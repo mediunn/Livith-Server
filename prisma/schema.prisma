@@ -95,7 +95,7 @@ model Song{
   title String @db.VarChar(50) 
   artist String @db.VarChar(50)
   imgUrl String? @db.VarChar(100) @map("img_url")
-  lyric String? @db.Text
+  lyrics String? @db.Text
   pronunciation String? @db.Text
   translation String? @db.Text
   createdAt DateTime @map("created_at") @default(now())
