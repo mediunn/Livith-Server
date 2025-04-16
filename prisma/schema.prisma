@@ -13,3 +13,120 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+model Concert {
+  id BigInt @id @default(autoincrement())
+  code String @db.VarChar(20)
+  title String @db.VarChar(100)
+  startDate DateTime @map("start_date")
+  endDate DateTime @map("end_date")
+  status String @db.VarChar(10)
+  poster String? @db.VarChar(100)
+  artist String? @db.VarChar(100) 
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+  cultures Culture[]
+  setlists Setlist[]
+
+  @@fulltext([title, artist])
+
+  @@map("concerts")
+}
+
+model Culture {
+  id BigInt @id @default(autoincrement())
+  concertId BigInt @map("concert_id")
+  content String? @db.VarChar(100)
+  imgUrl String? @db.VarChar(100) @map("img_url")
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  concert Concert @relation(fields: [concertId], references: [id])
+
+  @@index([concertId])
+  
+  @@map("cultures")
+}
+
+enum SetlistType {
+  ONGOING
+  PAST
+  EXPECTED
+}
+model Setlist {
+  id BigInt @id @default(autoincrement())
+  concertId BigInt @map("concert_id")
+  title String @db.VarChar(50)
+  type SetlistType @default(ONGOING)
+  status String @db.VarChar(10)
+  date DateTime?
+  imgUrl String? @db.VarChar(100)
+  artist String? @db.VarChar(100)
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+  
+  setlistSongs SetlistSong []
+
+  concert Concert @relation(fields: [concertId], references: [id])
+
+  @@index([concertId])
+
+  @@map("setlists")
+}
+
+model SetlistSong {
+  id BigInt @id @default(autoincrement())
+  setlistId BigInt @map("setlist_id")
+  songId BigInt @map("song_id")
+  order BigInt @map("order_index")
+  fanchant String? @db.Text
+
+
+  setlist Setlist @relation(fields: [setlistId],references: [id])
+  song Song @relation(fields: [songId],references:[id])
+
+  @@index([setlistId, songId])
+  
+  @@map("setlist_songs")
+}
+
+model Song{
+  id BigInt @id @default(autoincrement())
+  title String @db.VarChar(50) 
+  artist String @db.VarChar(50)
+  imgUrl String? @db.VarChar(100) @map("img_url")
+  lyric String? @db.Text
+  pronunciation String? @db.Text
+  translation String? @db.Text
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+  
+  setlistSongs SetlistSong []
+  @@map("songs")
+}
+
+model Carousel {
+  id BigInt @id @default(autoincrement())
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  carouselItems CarouselItem []
+
+  @@map("carousel")
+}
+
+model CarouselItem {
+  id BigInt @id @default(autoincrement())
+  carouselId BigInt @map("carousel_id")
+  imgUrl String? @db.VarChar(100) @map("img_url")
+  category String? @db.VarChar(30)
+  title String? @db.VarChar(50)
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  carousel Carousel @relation(fields: [carouselId], references: [id])
+
+  @@index([carouselId])
+
+  @@map("carousel_items")
+}
