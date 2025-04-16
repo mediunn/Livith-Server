@@ -3,6 +3,12 @@
 /node_modules
 /build
 
+# Prisma client output 
+/generated
+
+# Prisma migration lock files
+migration_lock.toml
+
 # Logs
 logs
 *.log
