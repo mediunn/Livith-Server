@@ -14,13 +14,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SetlistStatus {
+  ONGOING
+  UPCOMING
+  COMPLETED
+}
+
 model Concert {
   id BigInt @id @default(autoincrement())
   code String @db.VarChar(20)
   title String @db.VarChar(100)
   startDate DateTime @map("start_date")
   endDate DateTime @map("end_date")
-  status String @db.VarChar(10)
+  status SetlistStatus @default(ONGOING)
+  daysLeft BigInt? @map("days_left")
   poster String? @db.VarChar(100)
   artist String? @db.VarChar(100) 
   createdAt DateTime @map("created_at") @default(now())
