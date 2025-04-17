@@ -105,28 +105,13 @@ model Song{
   @@map("songs")
 }
 
-model Carousel {
+model Banner {
   id BigInt @id @default(autoincrement())
-  createdAt DateTime @map("created_at") @default(now())
-  updatedAt DateTime @map("updated_at") @updatedAt
-
-  carouselItems CarouselItem []
-
-  @@map("carousel")
-}
-
-model CarouselItem {
-  id BigInt @id @default(autoincrement())
-  carouselId BigInt @map("carousel_id")
   imgUrl String? @db.VarChar(100) @map("img_url")
   category String? @db.VarChar(30)
   title String? @db.VarChar(50)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
-  carousel Carousel @relation(fields: [carouselId], references: [id])
-
-  @@index([carouselId])
-
-  @@map("carousel_items")
+  @@map("banners")
 }
