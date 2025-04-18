@@ -21,10 +21,10 @@ enum SetlistStatus {
 
 model Concert {
   id BigInt @id @default(autoincrement())
-  code String @db.VarChar(20)
+  code String @db.VarChar(20) @unique
   title String @db.VarChar(100)
-  startDate DateTime @map("start_date")
-  endDate DateTime @map("end_date")
+  startDate String @db.VarChar(20) @map("start_date")
+  endDate String @db.VarChar(20) @map("end_date")
   status SetlistStatus @default(ONGOING)
   daysLeft BigInt? @map("days_left")
   poster String? @db.VarChar(100)
