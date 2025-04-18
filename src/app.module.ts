@@ -6,7 +6,8 @@ import { LyricsModule } from './lyrics/lyrics.module';
 import { SearchModule } from './search/search.module';
 import { SetlistModule } from './setlist/setlist.module';
 import { PrismaModule } from 'prisma/prisma.module';
-import { OpenapiModule } from './openapi/openapi.module';
+import { OpenApiModule } from './open-api/open-api.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -18,8 +19,9 @@ import { OpenapiModule } from './openapi/openapi.module';
     LyricsModule,
     SearchModule,
     SetlistModule,
-    OpenapiModule,
+    OpenApiModule,
     PrismaModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [],
   providers: [],

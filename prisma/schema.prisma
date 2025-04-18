@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -14,13 +13,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SetlistStatus {
+  ONGOING
+  UPCOMING
+  COMPLETED
+}
+
 model Concert {
   id BigInt @id @default(autoincrement())
-  code String @db.VarChar(20)
+  code String @db.VarChar(20) @unique
   title String @db.VarChar(100)
-  startDate DateTime @map("start_date")
-  endDate DateTime @map("end_date")
-  status String @db.VarChar(10)
+  startDate String @db.VarChar(20) @map("start_date")
+  endDate String @db.VarChar(20) @map("end_date")
+  status SetlistStatus @default(ONGOING)
+  daysLeft BigInt? @map("days_left")
   poster String? @db.VarChar(100)
   artist String? @db.VarChar(100) 
   createdAt DateTime @map("created_at") @default(now())
@@ -105,28 +111,13 @@ model Song{
   @@map("songs")
 }
 
-model Carousel {
+model Banner {
   id BigInt @id @default(autoincrement())
-  createdAt DateTime @map("created_at") @default(now())
-  updatedAt DateTime @map("updated_at") @updatedAt
-
-  carouselItems CarouselItem []
-
-  @@map("carousel")
-}
-
-model CarouselItem {
-  id BigInt @id @default(autoincrement())
-  carouselId BigInt @map("carousel_id")
   imgUrl String? @db.VarChar(100) @map("img_url")
   category String? @db.VarChar(30)
   title String? @db.VarChar(50)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
-  carousel Carousel @relation(fields: [carouselId], references: [id])
-
-  @@index([carouselId])
-
-  @@map("carousel_items")
+  @@map("banners")
 }
