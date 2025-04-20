@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
+import { getDaysUntil } from 'src/common/utils/date.util';
 
 @Injectable()
 export class ConcertService {
@@ -14,6 +15,13 @@ export class ConcertService {
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
       cursor: cursor ? { id: cursor } : undefined,
     });
-    return concertLists;
+
+    // daysLeft 계산
+    const concertsWithDaysLeft = concertLists.map((concert) => ({
+      ...concert,
+      daysLeft: getDaysUntil(concert.startDate),
+    }));
+
+    return concertsWithDaysLeft;
   }
 }

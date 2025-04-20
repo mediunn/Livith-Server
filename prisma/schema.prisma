@@ -26,7 +26,6 @@ model Concert {
   startDate String @db.VarChar(20) @map("start_date")
   endDate String @db.VarChar(20) @map("end_date")
   status ConcertStatus @default(ONGOING)
-  daysLeft Int? @map("days_left")
   poster String? @db.VarChar(100)
   artist String? @db.VarChar(100) 
   createdAt DateTime @map("created_at") @default(now())
