@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ConcertService } from './concert.service';
 import { GetConcertsDto } from './dto/get-concerts.dto';
 import {
@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ConcertResponseDto } from './dto/concert-response.dto';
+import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
 
 @ApiTags('콘서트')
 @Controller('concerts')
@@ -32,5 +33,10 @@ export class ConcertController {
       query.cursor,
       query.size,
     );
+  }
+
+  @Get(':id')
+  getConcertDetails(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertDetails(id);
   }
 }
