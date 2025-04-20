@@ -3,7 +3,6 @@ import { PrismaService } from 'prisma/prisma.service';
 import { Cron } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 import { FetchConcertService } from './fetch-concert.service';
-import { getDaysUntil } from 'src/common/utils/date.util';
 import { mapStatusToEnum } from 'src/common/utils/concert.util';
 
 @Injectable()
@@ -66,8 +65,8 @@ export class OpenApiService {
     const completedDetails = (
       await this.fetchConcertService.fetchConcertDetails(completedCodes)
     ).sort((a, b) => {
-      if (a.startDate < b.startDate) return -1;
-      if (a.startDate > b.startDate) return 1;
+      if (a.startDate > b.startDate) return -1;
+      if (a.startDate < b.startDate) return 1;
       return a.title.localeCompare(b.title);
     });
 
@@ -96,7 +95,6 @@ export class OpenApiService {
           artist: concert.artist,
           poster: concert.poster,
           status: mapStatusToEnum(concert.status),
-          daysLeft: getDaysUntil(concert.startDate),
         },
         create: {
           code: concert.code,
@@ -106,7 +104,6 @@ export class OpenApiService {
           artist: concert.artist,
           poster: concert.poster,
           status: mapStatusToEnum(concert.status),
-          daysLeft: getDaysUntil(concert.startDate),
         },
       });
     }

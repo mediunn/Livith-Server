@@ -13,20 +13,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum SetlistStatus {
+enum ConcertStatus {
   ONGOING
   UPCOMING
   COMPLETED
 }
 
 model Concert {
-  id BigInt @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   code String @db.VarChar(20) @unique
   title String @db.VarChar(100)
   startDate String @db.VarChar(20) @map("start_date")
   endDate String @db.VarChar(20) @map("end_date")
-  status SetlistStatus @default(ONGOING)
-  daysLeft BigInt? @map("days_left")
+  status ConcertStatus @default(ONGOING)
   poster String? @db.VarChar(100)
   artist String? @db.VarChar(100) 
   createdAt DateTime @map("created_at") @default(now())
@@ -40,8 +39,8 @@ model Concert {
 }
 
 model Culture {
-  id BigInt @id @default(autoincrement())
-  concertId BigInt @map("concert_id")
+  id Int @id @default(autoincrement())
+  concertId Int @map("concert_id")
   content String? @db.VarChar(100)
   imgUrl String? @db.VarChar(100) @map("img_url")
   createdAt DateTime @map("created_at") @default(now())
@@ -60,8 +59,8 @@ enum SetlistType {
   EXPECTED
 }
 model Setlist {
-  id BigInt @id @default(autoincrement())
-  concertId BigInt @map("concert_id")
+  id Int @id @default(autoincrement())
+  concertId Int @map("concert_id")
   title String @db.VarChar(50)
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
@@ -81,10 +80,10 @@ model Setlist {
 }
 
 model SetlistSong {
-  id BigInt @id @default(autoincrement())
-  setlistId BigInt @map("setlist_id")
-  songId BigInt @map("song_id")
-  order BigInt @map("order_index")
+  id Int @id @default(autoincrement())
+  setlistId Int @map("setlist_id")
+  songId Int @map("song_id")
+  order Int @map("order_index")
   fanchant String? @db.Text
 
 
@@ -97,7 +96,7 @@ model SetlistSong {
 }
 
 model Song{
-  id BigInt @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   title String @db.VarChar(50) 
   artist String @db.VarChar(50)
   imgUrl String? @db.VarChar(100) @map("img_url")
@@ -112,7 +111,7 @@ model Song{
 }
 
 model Banner {
-  id BigInt @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   imgUrl String? @db.VarChar(100) @map("img_url")
   category String? @db.VarChar(30)
   title String? @db.VarChar(50)
