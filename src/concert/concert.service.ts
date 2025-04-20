@@ -24,4 +24,18 @@ export class ConcertService {
 
     return concertsWithDaysLeft;
   }
+
+  async getConcertDetails(id: number) {
+    const concert = await this.prismaService.concert.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    const concertWithDaysLeft = {
+      ...concert,
+      daysLeft: getDaysUntil(concert.startDate),
+    };
+    return concertWithDaysLeft;
+  }
 }

@@ -1,13 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ConcertService } from './concert.service';
 import { GetConcertsDto } from './dto/get-concerts.dto';
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { ConcertResponseDto } from './dto/concert-response.dto';
+import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
 
 @ApiTags('콘서트')
 @Controller('concerts')
@@ -32,5 +34,27 @@ export class ConcertController {
       query.cursor,
       query.size,
     );
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: '특정 콘서트 상세 조회',
+    description: '특정 콘서트를 상세 조회합니다.',
+  })
+  @ApiOkResponse({
+    description: '특정 콘서트 상세 조회 성공',
+    type: [ConcertResponseDto],
+  })
+  @ApiBadRequestResponse({
+    description: '잘못된 요청입니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertDetails(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertDetails(id);
   }
 }
