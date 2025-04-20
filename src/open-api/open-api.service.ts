@@ -66,8 +66,8 @@ export class OpenApiService {
     const completedDetails = (
       await this.fetchConcertService.fetchConcertDetails(completedCodes)
     ).sort((a, b) => {
-      if (a.startDate < b.startDate) return -1;
-      if (a.startDate > b.startDate) return 1;
+      if (a.startDate > b.startDate) return -1;
+      if (a.startDate < b.startDate) return 1;
       return a.title.localeCompare(b.title);
     });
 
