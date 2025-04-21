@@ -57,26 +57,14 @@ export class OpenApiService {
       futureCodes.push(...futureConcerts);
     }
 
-    // 각각 정렬
-    const ongoingDetails = (
-      await this.fetchConcertService.fetchConcertDetails(ongoingCodes)
-    ).sort((a, b) => a.title.localeCompare(b.title));
+    // 공연 상세정보 조회
+    const ongoingDetails =
+      await this.fetchConcertService.fetchConcertDetails(ongoingCodes);
+    const completedDetails =
+      await this.fetchConcertService.fetchConcertDetails(completedCodes);
 
-    const completedDetails = (
-      await this.fetchConcertService.fetchConcertDetails(completedCodes)
-    ).sort((a, b) => {
-      if (a.startDate > b.startDate) return -1;
-      if (a.startDate < b.startDate) return 1;
-      return a.title.localeCompare(b.title);
-    });
-
-    const futureDetails = (
-      await this.fetchConcertService.fetchConcertDetails(futureCodes)
-    ).sort((a, b) => {
-      if (a.startDate < b.startDate) return -1;
-      if (a.startDate > b.startDate) return 1;
-      return a.title.localeCompare(b.title);
-    });
+    const futureDetails =
+      await this.fetchConcertService.fetchConcertDetails(futureCodes);
 
     const allConcerts = [
       ...ongoingDetails,
