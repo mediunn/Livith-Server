@@ -27,13 +27,15 @@ model Concert {
   endDate String @db.VarChar(20) @map("end_date")
   status ConcertStatus @default(ONGOING)
   poster String? @db.VarChar(100)
-  artist String? @db.VarChar(100) 
+  artist String? @db.VarChar(100)
+  sortedIndex Int? @map("sorted_index")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
   cultures Culture[]
   setlists Setlist[]
 
   @@fulltext([title, artist])
+  @@index([sortedIndex])
 
   @@map("concerts")
 }
