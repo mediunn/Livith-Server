@@ -8,6 +8,8 @@ import { SetlistModule } from './setlist/setlist.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { OpenApiModule } from './open-api/open-api.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { GlobalResponseInterceptor } from './common/interceptors/gloabl-response.interceptor';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -24,6 +26,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     ScheduleModule.forRoot(),
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: GlobalResponseInterceptor, // 인터셉터 등록
+    },
+  ],
 })
 export class AppModule {}
