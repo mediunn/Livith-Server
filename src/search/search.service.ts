@@ -35,9 +35,6 @@ export class SearchService {
 
   // 검색어에 대한 결과를 가져오는 메서드
   async getSearchResults(keyword: string, cursor: number, size: number) {
-    if (!keyword.trim()) {
-      return []; // 검색어가 비어있을 경우 빈 배열 반환
-    }
     const searchResults = await this.prismaService.concert.findMany({
       where: {
         OR: [
