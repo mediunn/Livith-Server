@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+// import { ConcertSchedulerService } from './concert/concert-scheduler.service';
 // import { OpenApiService } from './open-api/open-api.service';
 
 async function bootstrap() {
@@ -31,5 +32,8 @@ async function bootstrap() {
   //직접 호출
   // const openApiService = app.get(OpenApiService);
   // await openApiService.handleDailyUpdate();
+
+  // const concertService = app.get(ConcertSchedulerService);
+  // await concertService.handleSortedIndexUpdate();
 }
 bootstrap();
