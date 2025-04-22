@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { getDaysUntil } from 'src/common/utils/date.util';
-import { getConcertOrderByForStatus } from 'src/common/utils/sort.util';
 
 @Injectable()
 export class ConcertService {
@@ -15,7 +14,7 @@ export class ConcertService {
       take: size,
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
       cursor: cursor ? { id: cursor } : undefined,
-      orderBy: getConcertOrderByForStatus(status),
+      orderBy: { sortedIndex: 'asc' },
     });
 
     // daysLeft 계산
