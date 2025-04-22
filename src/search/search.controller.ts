@@ -17,14 +17,25 @@ export class SearchController {
   @Get('/suggestions')
   @ApiOperation({
     summary: '추천 검색어 조회',
-    description: '추천 검색어 5개를 조회합니다',
+    description: '추천 검색어 10개를 조회합니다',
   })
   @ApiOkResponse({
     description: '추천 검색어 조회 성공',
     examples: {
       'application/json': {
         summary: '추천 검색어 예시',
-        value: ['a', 'ab', 'abc', 'abcd', 'abcde'],
+        value: [
+          'a',
+          'ab',
+          'abc',
+          'abcd',
+          'abcde',
+          'ba',
+          'bca',
+          'cab',
+          'dca',
+          'eac',
+        ],
       },
     },
   })
