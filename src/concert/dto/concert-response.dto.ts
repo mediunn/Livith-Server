@@ -31,6 +31,12 @@ export class ConcertResponseDto {
   })
   daysLeft: number;
 
+  @ApiProperty({
+    example: 0,
+    description: '정렬 인덱스',
+  })
+  sortedIndex: number;
+
   constructor(concert: Concert) {
     this.id = concert.id;
     this.code = concert.code;
@@ -41,5 +47,6 @@ export class ConcertResponseDto {
     this.poster = concert.poster;
     this.status = concert.status;
     this.daysLeft = concert.daysLeft;
+    this.sortedIndex = concert.sortedIndex;
   }
 }

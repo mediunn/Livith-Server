@@ -28,7 +28,7 @@ model Concert {
   status ConcertStatus @default(ONGOING)
   poster String? @db.VarChar(100)
   artist String? @db.VarChar(100)
-  sortedIndex Int? @map("sorted_index")
+  sortedIndex Int? @map("sorted_index") @unique
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
   cultures Culture[]
