@@ -14,7 +14,7 @@ export class ConcertService {
       },
       take: size,
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
-      cursor: cursor ? { id: cursor } : undefined,
+      cursor: cursor ? { sortedIndex: cursor } : undefined,
       orderBy: { sortedIndex: 'asc' },
     });
 

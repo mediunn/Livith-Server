@@ -17,7 +17,7 @@ export class GetConcertsDto {
   status: ConcertStatus;
 
   @ApiProperty({
-    description: '커서(마지막 콘서트의 ID)',
+    description: '커서(마지막 콘서트의 sortedIndex 값)',
     default: 0,
     required: false,
     example: 0,
