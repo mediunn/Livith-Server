@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { getDaysUntil } from 'src/common/utils/date.util';
+import { ConcertResponseDto } from './dto/concert-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -23,7 +24,9 @@ export class ConcertService {
       daysLeft: getDaysUntil(concert.startDate),
     }));
 
-    return concertsWithDaysLeft;
+    return concertsWithDaysLeft.map(
+      (concert) => new ConcertResponseDto(concert),
+    );
   }
 
   async getConcertDetails(id: number) {
@@ -37,6 +40,6 @@ export class ConcertService {
       ...concert,
       daysLeft: getDaysUntil(concert.startDate),
     };
-    return concertWithDaysLeft;
+    return new ConcertResponseDto(concertWithDaysLeft);
   }
 }
