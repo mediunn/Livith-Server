@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
 import {
   ApiBadRequestResponse,
@@ -38,10 +38,16 @@ export class SearchController {
     example: 'a',
   })
   getRecommendWords(@Query('letter') letter: string) {
+    if (!letter?.trim()) {
+      throw new BadRequestException('검색어(letter)는 필수입니다.');
+    }
     return this.searchService.getRecommendWords(letter);
   }
   @Get()
   getSearchResults(@Query() query: GetSearchResultsDto) {
+    if (!query.keyword?.trim()) {
+      throw new BadRequestException('검색어(keyword)는 필수입니다.');
+    }
     return this.searchService.getSearchResults(
       query.keyword,
       query.cursor,
