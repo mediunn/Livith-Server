@@ -7,6 +7,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
 @ApiTags('검색')
 @Controller('search')
@@ -38,5 +39,13 @@ export class SearchController {
   })
   getRecommendWords(@Query('letter') letter: string) {
     return this.searchService.getRecommendWords(letter);
+  }
+  @Get()
+  getSearchResults(@Query() query: GetSearchResultsDto) {
+    return this.searchService.getSearchResults(
+      query.keyword,
+      query.cursor,
+      query.size,
+    );
   }
 }
