@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { getDaysUntil } from 'src/common/utils/date.util';
@@ -35,6 +35,11 @@ export class ConcertService {
         id: id,
       },
     });
+
+    // 콘서트가 없을 경우 예외 처리
+    if (!concert) {
+      throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
+    }
 
     const concertWithDaysLeft = {
       ...concert,
