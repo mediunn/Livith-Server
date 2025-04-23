@@ -3,10 +3,12 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { getDaysUntil } from 'src/common/utils/date.util';
 import { ConcertResponseDto } from './dto/concert-response.dto';
+import { CultureResponseDto } from './dto/culture-response.dto';
 
 @Injectable()
 export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
+  // 콘서트 목록 조회
   async getConcerts(status: ConcertStatus, cursor?: number, size?: number) {
     const concertLists = await this.prismaService.concert.findMany({
       where: {
@@ -29,6 +31,7 @@ export class ConcertService {
     );
   }
 
+  // 콘서트 상세 조회
   async getConcertDetails(id: number) {
     const concert = await this.prismaService.concert.findUnique({
       where: {
@@ -46,5 +49,26 @@ export class ConcertService {
       daysLeft: getDaysUntil(concert.startDate),
     };
     return new ConcertResponseDto(concertWithDaysLeft);
+  }
+
+  // 콘서트에 해당하는 문화 조회
+  async getConcertCulture(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    // 문화 조회
+    const cultures = await this.prismaService.culture.findMany({
+      where: {
+        concertId: id,
+      },
+    });
+
+    return cultures.map((culture) => new CultureResponseDto(culture));
   }
 }

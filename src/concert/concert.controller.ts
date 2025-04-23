@@ -16,6 +16,7 @@ import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) {}
 
+  // 콘서트 목록 조회
   @Get()
   @ApiOperation({
     summary: '콘서트 목록 조회',
@@ -36,6 +37,7 @@ export class ConcertController {
     );
   }
 
+  // 콘서트 상세 조회
   @Get(':id')
   @ApiOperation({
     summary: '특정 콘서트 상세 조회',
@@ -56,5 +58,11 @@ export class ConcertController {
   })
   getConcertDetails(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertDetails(id);
+  }
+
+  // 콘서트에 해당하는 문화 조회
+  @Get(':id/cultures')
+  getConcertCulture(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertCulture(id);
   }
 }
