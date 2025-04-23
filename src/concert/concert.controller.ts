@@ -10,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { CultureResponseDto } from './dto/culture-response.dto';
 
 @ApiTags('콘서트')
 @Controller('concerts')
@@ -62,6 +63,23 @@ export class ConcertController {
 
   // 콘서트에 해당하는 문화 조회
   @Get(':id/cultures')
+  @ApiOperation({
+    summary: '특정 콘서트 문화 조회',
+    description: '특정 콘서트에 해당하는 문화를 조회합니다.',
+  })
+  @ApiOkResponse({
+    description: '특정 콘서트 문화 조회 성공',
+    type: [CultureResponseDto],
+  })
+  @ApiBadRequestResponse({
+    description: '잘못된 요청입니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
   getConcertCulture(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertCulture(id);
   }
