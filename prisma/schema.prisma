@@ -67,7 +67,7 @@ model Setlist {
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
   date DateTime?
-  imgUrl String? @db.VarChar(100)
+  imgUrl String? @db.VarChar(100) @map("img_url")
   artist String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
@@ -87,7 +87,6 @@ model SetlistSong {
   songId Int @map("song_id")
   order Int @map("order_index")
   fanchant String? @db.Text
-
 
   setlist Setlist @relation(fields: [setlistId],references: [id])
   song Song @relation(fields: [songId],references:[id])
