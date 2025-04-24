@@ -12,6 +12,10 @@ export class ConcertResponseDto {
     description: '콘서트 제목',
   })
   title: string;
+  @ApiProperty({
+    example: '아이묭',
+    description: '콘서트 아티스트',
+  })
   artist: string;
   @ApiProperty({ example: '2025.04.19', description: '공연 시작일' })
   startDate: string;
