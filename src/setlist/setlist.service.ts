@@ -1,4 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'prisma/prisma.service';
+import { SetlistResponseDto } from './dto/setlist-response.dto';
 
 @Injectable()
-export class SetlistService {}
+export class SetlistService {
+  constructor(private readonly prismaService: PrismaService) {}
+  // 콘서트 ID에 해당하는 셋리스트 목록 조회
+  async getSetlists(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    // 셋리스트 조회
+    const setlists = await this.prismaService.setlist.findMany({
+      where: { concertId: id },
+    });
+
+    return setlists.map((setlist) => new SetlistResponseDto(setlist));
+  }
+}
