@@ -8,7 +8,7 @@ import { SetlistModule } from './setlist/setlist.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { OpenApiModule } from './open-api/open-api.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { GlobalResponseInterceptor } from './common/interceptors/gloabl-response.interceptor';
+import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
