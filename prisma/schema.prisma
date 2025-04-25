@@ -66,7 +66,7 @@ model Setlist {
   title String @db.VarChar(50)
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
-  date String?
+  date String @unique
   imgUrl String? @db.VarChar(100) @map("img_url")
   artist String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
