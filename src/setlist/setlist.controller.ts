@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SetlistService } from './setlist.service';
 import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
 import {
@@ -9,6 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
+import { GetSetlistsDto } from './dto/get-setlists.dto';
 
 @ApiTags('셋리스트')
 @Controller('')
@@ -34,7 +35,15 @@ export class SetlistController {
     type: Number,
     example: 1,
   })
-  getSetlists(@Param('id', ParsePositiveIntPipe) id: number) {
-    return this.setlistService.getSetlists(id);
+  getSetlists(
+    @Query() query: GetSetlistsDto,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    return this.setlistService.getSetlists(
+      id,
+      query.size,
+      query.cursor,
+      query.type,
+    );
   }
 }
