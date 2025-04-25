@@ -21,13 +21,9 @@ export class ConcertService {
     });
 
     // daysLeft 계산
-    const concertsWithDaysLeft = concertLists.map((concert) => ({
-      ...concert,
-      daysLeft: getDaysUntil(concert.startDate),
-    }));
-
-    return concertsWithDaysLeft.map(
-      (concert) => new ConcertResponseDto(concert),
+    return concertLists.map(
+      (concert) =>
+        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
     );
   }
 
@@ -44,11 +40,7 @@ export class ConcertService {
       throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
     }
 
-    const concertWithDaysLeft = {
-      ...concert,
-      daysLeft: getDaysUntil(concert.startDate),
-    };
-    return new ConcertResponseDto(concertWithDaysLeft);
+    return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
   }
 
   // 콘서트에 해당하는 문화 조회
