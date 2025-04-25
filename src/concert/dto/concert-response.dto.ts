@@ -41,7 +41,7 @@ export class ConcertResponseDto {
   })
   sortedIndex: number;
 
-  constructor(concert: Concert) {
+  constructor(concert: Concert, daysLeft: number) {
     this.id = concert.id;
     this.code = concert.code;
     this.title = concert.title;
@@ -50,6 +50,7 @@ export class ConcertResponseDto {
     this.endDate = concert.endDate;
     this.poster = concert.poster;
     this.status = concert.status;
+    this.daysLeft = daysLeft;
     this.sortedIndex = concert.sortedIndex;
   }
 }
