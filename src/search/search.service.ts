@@ -49,10 +49,7 @@ export class SearchService {
     });
 
     const resultsWithDaysLeft = searchResults.map((result) => {
-      return new ConcertResponseDto({
-        ...result,
-        daysLeft: getDaysUntil(result.startDate),
-      });
+      return new ConcertResponseDto(result, getDaysUntil(result.startDate));
     });
 
     return resultsWithDaysLeft;

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Culture } from 'generated/prisma';
+import { Culture } from '@prisma/client';
 
 export class CultureResponseDto {
   @ApiProperty({ example: 1, description: '문화 ID' })

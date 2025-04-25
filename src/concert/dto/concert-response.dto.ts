@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Concert } from 'generated/prisma';
+import { Concert } from '@prisma/client';
 
 export class ConcertResponseDto {
   @ApiProperty({ example: 1, description: '콘서트 ID' })
@@ -41,7 +41,7 @@ export class ConcertResponseDto {
   })
   sortedIndex: number;
 
-  constructor(concert: Concert) {
+  constructor(concert: Concert, daysLeft: number) {
     this.id = concert.id;
     this.code = concert.code;
     this.title = concert.title;
@@ -50,7 +50,7 @@ export class ConcertResponseDto {
     this.endDate = concert.endDate;
     this.poster = concert.poster;
     this.status = concert.status;
-    this.daysLeft = concert.daysLeft;
+    this.daysLeft = daysLeft;
     this.sortedIndex = concert.sortedIndex;
   }
 }
