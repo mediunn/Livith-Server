@@ -33,4 +33,16 @@ export class SetlistService {
 
     return setlists.map((setlist) => new SetlistResponseDto(setlist));
   }
+
+  // 특정 셋리스트 조회
+  async getSetlistDetails(id: number) {
+    const setlist = await this.prismaService.setlist.findUnique({
+      where: { id: id },
+    });
+    // 셋리스트가 없을 경우 예외 처리
+    if (!setlist) {
+      throw new NotFoundException(`해당 셋리스트가 존재하지 않습니다.`);
+    }
+    return new SetlistResponseDto(setlist);
+  }
 }
