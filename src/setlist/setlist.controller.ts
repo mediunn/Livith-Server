@@ -46,4 +46,10 @@ export class SetlistController {
       query.type,
     );
   }
+
+  //특정 셋리스트 조회
+  @Get('/setlists/:id')
+  getSetlistDetails(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.setlistService.getSetlistDetails(id);
+  }
 }
