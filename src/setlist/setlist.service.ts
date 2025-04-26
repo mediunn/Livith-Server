@@ -27,7 +27,9 @@ export class SetlistService {
     const setlists = await this.prismaService.setlist.findMany({
       where: { concertId: id, type: type },
       orderBy: { date: 'desc' },
-      cursor: cursor ? { date: cursor } : undefined,
+      cursor: cursor
+        ? { concertId_date: { concertId: id, date: cursor } }
+        : undefined,
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
       take: size,
     });
