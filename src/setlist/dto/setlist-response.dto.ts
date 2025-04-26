@@ -22,7 +22,7 @@ export class SetlistResponseDto {
   })
   status: string;
   @ApiProperty({
-    example: '2023-10-01',
+    example: '2017-10-01',
     description: '셋리스트 날짜',
   })
   date: string;
