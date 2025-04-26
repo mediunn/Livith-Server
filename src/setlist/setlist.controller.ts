@@ -10,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
 import { GetSetlistsDto } from './dto/get-setlists.dto';
+import { GetSetlistSongsDto } from './dto/get-setlist-songs.dto';
 
 @ApiTags('셋리스트')
 @Controller('')
@@ -68,5 +69,14 @@ export class SetlistController {
   })
   getSetlistDetails(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.setlistService.getSetlistDetails(id);
+  }
+
+  //셋리스트 노래 목록 조회
+  @Get('/setlists/:id/songs')
+  getSetlistSongs(
+    @Param('id', ParsePositiveIntPipe) id: number,
+    @Query() query: GetSetlistSongsDto,
+  ) {
+    return this.setlistService.getSetlistSongs(id, query.size, query.cursor);
   }
 }
