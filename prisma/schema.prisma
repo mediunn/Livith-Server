@@ -66,7 +66,7 @@ model Setlist {
   title String @db.VarChar(50)
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
-  date String @unique
+  date String
   imgUrl String? @db.VarChar(100) @map("img_url")
   artist String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
@@ -77,7 +77,7 @@ model Setlist {
   concert Concert @relation(fields: [concertId], references: [id])
 
   @@index([concertId])
-
+  @@unique([concertId, date]) 
   @@map("setlists")
 }
 
@@ -85,13 +85,14 @@ model SetlistSong {
   id Int @id @default(autoincrement())
   setlistId Int @map("setlist_id")
   songId Int @map("song_id")
-  order Int @map("order_index")
+  orderIndex Int @map("order_index")
   fanchant String? @db.Text
 
   setlist Setlist @relation(fields: [setlistId],references: [id])
   song Song @relation(fields: [songId],references:[id])
 
   @@index([setlistId, songId])
+  @@unique([setlistId,orderIndex])
   
   @@map("setlist_songs")
 }
