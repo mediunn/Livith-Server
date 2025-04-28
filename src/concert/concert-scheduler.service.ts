@@ -9,35 +9,49 @@ export class ConcertSchedulerService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // 매일 0시 실행
   async handleSortedIndexUpdate() {
+    // 1. 기존의 sortedIndex 값 모두 초기화
+    await this.prisma.concert.updateMany({
+      data: { sortedIndex: null }, // 또는 sortedIndex: 0 으로 초기화 가능
+    });
+
+    // 2. 모든 concert 데이터를 상태별로 필터링 및 정렬
     const allConcerts = await this.prisma.concert.findMany();
 
     const ongoing = allConcerts
-      .filter((c) => c.status === ConcertStatus.ONGOING)
-      .sort((a, b) => a.title.localeCompare(b.title));
+      .filter((c) => c.status === ConcertStatus.ONGOING) // 예시로 status 필드 값 사용
+      .sort((a, b) => a.title.localeCompare(b.title)); // 정렬 기준 설정
 
     const upcoming = allConcerts
       .filter((c) => c.status === ConcertStatus.UPCOMING)
-      .sort((a, b) => {
-        if (a.startDate < b.startDate) return -1;
-        if (a.startDate > b.startDate) return 1;
-        return a.title.localeCompare(b.title);
-      });
+      .sort((a, b) =>
+        a.startDate < b.startDate
+          ? -1
+          : a.startDate > b.startDate
+            ? 1
+            : a.title.localeCompare(b.title),
+      );
 
     const completed = allConcerts
       .filter((c) => c.status === ConcertStatus.COMPLETED)
-      .sort((a, b) => {
-        if (a.startDate > b.startDate) return -1;
-        if (a.startDate < b.startDate) return 1;
-        return a.title.localeCompare(b.title);
-      });
+      .sort((a, b) =>
+        a.startDate > b.startDate
+          ? -1
+          : a.startDate < b.startDate
+            ? 1
+            : a.title.localeCompare(b.title),
+      );
 
     const sorted = [...ongoing, ...upcoming, ...completed];
 
-    for (let i = 0; i < sorted.length; i++) {
-      await this.prisma.concert.update({
-        where: { id: sorted[i].id },
-        data: { sortedIndex: i },
-      });
-    }
+    // 3. 새로운 sortedIndex 값으로 업데이트
+    const updatePromises = sorted.map((concert, index) =>
+      this.prisma.concert.update({
+        where: { id: concert.id },
+        data: { sortedIndex: index + 1 },
+      }),
+    );
+
+    // 모든 업데이트를 병렬로 실행
+    await Promise.all(updatePromises);
   }
 }
