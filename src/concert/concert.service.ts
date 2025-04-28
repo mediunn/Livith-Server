@@ -4,16 +4,31 @@ import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { getDaysUntil } from 'src/common/utils/date.util';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { CultureResponseDto } from './dto/culture-response.dto';
+import dayjs from 'dayjs';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
   async getConcerts(status: ConcertStatus, cursor?: number, size?: number) {
+    const today = dayjs().format('YYYY.MM.DD');
+    const oneMonthAgo = dayjs().subtract(1, 'month').format('YYYY.MM.DD');
+
+    const statusCondition: Prisma.ConcertWhereInput = {
+      status: status,
+    };
+
+    // 완료된 콘서트는 1개월 전까지 조회 가능
+    if (status === ConcertStatus.COMPLETED) {
+      statusCondition.startDate = {
+        gte: oneMonthAgo,
+        lt: today,
+      };
+    }
+
     const concertLists = await this.prismaService.concert.findMany({
-      where: {
-        status: status,
-      },
+      where: statusCondition,
       take: size,
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
       cursor: cursor ? { sortedIndex: cursor } : undefined,
