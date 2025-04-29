@@ -49,6 +49,10 @@ jobs:
           ssh livith_ec2 'npm install --prefix /opt/app/'
           ssh livith_ec2 'cd /opt/app; npm exec prisma generate'
 
+      - name: Build project
+        run: |
+          ssh livith_ec2 'cd /opt/app; npm run build'
+
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'
         run: |
