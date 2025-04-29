@@ -13,6 +13,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check prisma has changes
+        uses: dorny/paths-filter@v3
+        id: paths-filter
+        with:
+          filters: |
+            prisma: ["prisma/**"]
+
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
@@ -40,7 +47,12 @@ jobs:
       - name: Install dependencies
         run: |
           ssh livith_ec2 'npm install --prefix /opt/app/'
+          ssh livith_ec2 'cd /opt/app; npm exec prisma generate'
 
+      - name: Apply prisma migrations
+        if: steps.paths-filter.outputs.prisma == 'true'
+        run: |
+          ssh livith_ec2 'cd /opt/app; npm exec prisma migrate deploy'
       - name: Copy systemd service file
         run: |
           ssh livith_ec2 '
