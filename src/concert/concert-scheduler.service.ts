@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 
@@ -7,7 +7,7 @@ import { PrismaService } from 'prisma/prisma.service';
 export class ConcertSchedulerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // 매일 0시 실행
+  @Cron('5 0 * * *') // 매일 00시 05분 실행
   async handleSortedIndexUpdate() {
     // 1. 기존의 sortedIndex 값 모두 초기화
     await this.prisma.concert.updateMany({
