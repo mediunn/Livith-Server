@@ -68,8 +68,8 @@ export class OpenApiService {
 
     const allConcerts = [
       ...ongoingDetails,
-      ...completedDetails,
       ...futureDetails,
+      ...completedDetails,
     ];
 
     // 프리즈마에 저장
