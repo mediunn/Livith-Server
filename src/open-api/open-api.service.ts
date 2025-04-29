@@ -12,8 +12,8 @@ export class OpenApiService {
     private readonly prismaService: PrismaService,
   ) {}
 
-  //매 3일마다 오전 3시에 실행
-  @Cron('0 0 3 */3 * *')
+  // 매 3일마다 자정(00:00)에 실행
+  @Cron('0 0 0 */3 * *')
   async handleDailyUpdate() {
     await this.fetchAndSaveConcerts();
   }
