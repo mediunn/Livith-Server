@@ -15,6 +15,7 @@ import { LyricsResponseDto } from './dto/lyrics-response.dto';
 export class LyricsController {
   constructor(private readonly lyricsService: LyricsService) {}
 
+  //가사 및 기타 정보 조회
   @Get('/songs/:id')
   @ApiOperation({
     summary: '가사 및 기타 정보 조회',
@@ -35,5 +36,14 @@ export class LyricsController {
   })
   getLyrics(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.lyricsService.getLyrics(id);
+  }
+
+  //응원법 조회
+  @Get('/setlists/:setlistId/songs/:songId/fanchant')
+  getFanchant(
+    @Param('setlistId', ParsePositiveIntPipe) setlistId: number,
+    @Param('songId', ParsePositiveIntPipe) songId: number,
+  ) {
+    return this.lyricsService.getFanchant(setlistId, songId);
   }
 }
