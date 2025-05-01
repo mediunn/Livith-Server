@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Setlist, SetlistType } from '@prisma/client';
+import { ConcertSetlist, Setlist, SetlistType } from '@prisma/client';
 
 export class SetlistResponseDto {
   @ApiProperty({ example: 1, description: '셋리스트 ID' })
@@ -37,12 +37,12 @@ export class SetlistResponseDto {
   })
   artist: string;
 
-  constructor(setlist: Setlist) {
+  constructor(setlist: Setlist, concertSetlist: ConcertSetlist) {
     this.id = setlist.id;
-    this.concertId = setlist.concertId;
+    this.concertId = concertSetlist.concertId;
     this.title = setlist.title;
-    this.type = setlist.type;
-    this.status = setlist.status;
+    this.type = concertSetlist.type;
+    this.status = concertSetlist.status;
     this.date = setlist.date;
     this.imgUrl = setlist.imgUrl;
     this.artist = setlist.artist;
