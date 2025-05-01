@@ -32,7 +32,7 @@ model Concert {
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
   cultures Culture[]
-  setlists Setlist[]
+  concertSetlists ConcertSetlist []
 
   @@fulltext([title, artist])
   @@index([sortedIndex])
@@ -60,12 +60,26 @@ enum SetlistType {
   PAST
   EXPECTED
 }
-model Setlist {
+
+model ConcertSetlist{
   id Int @id @default(autoincrement())
   concertId Int @map("concert_id")
-  title String @db.VarChar(50)
+  setlistId Int @map("setlist_id")
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  concert Concert @relation(fields: [concertId], references: [id])
+  setlist Setlist @relation(fields: [setlistId], references: [id])
+
+  @@index([concertId,setlistId])
+  @@map("concert_setlists")
+}
+
+model Setlist {
+  id Int @id @default(autoincrement())
+  title String @db.VarChar(50)
   date String
   imgUrl String? @db.VarChar(100) @map("img_url")
   artist String? @db.VarChar(100)
@@ -73,11 +87,9 @@ model Setlist {
   updatedAt DateTime @map("updated_at") @updatedAt
   
   setlistSongs SetlistSong []
+  concertSetlists ConcertSetlist []
 
-  concert Concert @relation(fields: [concertId], references: [id])
-
-  @@index([concertId])
-  @@unique([concertId, date]) 
+  @@unique([date,id]) 
   @@map("setlists")
 }
 
