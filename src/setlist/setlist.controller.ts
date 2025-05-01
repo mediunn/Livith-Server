@@ -50,7 +50,7 @@ export class SetlistController {
   }
 
   //특정 셋리스트 조회
-  @Get('/setlists/:id')
+  @Get('/concerts/:concertId/setlists/:setlistId')
   @ApiOperation({
     summary: '특정 셋리스트 조회',
     description: '특정 셋리스트를 조회합니다.',
@@ -63,13 +63,22 @@ export class SetlistController {
     description: '잘못된 요청입니다.',
   })
   @ApiParam({
-    name: 'id',
+    name: 'setlistId',
     description: '셋리스트의 ID',
     type: Number,
     example: 1,
   })
-  getSetlistDetails(@Param('id', ParsePositiveIntPipe) id: number) {
-    return this.setlistService.getSetlistDetails(id);
+  @ApiParam({
+    name: 'concertId',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getSetlistDetails(
+    @Param('setlistId', ParsePositiveIntPipe) setlistId: number,
+    @Param('concertId', ParsePositiveIntPipe) concertId: number,
+  ) {
+    return this.setlistService.getSetlistDetails(setlistId, concertId);
   }
 
   //셋리스트 노래 목록 조회
