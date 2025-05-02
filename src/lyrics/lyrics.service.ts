@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { LyricsResponseDto } from './dto/lyrics-response.dto';
-import { FanchatResponseDto } from './dto/fanchat-response.dto';
+import { FanchantResponseDto } from './dto/fanchant-response.dto';
 
 @Injectable()
 export class LyricsService {
@@ -56,6 +56,6 @@ export class LyricsService {
         '해당 셋리스트와 곡의 조합이 존재하지 않습니다.',
       );
     }
-    return new FanchatResponseDto(fanchant);
+    return new FanchantResponseDto(fanchant);
   }
 }
