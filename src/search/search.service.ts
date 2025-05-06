@@ -47,14 +47,22 @@ export class SearchService {
       },
       cursor: cursor ? { sortedIndex: cursor } : undefined,
       take: size,
-      skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
+      skip: cursor ? 1 : 0,
       orderBy: { sortedIndex: 'asc' },
     });
+
+    const nextCursor =
+      searchResults.length > 0
+        ? searchResults[searchResults.length - 1].sortedIndex
+        : null;
 
     const resultsWithDaysLeft = searchResults.map((result) => {
       return new ConcertResponseDto(result, getDaysUntil(result.startDate));
     });
 
-    return resultsWithDaysLeft;
+    return {
+      data: resultsWithDaysLeft,
+      cursor: nextCursor,
+    };
   }
 }
