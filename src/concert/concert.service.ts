@@ -30,16 +30,24 @@ export class ConcertService {
     const concertLists = await this.prismaService.concert.findMany({
       where: statusCondition,
       take: size,
-      skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
       cursor: cursor ? { sortedIndex: cursor } : undefined,
       orderBy: { sortedIndex: 'asc' },
     });
 
-    // daysLeft 계산
-    return concertLists.map(
+    const concertResponse = concertLists.map(
       (concert) =>
         new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
     );
+    // **다음 페이지의 cursor 값은 마지막 아이템의 sortedIndex보다 1 증가한 값**
+    const nextCursor =
+      concertLists.length > 0
+        ? concertLists[concertLists.length - 1].sortedIndex + 1
+        : null;
+    // daysLeft 계산
+    return {
+      data: concertResponse,
+      cursor: nextCursor,
+    };
   }
 
   // 콘서트 상세 조회
