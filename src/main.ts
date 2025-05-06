@@ -28,7 +28,10 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
 
   //cors 설정
-  app.enableCors(); // 모두 허용
+  app.enableCors({
+    origin: 'http://localhost:5173', // 클라이언트 주소 정확히 명시
+    credentials: true, // 자격 정보 허용
+  });
 
   await app.listen(3000);
 
