@@ -112,6 +112,11 @@ export class SetlistService {
       skip: cursor ? 1 : 0, // cursor가 있을 때만 건너뛰기
     });
 
+    const nextCursor =
+      setlistSongs.length > 0
+        ? setlistSongs[setlistSongs.length - 1].orderIndex
+        : null;
+
     //곡 ID 목록 생성
     const songIds = setlistSongs.map((setlistSong) => setlistSong.songId);
 
@@ -124,7 +129,7 @@ export class SetlistService {
     const songDetailMap = new Map(songDetails.map((song) => [song.id, song]));
 
     // 매칭해서 DTO 만들기
-    return setlistSongs.map((setlistSong) => {
+    const songResponse = setlistSongs.map((setlistSong) => {
       const songDetail = songDetailMap.get(setlistSong.songId);
 
       return new SongResponseDto(
@@ -133,5 +138,9 @@ export class SetlistService {
         setlistSong.orderIndex,
       );
     });
+    return {
+      data: songResponse,
+      cursor: nextCursor,
+    };
   }
 }
