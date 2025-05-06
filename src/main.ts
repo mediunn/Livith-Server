@@ -27,6 +27,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
+  //cors 설정
+  app.enableCors(); // 모두 허용
+
   await app.listen(3000);
 
   //직접 호출
