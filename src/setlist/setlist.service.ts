@@ -41,7 +41,19 @@ export class SetlistService {
     });
 
     // Setlist만 추출해서 DTO로 매핑
-    return concertSetlists.map((cs) => new SetlistResponseDto(cs.setlist, cs));
+    const concertSetlistResponse = concertSetlists.map(
+      (cs) => new SetlistResponseDto(cs.setlist, cs),
+    );
+
+    const nextCursor =
+      concertSetlists.length > 0
+        ? concertSetlists[concertSetlists.length - 1].setlist.date
+        : null;
+
+    return {
+      data: concertSetlistResponse,
+      cursor: nextCursor,
+    };
   }
 
   // 특정 셋리스트 조회
