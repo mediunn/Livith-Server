@@ -13,6 +13,9 @@ export class SearchService {
         OR: [{ title: { contains: letter } }, { artist: { contains: letter } }],
       },
       take: 10,
+      orderBy: {
+        sortedIndex: 'asc',
+      },
     });
 
     // title이나 artist에 포함된 값만 필터링
