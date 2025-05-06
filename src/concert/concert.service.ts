@@ -30,6 +30,7 @@ export class ConcertService {
     const concertLists = await this.prismaService.concert.findMany({
       where: statusCondition,
       take: size,
+      skip: cursor ? 1 : 0,
       cursor: cursor ? { sortedIndex: cursor } : undefined,
       orderBy: { sortedIndex: 'asc' },
     });
@@ -38,10 +39,10 @@ export class ConcertService {
       (concert) =>
         new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
     );
-    // **다음 페이지의 cursor 값은 마지막 아이템의 sortedIndex보다 1 증가한 값**
+
     const nextCursor =
       concertLists.length > 0
-        ? concertLists[concertLists.length - 1].sortedIndex + 1
+        ? concertLists[concertLists.length - 1].sortedIndex
         : null;
     // daysLeft 계산
     return {
