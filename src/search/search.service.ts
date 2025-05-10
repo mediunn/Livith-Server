@@ -38,13 +38,15 @@ export class SearchService {
 
   // 검색어에 대한 결과를 가져오는 메서드
   async getSearchResults(keyword: string, cursor: number, size: number) {
+    const whereCondition = {
+      OR: [{ title: { contains: keyword } }, { artist: { contains: keyword } }],
+    };
+    // 전체 개수
+    const totalCount = await this.prismaService.concert.count({
+      where: whereCondition,
+    });
     const searchResults = await this.prismaService.concert.findMany({
-      where: {
-        OR: [
-          { title: { contains: keyword } },
-          { artist: { contains: keyword } },
-        ],
-      },
+      where: whereCondition,
       cursor: cursor ? { sortedIndex: cursor } : undefined,
       take: size,
       skip: cursor ? 1 : 0,
@@ -63,6 +65,7 @@ export class SearchService {
     return {
       data: resultsWithDaysLeft,
       cursor: nextCursor,
+      totalCount: totalCount,
     };
   }
 }
