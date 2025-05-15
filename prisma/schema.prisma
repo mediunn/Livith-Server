@@ -26,7 +26,7 @@ model Concert {
   startDate String @db.VarChar(20) @map("start_date")
   endDate String @db.VarChar(20) @map("end_date")
   status ConcertStatus @default(ONGOING)
-  poster String? @db.VarChar(100)
+  poster String? @db.VarChar(2048)
   artist String? @db.VarChar(100)
   sortedIndex Int? @map("sorted_index") @unique
   createdAt DateTime @map("created_at") @default(now())
@@ -44,7 +44,7 @@ model Culture {
   id Int @id @default(autoincrement())
   concertId Int @map("concert_id")
   content String? @db.VarChar(100)
-  imgUrl String? @db.VarChar(100) @map("img_url")
+  imgUrl String? @db.VarChar(2048) @map("img_url")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
@@ -81,7 +81,7 @@ model Setlist {
   id Int @id @default(autoincrement())
   title String @db.VarChar(50)
   date String
-  imgUrl String? @db.VarChar(100) @map("img_url")
+  imgUrl String? @db.VarChar(2048) @map("img_url")
   artist String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
@@ -113,7 +113,7 @@ model Song{
   id Int @id @default(autoincrement())
   title String @db.VarChar(50) 
   artist String @db.VarChar(50)
-  imgUrl String? @db.VarChar(100) @map("img_url")
+  imgUrl String? @db.VarChar(2048) @map("img_url")
   lyrics String? @db.Text
   pronunciation String? @db.Text
   translation String? @db.Text
@@ -126,7 +126,7 @@ model Song{
 
 model Banner {
   id Int @id @default(autoincrement())
-  imgUrl String? @db.VarChar(100) @map("img_url")
+  imgUrl String? @db.VarChar(2048) @map("img_url")
   category String? @db.VarChar(30)
   title String? @db.VarChar(50)
   createdAt DateTime @map("created_at") @default(now())
