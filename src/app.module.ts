@@ -10,6 +10,7 @@ import { OpenApiModule } from './open-api/open-api.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     OpenApiModule,
     PrismaModule,
     ScheduleModule.forRoot(),
+    UploadModule,
   ],
   controllers: [],
   providers: [
