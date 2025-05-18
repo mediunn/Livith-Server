@@ -36,10 +36,10 @@ export class LyricsResponseDto {
     this.id = song.id;
     this.title = song.title;
     this.artist = song.artist;
-    this.lyrics = song.lyrics ? song.lyrics.split('\n') : [];
+    this.lyrics = song.lyrics ? song.lyrics.split('\\n') : [];
     this.pronunciation = song.pronunciation
-      ? song.pronunciation.split('\n')
+      ? song.pronunciation.split('\\n')
       : [];
-    this.translation = song.translation ? song.translation.split('\n') : [];
+    this.translation = song.translation ? song.translation.split('\\n') : [];
   }
 }
