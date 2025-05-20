@@ -21,7 +21,7 @@ enum ConcertStatus {
 
 model Concert {
   id Int @id @default(autoincrement())
-  code String @db.VarChar(20) @unique
+  code String? @db.VarChar(20) @unique
   title String @db.VarChar(300)
   startDate String @db.VarChar(20) @map("start_date")
   endDate String @db.VarChar(20) @map("end_date")
