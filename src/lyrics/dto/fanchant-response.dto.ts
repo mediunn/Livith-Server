@@ -28,7 +28,7 @@ export class FanchantResponseDto {
     this.setlistId = setlistSong.setlistId;
     this.songId = setlistSong.songId;
     this.fanchant = setlistSong.fanchant
-      ? setlistSong.fanchant.split('\\n')
+      ? setlistSong.fanchant.split(/\/n|\\n/)
       : [];
   }
 }
