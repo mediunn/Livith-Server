@@ -74,6 +74,10 @@ export class OpenApiService {
 
     // 프리즈마에 저장
     for (const concert of allConcerts) {
+      if (!concert.code) {
+        console.warn('concert.code is null or undefined. Skipping...');
+        continue;
+      }
       await this.prismaService.concert.upsert({
         where: { code: concert.code },
         update: {
