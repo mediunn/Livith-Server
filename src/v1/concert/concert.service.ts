@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConcertStatus } from 'src/common/enums/concert-status.enum';
-import { getDaysUntil } from 'src/common/utils/date.util';
+import { ConcertStatus } from 'src/v1/common/enums/concert-status.enum';
+import { getDaysUntil } from 'src/v1/common/utils/date.util';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { CultureResponseDto } from './dto/culture-response.dto';
 import dayjs from 'dayjs';

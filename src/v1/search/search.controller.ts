@@ -8,10 +8,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GetSearchResultsDto } from './dto/get-search-results.dto';
-import { ConcertResponseDto } from 'src/concert/dto/concert-response.dto';
+import { ConcertResponseDto } from 'src/v1/concert/dto/concert-response.dto';
 
 @ApiTags('검색')
-@Controller('search')
+@Controller('api/v1/search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
