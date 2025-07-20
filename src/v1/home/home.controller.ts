@@ -9,7 +9,7 @@ import {
 import { BannerResponseDto } from './dto/banner-response.dto';
 
 @ApiTags('홈')
-@Controller('home')
+@Controller('api/v1/home')
 export class HomeController {
   constructor(private readonly homeService: HomeService) {}
   // 배너 조회

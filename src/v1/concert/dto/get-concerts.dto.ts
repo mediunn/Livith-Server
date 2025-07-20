@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
-import { ConcertStatus } from 'src/common/enums/concert-status.enum';
+import { ConcertStatus } from 'src/v1/common/enums/concert-status.enum';
 
 export class GetConcertsDto {
   @ApiProperty({
