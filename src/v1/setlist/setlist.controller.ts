@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SetlistService } from './setlist.service';
-import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { ParsePositiveIntPipe } from 'src/v1/common/pipes/parse-positive-int.pipe';
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
@@ -19,7 +19,7 @@ export class SetlistController {
   constructor(private readonly setlistService: SetlistService) {}
 
   //셋리스트 목록 조회
-  @Get('/concerts/:id/setlists')
+  @Get('api/v1/concerts/:id/setlists')
   @ApiOperation({
     summary: '특정 콘서트의 셋리스트 목록 조회',
     description: '특정 콘서트의 셋리스트 목록을 조회합니다.',
@@ -50,7 +50,7 @@ export class SetlistController {
   }
 
   //특정 셋리스트 조회
-  @Get('/concerts/:concertId/setlists/:setlistId')
+  @Get('api/v1/concerts/:concertId/setlists/:setlistId')
   @ApiOperation({
     summary: '특정 셋리스트 조회',
     description: '특정 셋리스트를 조회합니다.',
@@ -82,7 +82,7 @@ export class SetlistController {
   }
 
   //셋리스트 노래 목록 조회
-  @Get('/setlists/:id/songs')
+  @Get('api/v1/setlists/:id/songs')
   @ApiOperation({
     summary: '특정 셋리스트의 곡 목록 조회',
     description: '특정 셋리스트의 곡 목록을 조회합니다.',

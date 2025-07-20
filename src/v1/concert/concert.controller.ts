@@ -9,11 +9,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ConcertResponseDto } from './dto/concert-response.dto';
-import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { ParsePositiveIntPipe } from 'src/v1/common/pipes/parse-positive-int.pipe';
 import { CultureResponseDto } from './dto/culture-response.dto';
 
 @ApiTags('콘서트')
-@Controller('concerts')
+@Controller('api/v1/concerts')
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) {}
 

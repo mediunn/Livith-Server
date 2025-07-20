@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { getDaysUntil } from 'src/common/utils/date.util';
-import { ConcertResponseDto } from 'src/concert/dto/concert-response.dto';
+import { getDaysUntil } from 'src/v1/common/utils/date.util';
+import { ConcertResponseDto } from 'src/v1/concert/dto/concert-response.dto';
 
 @Injectable()
 export class SearchService {

@@ -1,6 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { LyricsService } from './lyrics.service';
-import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { ParsePositiveIntPipe } from 'src/v1/common/pipes/parse-positive-int.pipe';
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
@@ -17,7 +17,7 @@ export class LyricsController {
   constructor(private readonly lyricsService: LyricsService) {}
 
   //가사 및 기타 정보 조회
-  @Get('/songs/:id')
+  @Get('/api/v1/songs/:id')
   @ApiOperation({
     summary: '가사 및 기타 정보 조회',
     description: '가사, 발음, 번역 정보를 조회합니다.',
@@ -40,7 +40,7 @@ export class LyricsController {
   }
 
   //응원법 조회
-  @Get('/setlists/:setlistId/songs/:songId/fanchant')
+  @Get('/api/v1/setlists/:setlistId/songs/:songId/fanchant')
   @ApiOperation({
     summary: '응원법 조회',
     description: '응원법을 조회합니다.',
