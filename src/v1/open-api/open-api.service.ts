@@ -3,7 +3,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { Cron } from '@nestjs/schedule';
 import dayjs from 'dayjs';
 import { FetchConcertService } from './fetch-concert.service';
-import { mapStatusToEnum } from 'src/common/utils/concert.util';
+import { mapStatusToEnum } from 'src/v1/common/utils/concert.util';
 
 @Injectable()
 export class OpenApiService {

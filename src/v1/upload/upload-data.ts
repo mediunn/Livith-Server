@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { AppModule } from '../../app.module';
 import { CultureUploadService } from './culture-upload.service';
 import { SetlistUploadService } from './setlist-upload.service';
 import { ConcertSetlistUploadService } from './concert-setlist-upload.service';
