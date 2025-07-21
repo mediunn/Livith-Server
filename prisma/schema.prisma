@@ -21,6 +21,7 @@ enum ConcertStatus {
 
 model Concert {
   id Int @id @default(autoincrement())
+  artistId Int @map("artist_id")
   code String? @db.VarChar(20) @unique
   title String @db.VarChar(300)
   startDate String @db.VarChar(20) @map("start_date")
@@ -29,10 +30,19 @@ model Concert {
   poster String? @db.VarChar(2048)
   artist String? @db.VarChar(100)
   sortedIndex Int? @map("sorted_index") @unique
+  ticketSite Int? @map("ticket_site")
+  ticketUrl String? @db.VarChar(2048) @map("ticket_url")
+  venue String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
+
+  mdItems Md[]
   cultures Culture[]
+  schedules Schedule[]
+  concertInfos   ConcertInfo[]
   concertSetlists ConcertSetlist []
+
+  artist_rel Artist @relation(fields: [artistId], references: [id])
 
   @@fulltext([title, artist])
   @@index([sortedIndex])
@@ -40,10 +50,70 @@ model Concert {
   @@map("concerts")
 }
 
+model Artist {
+  id             Int       @id @default(autoincrement())
+  artist         String    @db.VarChar(100)
+  birthDate     String?   @db.VarChar(30) @map("birth_date")
+  birthPlace    String?   @db.VarChar(100) @map("birth_place")
+  category       String?   @db.VarChar(30)
+  detail         String?  @db.Text
+  instagramUrl  String?   @db.VarChar(2048) @map("instagram_url")
+  keywords       String?   @db.VarChar(100)
+  imgUrl        String?   @db.VarChar(2048) @map("img_url")
+  createdAt     DateTime  @map("created_at") @default(now())
+  updatedAt     DateTime  @map("updated_at") @updatedAt
+
+  concerts       Concert[]
+
+  @@map("artists")
+}
+
+model ConcertInfo {
+  id         Int      @id @default(autoincrement())
+  concertId Int      @map("concert_id")
+  category   String   @db.VarChar(30)
+  content    String   @db.VarChar(100)
+  imgUrl    String?  @db.VarChar(2048) @map("img_url")
+  createdAt DateTime @map("created_at") @default(now()) 
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  concert    Concert  @relation(fields: [concertId], references: [id])
+
+  @@map("concert_info")
+}
+
+model Md {
+  id         Int      @id @default(autoincrement())
+  concertId Int @map("concert_id")
+  name       String   @db.VarChar(100)
+  price      String?   @db.VarChar(30)
+  imgUrl    String?  @db.VarChar(2048) @map("img_url")
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  concert    Concert  @relation(fields: [concertId], references: [id])
+
+  @@map("md")
+}
+
+model Schedule {
+  id           Int      @id @default(autoincrement())
+  concertId   Int @map("concert_id")
+  category     String   @db.VarChar(50)
+  scheduledAt DateTime @map("scheduled_at")
+  createdAt   DateTime @map("created_at") @default(now())
+  updatedAt   DateTime @map("updated_at") @updatedAt
+
+  concert      Concert  @relation(fields: [concertId], references: [id])
+
+  @@map("schedule")
+}
+
 model Culture {
   id Int @id @default(autoincrement())
   concertId Int @map("concert_id")
-  content String? @db.VarChar(100)
+  title String @db.Text
+  content String @db.Text
   imgUrl String? @db.VarChar(2048) @map("img_url")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
@@ -67,6 +137,10 @@ model ConcertSetlist{
   setlistId Int @map("setlist_id")
   type SetlistType @default(ONGOING)
   status String @db.VarChar(10)
+  concertTitle String @db.VarChar(300) @map("concert_title")
+  setlistTitle String @db.VarChar(300) @map("setlist_title")
+  concertDate String @db.VarChar(20) @map("concert_date")
+  setlistDate String @db.VarChar(20) @map("setlist_date")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
@@ -80,16 +154,18 @@ model ConcertSetlist{
 model Setlist {
   id Int @id @default(autoincrement())
   title String @db.VarChar(300)
-  date String
+  startDate String @db.VarChar(20)@map("start_date")
+  endDate String @db.VarChar(20) @map("end_date")
   imgUrl String? @db.VarChar(2048) @map("img_url")
   artist String? @db.VarChar(100)
+  venue String?  @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
   
   setlistSongs SetlistSong []
   concertSetlists ConcertSetlist []
 
-  @@unique([date,id]) 
+  @@unique([startDate,endDate,id]) 
   @@map("setlists")
 }
 
@@ -99,6 +175,11 @@ model SetlistSong {
   songId Int @map("song_id")
   orderIndex Int @map("order_index")
   fanchant String? @db.Text
+  songTitle String @db.VarChar(50) @map("song_title")
+  setlistTitle String @db.VarChar(300) @map("setlist_title")
+  setlistDate String @db.VarChar(20) @map("setlist_date")
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
 
   setlist Setlist @relation(fields: [setlistId],references: [id])
   song Song @relation(fields: [songId],references:[id])
@@ -113,10 +194,11 @@ model Song{
   id Int @id @default(autoincrement())
   title String @db.VarChar(50) 
   artist String @db.VarChar(50)
-  imgUrl String? @db.VarChar(2048) @map("img_url")
   lyrics String? @db.Text
   pronunciation String? @db.Text
   translation String? @db.Text
+  youtubeUrl String? @db.VarChar(2048) @map("youtube_url")
+  imgUrl String? @db.VarChar(2048) @map("img_url")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
   
