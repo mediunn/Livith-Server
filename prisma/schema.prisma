@@ -197,7 +197,7 @@ model Song{
   lyrics String? @db.Text
   pronunciation String? @db.Text
   translation String? @db.Text
-  youtubeUrl String? @db.VarChar(2048) @map("youtube_url")
+  youtubeId String? @db.VarChar(200) @map("youtube_id")
   imgUrl String? @db.VarChar(2048) @map("img_url")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
