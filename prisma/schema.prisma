@@ -30,7 +30,7 @@ model Concert {
   poster String? @db.VarChar(2048)
   artist String? @db.VarChar(100)
   sortedIndex Int? @map("sorted_index") @unique
-  ticketSite Int? @map("ticket_site")
+  ticketSite String? @db.VarChar(50) @map("ticket_site")
   ticketUrl String? @db.VarChar(2048) @map("ticket_url")
   venue String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
