@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../../app.module';
+import { AppModuleV1 } from '../app.module';
 import { CultureUploadService } from './culture-upload.service';
 import { SetlistUploadService } from './setlist-upload.service';
 import { ConcertSetlistUploadService } from './concert-setlist-upload.service';
@@ -7,7 +7,7 @@ import { SongUploadService } from './song-upload.service';
 import { SetlistSongsUploadService } from './setlist-song-upload.service';
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
+  const app = await NestFactory.createApplicationContext(AppModuleV1);
   const cultureService = app.get(CultureUploadService);
   const setlistService = app.get(SetlistUploadService);
   const concertSetlistService = app.get(ConcertSetlistUploadService);
