@@ -11,6 +11,9 @@ export class ConcertResponseDto {
   status: Concert['status'];
   daysLeft: number;
   sortedIndex: number;
+  ticketSite: string;
+  ticketUrl: string;
+  venue: string;
 
   constructor(concert: Concert, daysLeft: number) {
     this.id = concert.id;
@@ -23,5 +26,8 @@ export class ConcertResponseDto {
     this.artist = concert.artist;
     this.sortedIndex = concert.sortedIndex;
     this.daysLeft = daysLeft;
+    this.ticketSite = concert.ticketSite;
+    this.ticketUrl = concert.ticketUrl;
+    this.venue = concert.venue;
   }
 }
