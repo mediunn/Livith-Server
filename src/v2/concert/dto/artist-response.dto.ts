@@ -1,3 +1,5 @@
+import { Artist } from '@prisma/client';
+
 export class ArtistResponseDto {
   id: number;
   artist: string;
@@ -9,17 +11,7 @@ export class ArtistResponseDto {
   keywords: string[];
   imgUrl: string;
 
-  constructor(artist: {
-    id: number;
-    artist: string;
-    birthDate: string;
-    birthPlace: string;
-    category: string;
-    detail: string;
-    instagramUrl: string;
-    keywords: string;
-    imgUrl: string;
-  }) {
+  constructor(artist: Artist) {
     this.id = artist.id;
     this.artist = artist.artist;
     this.birthDate = artist.birthDate;
