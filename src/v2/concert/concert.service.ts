@@ -5,6 +5,7 @@ import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { getDaysUntil } from '../common/utils/date.util';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { ArtistResponseDto } from './dto/artist-response.dt';
+import { CultureResponseDto } from './dto/culture-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -122,5 +123,26 @@ export class ConcertService {
     }
 
     return new ArtistResponseDto(artist);
+  }
+
+  // 콘서트에 해당하는 문화 조회
+  async getConcertCulture(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    // 문화 조회
+    const cultures = await this.prismaService.culture.findMany({
+      where: {
+        concertId: id,
+      },
+    });
+
+    return cultures.map((culture) => new CultureResponseDto(culture));
   }
 }
