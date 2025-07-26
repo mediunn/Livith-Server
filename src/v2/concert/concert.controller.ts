@@ -55,11 +55,11 @@ export class ConcertController {
     return this.concertService.getConcertArtist(id);
   }
 
-  // 콘서트에 해당하는 문화 조회
+  // 콘서트에 해당하는 문화 목록 조회
   @Get(':id/cultures')
   @ApiOperation({
-    summary: '특정 콘서트 문화 조회',
-    description: '특정 콘서트에 해당하는 문화를 조회합니다.',
+    summary: '특정 콘서트 문화 목록 조회',
+    description: '특정 콘서트에 해당하는 문화 목록을 조회합니다.',
   })
   @ApiParam({
     name: 'id',
@@ -69,5 +69,21 @@ export class ConcertController {
   })
   getConcertCulture(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertCulture(id);
+  }
+
+  // 콘서트에 해당하는 MD 목록 조회
+  @Get(':id/mds')
+  @ApiOperation({
+    summary: '특정 콘서트 MD 목록 조회',
+    description: '특정 콘서트에 해당하는 MD 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertMds(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertMds(id);
   }
 }
