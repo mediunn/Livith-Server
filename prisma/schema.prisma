@@ -136,11 +136,9 @@ model ConcertSetlist{
   concertId Int @map("concert_id")
   setlistId Int @map("setlist_id")
   type SetlistType @default(ONGOING)
-  status String @db.VarChar(10)
-  concertTitle String @db.VarChar(300) @map("concert_title")
-  setlistTitle String @db.VarChar(300) @map("setlist_title")
-  concertDate String @db.VarChar(20) @map("concert_date")
-  setlistDate String @db.VarChar(20) @map("setlist_date")
+  status String? @db.VarChar(10)
+  concertTitle String? @db.VarChar(300) @map("concert_title")
+  setlistTitle String? @db.VarChar(300) @map("setlist_title")
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
@@ -154,7 +152,7 @@ model ConcertSetlist{
 model Setlist {
   id Int @id @default(autoincrement())
   title String @db.VarChar(300)
-  startDate String @db.VarChar(20)@map("start_date")
+  startDate String @db.VarChar(20) @map("start_date")
   endDate String @db.VarChar(20) @map("end_date")
   imgUrl String? @db.VarChar(2048) @map("img_url")
   artist String? @db.VarChar(100)
