@@ -86,4 +86,20 @@ export class ConcertController {
   getConcertMds(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertMds(id);
   }
+
+  // 콘서트 필수 정보 목록 조회
+  @Get(':id/info')
+  @ApiOperation({
+    summary: '특정 콘서트 필수 정보 목록 조회',
+    description: '특정 콘서트에 해당하는 필수 정보 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertInfo(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertInfos(id);
+  }
 }
