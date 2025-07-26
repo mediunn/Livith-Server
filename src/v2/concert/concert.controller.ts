@@ -24,4 +24,10 @@ export class ConcertController {
   getConcertDetails(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertDetails(id);
   }
+
+  // 콘서트의 아티스트 정보 조회
+  @Get(':id/artist')
+  getConcertArtist(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertArtist(id);
+  }
 }
