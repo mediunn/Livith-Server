@@ -8,8 +8,8 @@ import { ArtistResponseDto } from './dto/artist-response.dto';
 import { CultureResponseDto } from './dto/culture-response.dto';
 import { MDResponseDto } from './dto/md-response.dto';
 import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
-import { ScheduleResponseDto } from 'src/v1/concert/dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
+import { ScheduleResponseDto } from './dto/schedule-response.dto';
 
 @Injectable()
 export class ConcertService {
