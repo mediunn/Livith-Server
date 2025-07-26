@@ -42,7 +42,8 @@ jobs:
         run: |
           ssh livith_ec2 'sudo mkdir -p /opt/app'
           ssh livith_ec2 'sudo chown ubuntu:ubuntu /opt/app'
-          scp -r ./[!.]* livith_ec2:/opt/app
+          # scp -r ./[!.]* livith_ec2:/opt/app
+          rsync -av --exclude='src/v1' ./ livith_ec2:/opt/app
 
       - name: Install dependencies
         run: |
