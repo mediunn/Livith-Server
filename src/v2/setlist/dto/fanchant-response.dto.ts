@@ -10,8 +10,10 @@ export class FanchantResponseDto {
     this.id = setlistSong.id;
     this.setlistId = setlistSong.setlistId;
     this.songId = setlistSong.songId;
-    this.fanchant = setlistSong.fanchant
-      ? setlistSong.fanchant.split(/\r?\n/)
-      : [];
+    const rawFanchant = setlistSong.fanchant ?? '';
+    this.fanchant = rawFanchant
+      .split(/\r?\n/) // 줄바꿈 기준 분할
+      .map((line) => line.trim()) // 앞뒤 공백 제거
+      .filter(Boolean); // 빈 줄 제거
   }
 }
