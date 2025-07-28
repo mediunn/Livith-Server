@@ -23,4 +23,29 @@ export class SetlistController {
   getSetlistSongs(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.setlistService.getSetlistSongs(id);
   }
+
+  //노래 응원법 조회
+  @Get(':setlistId/songs/:songId/fanchant')
+  @ApiOperation({
+    summary: '특정 셋리스트의 곡 응원법 조회',
+    description: '특정 셋리스트의 곡에 대한 응원법을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'setlistId',
+    description: '셋리스트의 ID',
+    type: Number,
+    example: 1,
+  })
+  @ApiParam({
+    name: 'songId',
+    description: '곡의 ID',
+    type: Number,
+    example: 1,
+  })
+  getSongFanchant(
+    @Param('setlistId', ParsePositiveIntPipe) setlistId: number,
+    @Param('songId', ParsePositiveIntPipe) songId: number,
+  ) {
+    return this.setlistService.getSongFanchant(setlistId, songId);
+  }
 }
