@@ -1,7 +1,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { SongService } from './song.service';
-import { ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('노래')
 @Controller('api/v2/songs')
 export class SongController {
   //특정 노래 가사 정보 조회
