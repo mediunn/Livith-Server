@@ -4,12 +4,12 @@ import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 import { SetlistService } from './setlist.service';
 
 @ApiTags('셋리스트')
-@Controller('setlist')
+@Controller('api/v2/setlist/')
 export class SetlistController {
   constructor(private readonly setlistService: SetlistService) {}
 
   //셋리스트 노래 목록 조회
-  @Get('api/v2/setlists/:id/songs')
+  @Get(':id/songs')
   @ApiOperation({
     summary: '특정 셋리스트의 곡 목록 조회',
     description: '특정 셋리스트의 곡 목록을 조회합니다.',
