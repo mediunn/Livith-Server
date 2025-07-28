@@ -134,4 +134,20 @@ export class ConcertController {
   getConcertSetlists(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertSetlists(id);
   }
+
+  // 콘서트의 대표 셋리스트 조회
+  @Get(':id/main-setlist')
+  @ApiOperation({
+    summary: '특정 콘서트 대표 셋리스트 조회',
+    description: '특정 콘서트에 해당하는 대표 셋리스트를 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertMainSetlist(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertMainSetlist(id);
+  }
 }
