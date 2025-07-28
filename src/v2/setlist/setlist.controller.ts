@@ -4,7 +4,7 @@ import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 import { SetlistService } from './setlist.service';
 
 @ApiTags('셋리스트')
-@Controller('api/v2/setlist/')
+@Controller('api/v2/setlists/')
 export class SetlistController {
   constructor(private readonly setlistService: SetlistService) {}
 
