@@ -275,4 +275,45 @@ export class ConcertService {
         new SetlistResponseDto(setlist.setlist, setlist.status, setlist.type),
     );
   }
+
+  // 콘서트의 대표 셋리스트 조회
+  async getConcertMainSetlist(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    const concertSetlist = await this.prismaService.concertSetlist.findMany({
+      where: {
+        concertId: id,
+      },
+      include: {
+        setlist: true,
+      },
+      orderBy: {
+        setlist: {
+          startDate: 'desc', // 셋리스트 시작일 기준 내림차순
+        },
+      },
+    });
+
+    //예상 셋리스트가 있는 경우
+    const expected = concertSetlist.find((item) => item.type === 'EXPECTED');
+
+    if (expected) {
+      return new SetlistResponseDto(expected.setlist, '대표', expected.type);
+    }
+    // 예상 셋리스트가 없는 경우, 가장 최근의 셋리스트를 대표로 설정
+    const recentSetlist = concertSetlist[0];
+
+    return new SetlistResponseDto(
+      recentSetlist.setlist,
+      '대표',
+      recentSetlist.type,
+    );
+  }
 }
