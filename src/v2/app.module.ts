@@ -5,7 +5,7 @@ import { ConcertModule } from 'src/v2/concert/concert.module';
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { SetlistModule } from './setlist/setlist.module';
 import { SongModule } from './song/song.module';
-import { SearchModule } from './search/search.module';
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { SearchModule } from './search/search.module';
     ConcertModule,
     SetlistModule,
     SongModule,
-    SearchModule,
+    CategoryModule,
   ],
   controllers: [],
   providers: [
