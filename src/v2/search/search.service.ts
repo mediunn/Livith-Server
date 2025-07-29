@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { getDaysUntil } from '../common/utils/date.util';
+import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 
 @Injectable()
 export class SearchService {
@@ -33,5 +35,39 @@ export class SearchService {
     });
 
     return filteredResults;
+  }
+
+  //검색 결과 조회
+  async getSearchResults(keyword: string, cursor: number, size: number) {
+    const whereCondition = {
+      OR: [{ title: { contains: keyword } }, { artist: { contains: keyword } }],
+    };
+
+    // 전체 개수
+    const totalCount = await this.prismaService.concert.count({
+      where: whereCondition,
+    });
+
+    const searchResults = await this.prismaService.concert.findMany({
+      where: whereCondition,
+      cursor: cursor ? { sortedIndex: cursor } : undefined,
+      take: size,
+      skip: cursor ? 1 : 0,
+      orderBy: { sortedIndex: 'asc' },
+    });
+
+    const nextCursor =
+      searchResults.length > 0
+        ? searchResults[searchResults.length - 1].sortedIndex
+        : null;
+
+    return {
+      data: searchResults.map(
+        (concert) =>
+          new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+      ),
+      cursor: nextCursor,
+      totalCount,
+    };
   }
 }
