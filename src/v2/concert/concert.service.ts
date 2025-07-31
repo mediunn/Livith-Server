@@ -260,8 +260,8 @@ export class ConcertService {
         idx === expectedItems.length &&
         (item.type === 'ONGOING' || item.type === 'PAST')
       ) {
-        // expectedItems 길이만큼 건너뛴 후 첫 번째 비예상 항목에 '최신' status 부여
-        status = '최신';
+        // expectedItems 길이만큼 건너뛴 후 첫 번째 비예상 항목에 '최근' status 부여
+        status = '최근';
       }
 
       return {
@@ -371,7 +371,7 @@ export class ConcertService {
     if (concertSetlist.type === 'EXPECTED') {
       status = '예상';
     } else if (setlist.id === latestSetlist?.setlist?.id) {
-      status = '최신';
+      status = '최근';
     }
 
     return new SetlistResponseDto(setlist, status, concertSetlist.type);
