@@ -209,6 +209,7 @@ model Banner {
   imgUrl String? @db.VarChar(2048) @map("img_url")
   category String? @db.VarChar(30)
   title String? @db.VarChar(50)
+  content String? @db.VarChar(100)
   createdAt DateTime @map("created_at") @default(now())
   updatedAt DateTime @map("updated_at") @updatedAt
 
