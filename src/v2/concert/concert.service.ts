@@ -301,6 +301,10 @@ export class ConcertService {
       },
     });
 
+    // 콘서트셋리스트가 없을 경우 예외 처리
+    if (concertSetlist.length === 0) {
+      return null;
+    }
     //예상 셋리스트가 있는 경우
     const expected = concertSetlist.find((item) => item.type === 'EXPECTED');
 
