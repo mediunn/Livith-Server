@@ -3,8 +3,8 @@ import { Artist } from '@prisma/client';
 export class ArtistResponseDto {
   id: number;
   artist: string;
-  birthDate: string;
-  birthPlace: string;
+  debutDate: string;
+  debutPlace: string;
   category: string;
   detail: string;
   instagramUrl: string;
@@ -14,8 +14,8 @@ export class ArtistResponseDto {
   constructor(artist: Artist) {
     this.id = artist.id;
     this.artist = artist.artist;
-    this.birthDate = artist.birthDate;
-    this.birthPlace = artist.birthPlace;
+    this.debutDate = artist.debutDate;
+    this.debutPlace = artist.debutPlace;
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
