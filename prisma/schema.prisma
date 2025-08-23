@@ -23,12 +23,18 @@ model Concert {
   ticketSite      String?          @map("ticket_site") @db.VarChar(50)
   ticketUrl       String?          @map("ticket_url") @db.VarChar(2048)
   venue           String?          @db.VarChar(100)
+  introduction    String?          @db.Text
+  label           String?          @db.VarChar(50)
+
   concertInfos    ConcertInfo[]
   concertSetlists ConcertSetlist[]
   artist_rel      Artist           @relation(fields: [artistId], references: [id])
   cultures        Culture[]
   mdItems         Md[]
   schedules       Schedule[]
+  homeConcertSections HomeConcertSection[]
+  searchConcertSections SearchConcertSection[]
+  concertGenre ConcertGenre[]
 
   @@index([sortedIndex])
   @@index([artistId], map: "concerts_artist_id_fkey")
@@ -149,6 +155,7 @@ model SetlistSong {
   songId       Int      @map("song_id")
   orderIndex   Int      @map("order_index")
   fanchant     String?  @db.Text
+  fancahnt_point String? @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   setlistDate  String   @map("setlist_date") @db.VarChar(20)
   setlistTitle String   @map("setlist_title") @db.VarChar(300)
@@ -191,6 +198,81 @@ model Banner {
   @@map("banners")
 }
 
+model HomeConcertSection {
+  id    Int @id @default(autoincrement())
+  homeSectionId Int  @map("home_section_id")
+  concertId Int @map("concert_id")
+  sectionTitle String @db.VarChar(30) @map("section_title")
+  concertTitle String @db.VarChar(300) @map("concert_title")
+  sortedIndex Int @map("sorted_index")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  concert Concert @relation(fields: [concertId], references: [id])
+  homeSection HomeSection @relation(fields: [homeSectionId], references: [id])
+
+  @@map("home_concert_sections")
+}
+
+model HomeSection {
+  id Int @id @default(autoincrement())
+  sectionTitle String @db.VarChar(30) @map("section_title")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  homeConcertSections HomeConcertSection[]
+
+  @@map("home_sections")
+}
+
+model SearchConcertSection {
+  id    Int @id @default(autoincrement())
+  searchSectionId Int  @map("search_section_id")
+  concertId Int @map("concert_id")
+  sectionTitle String @db.VarChar(30) @map("section_title")
+  concertTitle String @db.VarChar(300) @map("concert_title")
+  sortedIndex Int @map("sorted_index")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  concert Concert @relation(fields: [concertId], references: [id])
+  searchSection SearchSection @relation(fields: [searchSectionId], references: [id])
+
+  @@map("search_concert_sections")
+}
+
+model SearchSection {
+  id Int @id @default(autoincrement())
+  sectionTitle String @db.VarChar(30) @map("section_title")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  searchConcertSections SearchConcertSection[]
+
+  @@map("search_sections")
+}
+
+model ConcertGenre {
+  id        Int      @id @default(autoincrement())
+  concertId Int
+  genreId   Int
+
+  concert   Concert  @relation(fields: [concertId], references: [id])
+  genre     Genre    @relation(fields: [genreId], references: [id])
+
+  @@unique([concertId, genreId])
+  @@map("concert_genres")
+}
+
+model Genre {
+  id       Int        @id @default(autoincrement())
+  name     GenreType  @unique
+
+  concertGenre ConcertGenre[]
+
+  @@map("genres")
+}
+
 enum ConcertStatus {
   ONGOING
   UPCOMING
@@ -201,4 +283,13 @@ enum SetlistType {
   ONGOING
   PAST
   EXPECTED
+}
+
+enum GenreType {
+  J_POP
+  ROCK_METAL
+  RAP_HIPHOP
+  CLASSIC_JAZZ
+  ACOUSTIC
+  ELECTRONIC
 }
