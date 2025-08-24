@@ -101,4 +101,20 @@ export class ConcertController {
   getConcertInfo(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.concertService.getConcertInfos(id);
   }
+
+  // 콘서트 일정 목록 조회
+  @Get(':id/schedule')
+  @ApiOperation({
+    summary: '특정 콘서트 일정 목록 조회',
+    description: '특정 콘서트에 해당하는 일정 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertSchedule(@Param('id', ParsePositiveIntPipe) id: number) {
+    return this.concertService.getConcertSchedule(id);
+  }
 }
