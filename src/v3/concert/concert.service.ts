@@ -9,6 +9,7 @@ import { CultureResponseDto } from './dto/culture-response.dto';
 import { MDResponseDto } from './dto/md-response.dto';
 import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
+import { SetlistResponseDto } from './dto/setlist-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -211,5 +212,67 @@ export class ConcertService {
     });
 
     return schedules.map((schedule) => new ScheduleResponseDto(schedule));
+  }
+
+  // 콘서트 셋리스트 목록 조회
+  async getConcertSetlists(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+    // ConcertSetlist 기준으로 연결된 Setlist 가져오기
+    const concertSetlists = await this.prismaService.concertSetlist.findMany({
+      where: {
+        concertId: id,
+      },
+      include: {
+        setlist: true,
+      },
+      orderBy: {
+        setlist: {
+          startDate: 'desc', // 셋리스트 시작일 기준 내림차순 정렬
+        },
+      },
+    });
+
+    // 셋리스트 타입별로 분류
+    const expectedItems = concertSetlists.filter(
+      (item) => item.type === 'EXPECTED',
+    );
+    const otherItems = concertSetlists.filter(
+      (item) => item.type !== 'EXPECTED',
+    );
+
+    // EXPECTED 타입의 셋리스트를 맨 앞으로 정렬
+    const sortedSetlists = [...expectedItems, ...otherItems];
+
+    // status 가공
+    const transformed = sortedSetlists.map((item, idx) => {
+      let status = null;
+
+      if (item.type === 'EXPECTED') {
+        status = '예상';
+      } else if (
+        idx === expectedItems.length &&
+        (item.type === 'ONGOING' || item.type === 'PAST')
+      ) {
+        // expectedItems 길이만큼 건너뛴 후 첫 번째 비예상 항목에 '최근' status 부여
+        status = '최근';
+      }
+
+      return {
+        ...item,
+        status,
+      };
+    });
+
+    return transformed.map(
+      (setlist) =>
+        new SetlistResponseDto(setlist.setlist, setlist.status, setlist.type),
+    );
   }
 }
