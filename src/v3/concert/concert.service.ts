@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConcertFilter } from '../common/enums/concert-filter.enum';
 import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
@@ -74,5 +74,21 @@ export class ConcertService {
       data: concertResponse,
       cursor: nextCursor,
     };
+  }
+
+  // 콘서트 상세 조회
+  async getConcertDetails(id: number) {
+    const concert = await this.prismaService.concert.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    // 콘서트가 없을 경우 예외 처리
+    if (!concert) {
+      throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
+    }
+
+    return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
   }
 }
