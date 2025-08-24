@@ -4,6 +4,7 @@ import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
+import { ArtistResponseDto } from './dto/artist-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -90,5 +91,36 @@ export class ConcertService {
     }
 
     return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
+  }
+
+  // 콘서트의 아티스트 정보 조회
+  async getConcertArtist(id: number) {
+    const artistId = await this.prismaService.concert.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        artistId: true,
+      },
+    });
+
+    // 콘서트가 없을 경우 예외 처리
+    if (!artistId) {
+      throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
+    }
+
+    // 아티스트 정보 조회
+    const artist = await this.prismaService.artist.findUnique({
+      where: {
+        id: artistId.artistId,
+      },
+    });
+
+    // 아티스트가 없을 경우 예외 처리
+    if (!artist) {
+      throw new NotFoundException(`해당 아티스트를 찾을 수 없습니다.`);
+    }
+
+    return new ArtistResponseDto(artist);
   }
 }
