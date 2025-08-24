@@ -8,6 +8,7 @@ import { ArtistResponseDto } from './dto/artist-response.dto';
 import { CultureResponseDto } from './dto/culture-response.dto';
 import { MDResponseDto } from './dto/md-response.dto';
 import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
+import { ScheduleResponseDto } from './dto/schedule-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -187,5 +188,28 @@ export class ConcertService {
     });
 
     return concertInfos.map((info) => new ConcertInfoResponseDto(info));
+  }
+
+  // 콘서트 일정 목록 조회
+  async getConcertSchedule(id: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    const schedules = await this.prismaService.schedule.findMany({
+      where: {
+        concertId: id,
+      },
+      orderBy: {
+        scheduledAt: 'asc',
+      },
+    });
+
+    return schedules.map((schedule) => new ScheduleResponseDto(schedule));
   }
 }
