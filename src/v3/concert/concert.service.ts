@@ -320,4 +320,64 @@ export class ConcertService {
       recentSetlist.type,
     );
   }
+
+  // 콘서트의 셋리스트 상세 조회
+  async getSetlistDetails(setlistId: number, concertId: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
+
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    // 셋리스트 ID가 유효한지 확인
+    const setlist = await this.prismaService.setlist.findUnique({
+      where: { id: setlistId },
+    });
+    if (!setlist) {
+      throw new NotFoundException('해당 셋리스트가 존재하지 않습니다.');
+    }
+
+    // 콘서트 ID와 셋리스트 ID가 일치하는 콘서트셋리스트 확인
+    const concertSetlist = await this.prismaService.concertSetlist.findFirst({
+      where: {
+        setlistId: setlistId,
+        concertId: concertId,
+      },
+    });
+
+    // 콘서트셋리스트가 없을 경우 예외 처리
+    if (!concertSetlist) {
+      throw new NotFoundException(
+        '해당 셋리스트와 콘서트의 조합이 존재하지 않습니다.',
+      );
+    }
+    // 해당 콘서트의 모든 셋리스트 중 가장 startDate가 최신인 것 찾기
+    const latestSetlist = await this.prismaService.concertSetlist.findFirst({
+      where: {
+        concertId,
+      },
+      orderBy: {
+        setlist: {
+          startDate: 'desc',
+        },
+      },
+      include: {
+        setlist: true,
+      },
+    });
+
+    // status 가공
+    let status: string | null = null;
+
+    if (concertSetlist.type === 'EXPECTED') {
+      status = '예상';
+    } else if (setlist.id === latestSetlist?.setlist?.id) {
+      status = '최근';
+    }
+
+    return new SetlistResponseDto(setlist, status, concertSetlist.type);
+  }
 }
