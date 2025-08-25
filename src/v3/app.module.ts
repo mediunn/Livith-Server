@@ -4,6 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { ConcertModule } from './concert/concert.module';
 import { SetlistModule } from './setlist/setlist.module';
+import { SongModule } from 'src/v2/song/song.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SetlistModule } from './setlist/setlist.module';
     }),
     ConcertModule,
     SetlistModule,
+    SongModule,
   ],
   controllers: [],
   providers: [
