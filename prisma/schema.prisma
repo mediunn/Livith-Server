@@ -155,7 +155,7 @@ model SetlistSong {
   songId       Int      @map("song_id")
   orderIndex   Int      @map("order_index")
   fanchant     String?  @db.Text
-  fancahnt_point String? @db.Text
+  fanchant_point String? @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   setlistDate  String   @map("setlist_date") @db.VarChar(20)
   setlistTitle String   @map("setlist_title") @db.VarChar(300)
