@@ -36,6 +36,9 @@ model Concert {
   concertGenre ConcertGenre[]
 
   @@index([artistId], map: "concerts_artist_id_fkey")
+  @@unique([startDate, id])
+  @@unique([title, id])
+  
   @@fulltext([title, artist])
   @@map("concerts")
 }
