@@ -18,7 +18,6 @@ model Concert {
   artist          String?          @db.VarChar(100)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
-  sortedIndex     Int?             @unique @map("sorted_index")
   artistId        Int              @map("artist_id")
   ticketSite      String?          @map("ticket_site") @db.VarChar(50)
   ticketUrl       String?          @map("ticket_url") @db.VarChar(2048)
@@ -36,7 +35,6 @@ model Concert {
   searchConcertSections SearchConcertSection[]
   concertGenre ConcertGenre[]
 
-  @@index([sortedIndex])
   @@index([artistId], map: "concerts_artist_id_fkey")
   @@fulltext([title, artist])
   @@map("concerts")
@@ -95,6 +93,7 @@ model Schedule {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   concert     Concert  @relation(fields: [concertId], references: [id])
+  type ScheduleType?
 
   @@index([concertId], map: "schedule_concert_id_fkey")
   @@map("schedule")
@@ -292,4 +291,9 @@ enum GenreType {
   CLASSIC_JAZZ
   ACOUSTIC
   ELECTRONIC
+}
+
+enum ScheduleType {
+  CONCERT
+  TICKETING
 }
