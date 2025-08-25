@@ -10,7 +10,6 @@ export class ConcertResponseDto {
   poster: string;
   status: Concert['status'];
   daysLeft: number;
-  sortedIndex: number;
   ticketSite: string;
   ticketUrl: string;
   venue: string;
@@ -26,7 +25,6 @@ export class ConcertResponseDto {
     this.status = concert.status;
     this.poster = concert.poster;
     this.artist = concert.artist;
-    this.sortedIndex = concert.sortedIndex;
     this.daysLeft = daysLeft;
     this.ticketSite = concert.ticketSite;
     this.ticketUrl = concert.ticketUrl;
