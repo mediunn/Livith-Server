@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { ConcertModule } from './concert/concert.module';
+import { SetlistModule } from './setlist/setlist.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { ConcertModule } from './concert/concert.module';
       isGlobal: true,
     }),
     ConcertModule,
+    SetlistModule,
   ],
   controllers: [],
   providers: [

@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ConcertService } from './concert.service';
-import { ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { GetConcertsDto } from './dto/get-concerts.dto';
 import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 
+@ApiTags('콘서트')
 @Controller('api/v3/concerts')
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) {}
