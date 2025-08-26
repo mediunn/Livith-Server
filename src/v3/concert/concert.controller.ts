@@ -16,11 +16,7 @@ export class ConcertController {
     description: '콘서트 목록을 조회합니다.',
   })
   getConcerts(@Query() query: GetConcertsDto) {
-    return this.concertService.getConcerts(
-      query.filter,
-      query.cursor,
-      query.size,
-    );
+    return this.concertService.getConcerts(query.cursor, query.id, query.size);
   }
 
   // 콘서트 상세 조회
