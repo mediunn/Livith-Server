@@ -8,7 +8,7 @@ export class HomeController {
   constructor(private readonly homeService: HomeService) {}
 
   // 홈 화면 섹션 정보 조회
-  @Get()
+  @Get('/sections')
   @ApiOperation({
     summary: '홈 화면 섹션 정보 조회',
     description: '홈 화면 섹션 정보를 조회합니다.',
