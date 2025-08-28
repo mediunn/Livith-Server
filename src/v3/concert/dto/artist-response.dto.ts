@@ -4,7 +4,6 @@ export class ArtistResponseDto {
   id: number;
   artist: string;
   debutDate: string;
-  debutPlace: string;
   category: string;
   detail: string;
   instagramUrl: string;
@@ -15,7 +14,6 @@ export class ArtistResponseDto {
     this.id = artist.id;
     this.artist = artist.artist;
     this.debutDate = artist.debutDate;
-    this.debutPlace = artist.debutPlace;
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
