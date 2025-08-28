@@ -17,7 +17,6 @@ export class SearchController {
   }
 
   //추천 검색어 조회
-
   @Get('/suggestions')
   @ApiOperation({
     summary: '추천 검색어 조회',
@@ -34,5 +33,15 @@ export class SearchController {
       throw new BadRequestException('검색어(letter)는 필수입니다.');
     }
     return this.searchService.getRecommendWords(letter);
+  }
+
+  // 탐색 화면 섹션 정보 조회
+  @Get('/sections')
+  @ApiOperation({
+    summary: '탐색 화면 섹션 정보 조회',
+    description: '탐색 화면 섹션 정보를 조회합니다.',
+  })
+  async getSearchSections() {
+    return this.searchService.getSearchSections();
   }
 }

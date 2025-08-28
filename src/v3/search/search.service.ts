@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { BannerResponseDto } from './dto/banner-response.dto';
+import { SearchSectionResponseDto } from './dto/search-section-response.dto';
 
 @Injectable()
 export class SearchService {
@@ -39,5 +40,22 @@ export class SearchService {
     });
 
     return filteredResults;
+  }
+
+  // 탐색 화면 섹션 정보 조회
+  async getSearchSections() {
+    const sections = await this.prismaService.searchSection.findMany({
+      include: {
+        searchConcertSections: {
+          orderBy: {
+            sortedIndex: 'asc',
+          },
+          include: {
+            concert: true,
+          },
+        },
+      },
+    });
+    return sections.map((section) => new SearchSectionResponseDto(section));
   }
 }
