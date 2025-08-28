@@ -256,8 +256,10 @@ model SearchSection {
 
 model ConcertGenre {
   id        Int      @id @default(autoincrement())
-  concertId Int
-  genreId   Int
+  concertId Int @map("concert_id")
+  genreId   Int @map("genre_id")
+  concertTitle String @db.VarChar(300) @map("concert_title")
+  name GenreType
 
   concert   Concert  @relation(fields: [concertId], references: [id])
   genre     Genre    @relation(fields: [genreId], references: [id])
@@ -288,7 +290,7 @@ enum SetlistType {
 }
 
 enum GenreType {
-  J_POP
+  JPOP
   ROCK_METAL
   RAP_HIPHOP
   CLASSIC_JAZZ

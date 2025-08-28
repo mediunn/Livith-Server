@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SearchService } from './search.service';
+import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
 @ApiTags('탐색')
 @Controller('api/v3/search')
@@ -41,7 +42,24 @@ export class SearchController {
     summary: '탐색 화면 섹션 정보 조회',
     description: '탐색 화면 섹션 정보를 조회합니다.',
   })
-  async getSearchSections() {
+  getSearchSections() {
     return this.searchService.getSearchSections();
+  }
+
+  //필터에 따른 검색 결과 콘서트 목록 조회
+  @Get()
+  @ApiOperation({
+    summary: '필터에 따른 검색 결과 콘서트 목록 조회',
+    description: '필터에 따른 검색 결과 콘서트 목록을 조회합니다.',
+  })
+  getSearchResults(@Query() query: GetSearchResultsDto) {
+    return this.searchService.getSearchResults(
+      query.genre,
+      query.status,
+      query.sort,
+      query.keyword,
+      query.cursor,
+      query.size,
+    );
   }
 }
