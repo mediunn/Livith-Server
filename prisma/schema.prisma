@@ -47,7 +47,6 @@ model Artist {
   id           Int       @id @default(autoincrement())
   artist       String    @db.VarChar(100)
   debutDate    String?   @map("debut_date") @db.VarChar(30)
-  debutPlace   String?   @map("debut_place") @db.VarChar(100)
   category     String?   @db.VarChar(30)
   detail       String?   @db.Text
   instagramUrl String?   @map("instagram_url") @db.VarChar(2048)
