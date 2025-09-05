@@ -4,7 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 import { ConcertModule } from './concert/concert.module';
 import { SetlistModule } from './setlist/setlist.module';
-import { SongModule } from 'src/v2/song/song.module';
+import { SongModule } from 'src/v3/song/song.module';
 import { HomeModule } from './home/home.module';
 import { SearchModule } from './search/search.module';
 
