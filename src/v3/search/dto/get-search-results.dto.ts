@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ConcertGenre } from 'src/v3/common/enums/concert-genre.enum';
 import { ConcertSort } from 'src/v3/common/enums/concert-sort.enum';
 import { ConcertStatus } from 'src/v3/common/enums/concert-status.enum';
@@ -7,22 +8,26 @@ import { ConcertStatus } from 'src/v3/common/enums/concert-status.enum';
 export class GetSearchResultsDto {
   @ApiProperty({
     description: '장르',
+    isArray: true,
     default: 'ALL',
     enum: ConcertGenre,
     enumName: 'ConcertGenre',
 
     required: false,
-    example: 'ALL',
+    example: ['JPOP', 'ROCK_METAL'],
   })
   @IsEnum(ConcertGenre, {
+    each: true,
     message:
       'genre는 JPOP | ROCK_METAL | RAP_HIPHOP | CLASSIC_JAZZ | ACOUSTIC | ELECTRONIC | ALL 중 하나여야 해요',
   })
   @IsOptional()
-  genre?: ConcertGenre;
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  genre?: ConcertGenre[];
 
   @ApiProperty({
     description: '진행 상태',
+    isArray: true,
     default: 'ALL',
     enum: ConcertStatus,
     enumName: 'ConcertStatus',
@@ -30,10 +35,12 @@ export class GetSearchResultsDto {
     example: 'ALL',
   })
   @IsEnum(ConcertStatus, {
+    each: true,
     message: 'status는 ONGOING | UPCOMING | COMPLETED | ALL 중 하나여야 해요',
   })
   @IsOptional()
-  status?: ConcertStatus;
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  status?: ConcertStatus[];
 
   @ApiProperty({
     description: '정렬 기준',

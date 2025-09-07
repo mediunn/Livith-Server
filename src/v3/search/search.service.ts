@@ -8,6 +8,7 @@ import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { GenreType } from '@prisma/client';
+import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
 @Injectable()
 export class SearchService {
@@ -66,14 +67,9 @@ export class SearchService {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  async getSearchResults(
-    genre?: ConcertGenre,
-    status?: ConcertStatus,
-    sort?: ConcertSort,
-    keyword?: string,
-    cursor?: string,
-    size?: number,
-  ) {
+  async getSearchResults(query: GetSearchResultsDto) {
+    const { genre, status, sort, keyword, cursor, size } = query;
+
     // cursor 파싱
     let parsedCursor: { value: string; id: number } | undefined;
     if (cursor) {
@@ -114,15 +110,18 @@ export class SearchService {
       AND: [],
     };
 
-    if (status && status !== ConcertStatus.ALL) {
-      where.AND.push({ status });
+    if (status && !status.includes(ConcertStatus.ALL)) {
+      where.AND.push({ status: { in: status } });
     }
 
     // genre 조건 (Prisma enum 변환)
-    if (genre && genre !== ConcertGenre.ALL) {
-      const prismaGenre = GenreType[genre as keyof typeof GenreType];
+    if (genre && !genre.includes(ConcertGenre.ALL)) {
+      const prismaGenres = genre.map(
+        (g) => GenreType[g as keyof typeof GenreType],
+      );
+
       where.AND.push({
-        concertGenre: { some: { genre: { name: prismaGenre } } },
+        concertGenre: { some: { genre: { name: { in: prismaGenres } } } },
       });
     }
 
