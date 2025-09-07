@@ -53,13 +53,6 @@ export class SearchController {
     description: '필터에 따른 검색 결과 콘서트 목록을 조회합니다.',
   })
   getSearchResults(@Query() query: GetSearchResultsDto) {
-    return this.searchService.getSearchResults(
-      query.genre,
-      query.status,
-      query.sort,
-      query.keyword,
-      query.cursor,
-      query.size,
-    );
+    return this.searchService.getSearchResults(query);
   }
 }
