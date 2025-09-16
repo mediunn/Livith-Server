@@ -31,7 +31,11 @@ async function bootstrap() {
 
   //cors 설정
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://www.livith.site'], // 클라이언트 주소 정확히 명시
+    origin: [
+      'http://localhost:5173',
+      'https://www.livith.site',
+      'https://staging.livith.site',
+    ], // 클라이언트 주소 정확히 명시
     credentials: true, // 자격 정보 허용
   });
 
