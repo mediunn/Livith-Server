@@ -1,4 +1,4 @@
-name: deploy-develop
+name: deploy
 
 on:
   push:
@@ -27,41 +27,57 @@ jobs:
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          cat >>~/.ssh/config <<END
-          Host livith_ec2
-            HostName $EC2_HOST
-            User $EC2_USER
-            IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
-          END
+          if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
+            cat >>~/.ssh/config <<END
+            Host dev_livith_ec2
+              HostName $DEV_EC2_HOST
+              User $EC2_USER
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking no
+            END
+          else
+            cat >>~/.ssh/config <<END
+            Host livith_ec2
+              HostName $PROD_EC2_HOST
+              User $EC2_USER
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking no
+            END
+          fi
         env:
           EC2_USER: ubuntu
-          EC2_HOST: ${{ startsWith(github.ref, 'refs/heads/develop') && secrets.DEV_EC2_HOST || secrets.PROD_EC2_HOST }}
+          DEV_EC2_HOST: ${{ secrets.DEV_EC2_HOST }}
+          PROD_EC2_HOST: ${{ secrets.PROD_EC2_HOST }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Copy Workspace
         run: |
-          ssh livith_ec2 'sudo mkdir -p /opt/app'
-          ssh livith_ec2 'sudo chown ubuntu:ubuntu /opt/app'
-          # scp -r ./[!.]* livith_ec2:/opt/app
-          rsync -av --exclude='src/v1' ./ livith_ec2:/opt/app
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'sudo mkdir -p /opt/app'
+          ssh $TARGET 'sudo chown ubuntu:ubuntu /opt/app'
+          rsync -av --exclude='src/v1' ./ $TARGET:/opt/app
 
       - name: Install dependencies
         run: |
-          ssh livith_ec2 'npm install --prefix /opt/app/'
-          ssh livith_ec2 'cd /opt/app; npm exec prisma generate'
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'npm install --prefix /opt/app/'
+          ssh $TARGET 'cd /opt/app; npm exec prisma generate'
 
       - name: Build project
         run: |
-          ssh livith_ec2 'cd /opt/app; npm run build'
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'cd /opt/app; npm run build'
 
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'
         run: |
-          ssh livith_ec2 'cd /opt/app; npm exec prisma migrate deploy'
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'cd /opt/app; npm exec prisma migrate deploy'
+
       - name: Copy systemd service file
         run: |
-          ssh livith_ec2 '
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET '
             echo "[Unit]
             Description=Livith Project
             After=network.target
@@ -77,9 +93,11 @@ jobs:
 
       - name: Enable systemd service
         run: |
-          ssh livith_ec2 'sudo systemctl daemon-reload'
-          ssh livith_ec2 'sudo systemctl enable app'
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'sudo systemctl daemon-reload'
+          ssh $TARGET 'sudo systemctl enable app'
 
       - name: Restart systemd service
         run: |
-          ssh livith_ec2 'sudo systemctl restart app'
+          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
+          ssh $TARGET 'sudo systemctl restart app'
