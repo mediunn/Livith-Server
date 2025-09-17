@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - main
   workflow_dispatch:
 
 jobs:
@@ -35,7 +36,7 @@ jobs:
           END
         env:
           EC2_USER: ubuntu
-          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_HOST: ${{ startsWith(github.ref, 'refs/heads/develop') && secrets.DEV_EC2_HOST || secrets.PROD_EC2_HOST }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Copy Workspace
