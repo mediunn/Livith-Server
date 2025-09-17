@@ -28,21 +28,21 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
 
           if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
-            cat >>~/.ssh/config <<END
-            Host dev_livith_ec2
-              HostName $DEV_EC2_HOST
-              User $EC2_USER
-              IdentityFile ~/.ssh/id_rsa
-              StrictHostKeyChecking no
-            END
+          cat <<EOF > ~/.ssh/config
+          Host dev_livith_ec2
+            HostName $DEV_EC2_HOST
+            User $EC2_USER
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+          EOF
           else
-            cat >>~/.ssh/config <<END
-            Host livith_ec2
-              HostName $PROD_EC2_HOST
-              User $EC2_USER
-              IdentityFile ~/.ssh/id_rsa
-              StrictHostKeyChecking no
-            END
+          cat <<EOF > ~/.ssh/config
+          Host livith_ec2
+            HostName $PROD_EC2_HOST
+            User $EC2_USER
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+          EOF
           fi
         env:
           EC2_USER: ubuntu
