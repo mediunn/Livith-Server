@@ -34,6 +34,8 @@ model Concert {
   homeConcertSections HomeConcertSection[]
   searchConcertSections SearchConcertSection[]
   concertGenre ConcertGenre[]
+  user User?
+  concertComments ConcertComment[]
 
   @@index([artistId], map: "concerts_artist_id_fkey")
   @@unique([startDate, id])
@@ -276,6 +278,65 @@ model Genre {
   @@map("genres")
 }
 
+model User {
+  id       Int        @id @default(autoincrement())
+  interestConcertId Int? @unique @map("interest_concert_id")
+  provider   Provider
+  providerId Int  @map("provider_id") // 소셜에서 제공하는 유저 ID
+  email      String?  @db.VarChar(255)
+  nickname   String?  @unique @db.VarChar(50)
+  marketingConsent MarketingConsent @default(NO) @map("marketing_consent") 
+  refreshToken String? @db.Text @map("refresh_token")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  concert Concert? @relation(fields: [interestConcertId], references:[id])
+  
+  concertComments ConcertComment[]
+  
+  @@map("users")
+}
+
+model ConcertComment {
+  id Int @id @default(autoincrement())
+  concertId Int @map("concert_id")
+  userId Int @map("user_id")
+  content String @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  concert Concert @relation(fields: [concertId], references:[id])
+  user User @relation(fields: [userId], references: [id])
+
+  reports Report[]
+
+  @@map("concert_comments")
+}
+
+model Report{
+  id Int @id @default(autoincrement())
+  commentId Int @map("comment_id")
+  content String @db.VarChar(300)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  concertComment ConcertComment @relation(fields: [commentId], references:[id])
+
+  @@map("reports")
+}
+
+model Resignation{
+  id Int @id @default(autoincrement())
+  content String @db.VarChar(300)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("resignations")
+}
+
+
+
 enum ConcertStatus {
   ONGOING
   UPCOMING
@@ -300,4 +361,14 @@ enum GenreType {
 enum ScheduleType {
   CONCERT
   TICKETING
+}
+
+enum Provider {
+  kakao
+  apple
+}
+
+enum MarketingConsent {
+  YES
+  NO
 }
