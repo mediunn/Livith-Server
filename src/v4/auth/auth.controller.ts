@@ -12,7 +12,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import * as crypto from 'crypto';
 
-@Controller('auth')
+@Controller('api/v4/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
