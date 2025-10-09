@@ -5,6 +5,7 @@ import { GlobalResponseInterceptor } from './common/interceptors/global-response
 import { AuthModule } from './auth/auth.module';
 import { ConcertModule } from './concert/concert.module';
 import { HomeModule } from './home/home.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HomeModule } from './home/home.module';
     AuthModule,
     ConcertModule,
     HomeModule,
+    SearchModule,
   ],
   controllers: [],
   providers: [
