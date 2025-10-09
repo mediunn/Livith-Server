@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConcertModule } from './concert/concert.module';
 import { HomeModule } from './home/home.module';
 import { SearchModule } from './search/search.module';
+import { SetlistModule } from './setlist/setlist.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SearchModule } from './search/search.module';
     ConcertModule,
     HomeModule,
     SearchModule,
+    SetlistModule,
   ],
   controllers: [],
   providers: [
