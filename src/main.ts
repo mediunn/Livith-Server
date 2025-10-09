@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModuleV4 } from './v4/app.module';
+import cookieParser from 'cookie-parser';
 // import { ConcertSchedulerService } from './concert/concert-scheduler.service';
 // import { OpenApiService } from './open-api/open-api.service';
 
@@ -20,11 +21,12 @@ async function bootstrap() {
       },
     }),
   );
+  app.use(cookieParser());
 
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
     .setDescription('Livith API 문서입니다.')
-    .setVersion('2.0')
+    .setVersion('4.0')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
