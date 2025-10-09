@@ -7,6 +7,7 @@ import { ConcertModule } from './concert/concert.module';
 import { HomeModule } from './home/home.module';
 import { SearchModule } from './search/search.module';
 import { SetlistModule } from './setlist/setlist.module';
+import { SongModule } from './song/song.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SetlistModule } from './setlist/setlist.module';
     HomeModule,
     SearchModule,
     SetlistModule,
+    SongModule,
   ],
   controllers: [],
   providers: [
