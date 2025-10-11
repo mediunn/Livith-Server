@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from './dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
@@ -8,6 +12,7 @@ import { MDResponseDto } from './dto/md-response.dto';
 import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
+import { CommentResponseDto } from './dto/comment-response.dto';
 
 @Injectable()
 export class ConcertService {
@@ -340,5 +345,60 @@ export class ConcertService {
     }
 
     return new SetlistResponseDto(setlist, status, concertSetlist.type);
+  }
+
+  // 콘서트 댓글 목록 조회
+  async getConcertComments(id: number, cursor?: string, size?: number) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id },
+    });
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+
+    //댓글 전체 개수
+    const totalCount = await this.prismaService.concertComment.count({
+      where: { concertId: id },
+    });
+
+    let cursorValue;
+    if (cursor) {
+      try {
+        const parsed = JSON.parse(cursor);
+        cursorValue = {
+          createdAt: new Date(parsed.createdAt),
+          id: parsed.id,
+        };
+      } catch (e) {
+        throw new BadRequestException('유효하지 않은 cursor 형식입니다.');
+      }
+    }
+
+    const comments = await this.prismaService.concertComment.findMany({
+      where: { concertId: id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], //최신 댓글이 위로 오도록 정렬
+      cursor: cursorValue,
+      take: size,
+      skip: cursor ? 1 : 0,
+    });
+
+    const concertResponse = comments.map(
+      (comment) => new CommentResponseDto(comment),
+    );
+
+    const nextCursor =
+      comments.length > 0
+        ? {
+            createdAt: comments[comments.length - 1].createdAt,
+            id: comments[comments.length - 1].id,
+          }
+        : null;
+
+    return {
+      data: concertResponse,
+      cursor: nextCursor,
+      totalCount,
+    };
   }
 }
