@@ -36,8 +36,9 @@ export class CommentService {
 
     const deletedComment = await this.prismaService.concertComment.delete({
       where: { id: commentId },
+      include: { user: { select: { nickname: true } } },
     });
-    return new CommentResponseDto(deletedComment);
+    return new CommentResponseDto(deletedComment, deletedComment.user.nickname);
   }
 
   // 댓글 신고

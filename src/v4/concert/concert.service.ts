@@ -381,10 +381,13 @@ export class ConcertService {
       cursor: cursorValue,
       take: size,
       skip: cursor ? 1 : 0,
+      include: {
+        user: { select: { nickname: true } },
+      },
     });
 
     const concertResponse = comments.map(
-      (comment) => new CommentResponseDto(comment),
+      (comment) => new CommentResponseDto(comment, comment.user.nickname),
     );
 
     const nextCursor =
@@ -433,6 +436,6 @@ export class ConcertService {
       },
     });
 
-    return new CommentResponseDto(newComment);
+    return new CommentResponseDto(newComment, user.nickname);
   }
 }
