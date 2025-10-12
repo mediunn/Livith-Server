@@ -9,6 +9,7 @@ import { SearchModule } from './search/search.module';
 import { SetlistModule } from './setlist/setlist.module';
 import { SongModule } from './song/song.module';
 import { CommentModule } from './comment/comment.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CommentModule } from './comment/comment.module';
     SetlistModule,
     SongModule,
     CommentModule,
+    UserModule,
   ],
   controllers: [],
   providers: [
