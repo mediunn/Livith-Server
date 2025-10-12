@@ -415,6 +415,15 @@ export class ConcertService {
     if (!concert) {
       throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
     }
+
+    // 유저 ID가 유효한지 확인
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
     // 댓글 작성
     const newComment = await this.prismaService.concertComment.create({
       data: {

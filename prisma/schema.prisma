@@ -317,7 +317,7 @@ model ConcertComment {
 model Report{
   id Int @id @default(autoincrement())
   commentId Int @map("comment_id")
-  content String @db.VarChar(300)
+  content String? @db.VarChar(300)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
