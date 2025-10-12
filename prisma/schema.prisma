@@ -316,12 +316,16 @@ model ConcertComment {
 
 model Report{
   id Int @id @default(autoincrement())
-  commentId Int @map("comment_id")
-  content String? @db.VarChar(300)
+  commentId Int? @map("comment_id")
+  commentUserId Int @map("comment_user_id") // 댓글 작성자 ID
+  commentContent String @db.VarChar(500) @map("comment_content")
+
+  reportReason String? @db.VarChar(300) @map("report_reason")
+
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  concertComment ConcertComment @relation(fields: [commentId], references:[id])
+  concertComment ConcertComment? @relation(fields: [commentId], references:[id], onDelete: SetNull)
 
   @@map("reports")
 }
@@ -334,8 +338,6 @@ model Resignation{
 
   @@map("resignations")
 }
-
-
 
 enum ConcertStatus {
   ONGOING

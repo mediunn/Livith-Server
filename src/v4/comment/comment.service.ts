@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { CommentResponseDto } from './dto/comment-response.dto';
 import { ReportResponseDto } from './dto/report-response.dto';
 
 @Injectable()
@@ -34,15 +33,23 @@ export class CommentService {
       throw new ForbiddenException('본인의 댓글만 삭제할 수 있습니다.');
     }
 
-    const deletedComment = await this.prismaService.concertComment.delete({
-      where: { id: commentId },
-      include: { user: { select: { nickname: true } } },
+    // 신고 기록이 있는 경우에만 comment 내용과 userId 업데이트
+    await this.prismaService.report.updateMany({
+      where: { commentId: comment.id },
+      data: {
+        commentUserId: comment.userId,
+        commentContent: comment.content,
+      },
     });
-    return new CommentResponseDto(deletedComment, deletedComment.user.nickname);
+
+    await this.prismaService.concertComment.delete({
+      where: { id: commentId },
+    });
+    return;
   }
 
   // 댓글 신고
-  async reportComment(commentId: number, content: string) {
+  async reportComment(commentId: number, reason?: string) {
     const comment = await this.prismaService.concertComment.findUnique({
       where: { id: commentId },
     });
@@ -55,7 +62,9 @@ export class CommentService {
     const reportedComment = await this.prismaService.report.create({
       data: {
         commentId: commentId,
-        content: content,
+        reportReason: reason,
+        commentUserId: comment.userId,
+        commentContent: comment.content,
       },
     });
 
