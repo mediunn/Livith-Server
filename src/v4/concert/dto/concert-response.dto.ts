@@ -16,7 +16,7 @@ export class ConcertResponseDto {
   introduction: string;
   label: string;
 
-  constructor(concert: Concert, daysLeft: number) {
+  constructor(concert: Concert, daysLeft?: number) {
     this.id = concert.id;
     this.code = concert.code;
     this.title = concert.title;
