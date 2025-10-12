@@ -1,3 +1,5 @@
+import { ConcertComment } from '@prisma/client';
+
 export class CommentResponseDto {
   id: number;
   userId: number;
@@ -5,7 +7,7 @@ export class CommentResponseDto {
   content: string;
   createdAt: Date;
 
-  constructor(comment: any) {
+  constructor(comment: ConcertComment) {
     this.id = comment.id;
     this.userId = comment.userId;
     this.concertId = comment.concertId;

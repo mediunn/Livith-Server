@@ -12,7 +12,7 @@ import { MDResponseDto } from './dto/md-response.dto';
 import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
-import { CommentResponseDto } from './dto/comment-response.dto';
+import { CommentResponseDto } from '../comment/dto/comment-response.dto';
 
 @Injectable()
 export class ConcertService {
