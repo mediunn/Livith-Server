@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
+import { getDaysUntil } from '../common/utils/date.util';
 
 @Injectable()
 export class UserService {
@@ -33,5 +34,21 @@ export class UserService {
     });
 
     return new ConcertResponseDto(concert);
+  }
+
+  //관심 콘서트 조회
+  async getInterestConcert(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { concert: true },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    return new ConcertResponseDto(
+      user.concert,
+      getDaysUntil(user.concert.startDate),
+    );
   }
 }
