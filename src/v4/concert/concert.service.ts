@@ -401,4 +401,29 @@ export class ConcertService {
       totalCount,
     };
   }
+
+  // 콘서트 댓글 작성
+  async createConcertComment(
+    concertId: number,
+    userId: number,
+    content: string,
+  ) {
+    // 콘서트 ID가 유효한지 확인
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
+    if (!concert) {
+      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+    }
+    // 댓글 작성
+    const newComment = await this.prismaService.concertComment.create({
+      data: {
+        concertId,
+        userId,
+        content,
+      },
+    });
+
+    return new CommentResponseDto(newComment);
+  }
 }
