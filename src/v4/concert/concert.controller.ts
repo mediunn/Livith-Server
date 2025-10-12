@@ -1,8 +1,25 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ConcertService } from './concert.service';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { GetConcertsDto } from './dto/get-concerts.dto';
 import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
+import { GetCommentsDto } from './dto/get-comments.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateCommentDto } from './dto/create-comment.dto';
 
 @ApiTags('콘서트')
 @Controller('api/v4/concerts')
@@ -170,5 +187,52 @@ export class ConcertController {
     @Param('setlistId', ParsePositiveIntPipe) setlistId: number,
   ) {
     return this.concertService.getSetlistDetails(setlistId, concertId);
+  }
+
+  // 콘서트 댓글 목록 조회
+  @Get(':id/comments')
+  @ApiOperation({
+    summary: '특정 콘서트 댓글 목록 조회',
+    description: '특정 콘서트에 해당하는 댓글 목록을 조회합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  getConcertComments(
+    @Param('id', ParsePositiveIntPipe) id: number,
+    @Query() query: GetCommentsDto,
+  ) {
+    return this.concertService.getConcertComments(id, query.cursor, query.size);
+  }
+
+  // 콘서트 댓글 작성
+  @Post(':id/comments')
+  // 로그인한 사용자만 댓글 작성 가능
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '특정 콘서트 댓글 작성',
+    description: '특정 콘서트에 해당하는 댓글을 작성합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  createConcertComment(
+    @Param('id', ParsePositiveIntPipe) concertId: number,
+    @Body() dto: CreateCommentDto,
+    @Req() req,
+  ) {
+    const userId = req.user.userId;
+    return this.concertService.createConcertComment(
+      concertId,
+      userId,
+      dto.content,
+    );
   }
 }
