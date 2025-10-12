@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,5 +41,18 @@ export class UserController {
   async getInterestConcert(@Req() req) {
     const userId = req.user.userId;
     return this.userService.getInterestConcert(userId);
+  }
+
+  // 관심 콘서트 삭제
+  @Delete('interest-concert')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 삭제',
+    description: '유저의 관심 콘서트를 삭제합니다.',
+  })
+  async removeInterestConcert(@Req() req) {
+    const userId = req.user.userId;
+    return this.userService.removeInterestConcert(userId);
   }
 }

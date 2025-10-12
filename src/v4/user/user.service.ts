@@ -51,4 +51,21 @@ export class UserService {
       getDaysUntil(user.concert.startDate),
     );
   }
+
+  // 관심 콘서트 삭제
+  async removeInterestConcert(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { concert: true },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { interestConcertId: { set: null } },
+    });
+
+    return;
+  }
 }
