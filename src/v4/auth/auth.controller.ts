@@ -12,11 +12,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import * as crypto from 'crypto';
 
-@Controller('api/v4/auth')
+@Controller()
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Get('kakao')
+  @Get('api/v4/auth/kakao')
   async kakaoLogin(@Res() res: Response, @Query('client') client: string) {
     // client 정보 + CSRF 방어용 nonce를 state에 넣어서 인코딩
     const statePayload = {
@@ -30,7 +30,7 @@ export class AuthController {
     return res.redirect(kakaoAuthUrl);
   }
 
-  @Get('kakao/callback')
+  @Get('auth/kakao/callback')
   @UseGuards(AuthGuard('kakao'))
   async kakaoCallback(
     @Req() req,
@@ -81,7 +81,7 @@ export class AuthController {
     }
   }
 
-  @Post('refresh')
+  @Post('api/v4/auth/refresh')
   async refresh(
     @Req() req,
     @Res() res: Response,
@@ -108,7 +108,7 @@ export class AuthController {
     }
   }
 
-  @Post('logout')
+  @Post('api/v4/auth/logout')
   async logout(
     @Req() req,
     @Res() res: Response,
