@@ -8,6 +8,7 @@ import { HomeModule } from './home/home.module';
 import { SearchModule } from './search/search.module';
 import { SetlistModule } from './setlist/setlist.module';
 import { SongModule } from './song/song.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SongModule } from './song/song.module';
     SearchModule,
     SetlistModule,
     SongModule,
+    CommentModule,
   ],
   controllers: [],
   providers: [
