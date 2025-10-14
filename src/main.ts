@@ -38,6 +38,7 @@ async function bootstrap() {
   );
   app.use(cookieParser());
   app.useGlobalFilters(new GlobalExceptionFilter());
+
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'default_secret',
@@ -49,6 +50,8 @@ async function bootstrap() {
       }, // 1일
     }),
   );
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
 
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
