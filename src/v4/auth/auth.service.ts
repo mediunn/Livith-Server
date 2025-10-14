@@ -75,7 +75,6 @@ export class AuthService {
       data: { refreshToken },
     });
 
-    // 프론트로 액세스 토큰만 전달
     return { accessToken, refreshToken, isNewUser };
   }
 
