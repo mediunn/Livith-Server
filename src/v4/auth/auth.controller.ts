@@ -49,12 +49,13 @@ export class AuthController {
 
     console.log('d', decoded);
     console.log('s', state);
-    console.log('r', req.session.kakaoNounce);
+    console.log('r', req.session.kakaoNonce);
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
       console.log('d', decoded);
       console.log('s', state);
-      console.log('r', req.session.kakaoNounce);
+      console.log('r', req.session.kakaoNonce);
+      console.log('rs', req.session);
       throw new ForbiddenException('CSRF 검증 실패');
     }
 
