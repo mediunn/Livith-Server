@@ -47,15 +47,8 @@ export class AuthController {
     // state 디코딩
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
 
-    console.log('d', decoded);
-    console.log('s', state);
-    console.log('r', req.session.kakaoNonce);
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
-      console.log('d', decoded);
-      console.log('s', state);
-      console.log('r', req.session.kakaoNonce);
-      console.log('rs', req.session);
       throw new ForbiddenException('CSRF 검증 실패');
     }
 
