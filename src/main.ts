@@ -7,6 +7,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModuleV4 } from './v4/app.module';
 import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './v4/common/filters/global-exception.filter';
+import session from 'express-session';
+
 // import { ConcertSchedulerService } from './concert/concert-scheduler.service';
 // import { OpenApiService } from './open-api/open-api.service';
 
@@ -36,6 +38,17 @@ async function bootstrap() {
   );
   app.use(cookieParser());
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'default_secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24,
+        secure: process.env.NODE_ENV === 'production',
+      }, // 1일
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
