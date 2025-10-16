@@ -55,4 +55,17 @@ export class UserController {
     const userId = req.user.userId;
     return this.userService.removeInterestConcert(userId);
   }
+
+  // 유저 정보 조회
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저 정보 조회',
+    description: '현재 로그인한 유저의 정보를 조회합니다.',
+  })
+  async getUserInfo(@Req() req) {
+    const userId = req.user.userId;
+    return this.userService.getUserInfo(userId);
+  }
 }
