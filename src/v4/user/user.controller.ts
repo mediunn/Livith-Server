@@ -5,6 +5,7 @@ import {
   Get,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -84,5 +85,18 @@ export class UserController {
     const { nickname } = body;
 
     return this.userService.updateNickname(userId, nickname);
+  }
+
+  //닉네임 중복 확인
+  @Get('check-nickname')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '닉네임 중복 확인',
+    description: '닉네임을 중복 확인합니다.',
+  })
+  async checkNickname(@Req() req, @Query() query: UpdateNicknameDto) {
+    const userId = req.user.userId;
+    return this.userService.checkNickname(userId, query.nickname);
   }
 }
