@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -11,6 +12,7 @@ import { UserService } from './user.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
 
 @ApiTags('유저')
 @Controller('api/v4/users')
@@ -67,5 +69,20 @@ export class UserController {
   async getUserInfo(@Req() req) {
     const userId = req.user.userId;
     return this.userService.getUserInfo(userId);
+  }
+
+  // 닉네임 수정
+  @Patch('nickname')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '닉네임 수정',
+    description: '현재 로그인한 유저의 닉네임을 수정합니다.',
+  })
+  async updateNickname(@Req() req, @Body() body: UpdateNicknameDto) {
+    const userId = req.user.userId;
+    const { nickname } = body;
+
+    return this.userService.updateNickname(userId, nickname);
   }
 }

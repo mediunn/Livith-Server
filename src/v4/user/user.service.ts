@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
@@ -79,5 +83,31 @@ export class UserService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
     return new UserResponseDto(user);
+  }
+
+  //닉네임 변경
+  async updateNickname(userId, nickname) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    //닉네임 중복 확인
+    const duplicate = await this.prismaService.user.findUnique({
+      where: { nickname: nickname },
+    });
+
+    if (duplicate) {
+      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+    }
+
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: { nickname: nickname },
+    });
+
+    return new UserResponseDto(updatedUser);
   }
 }
