@@ -1,4 +1,4 @@
-import { MarketingConsent, User } from '@prisma/client';
+import { User } from '@prisma/client';
 
 export class UserResponseDto {
   id: number;
@@ -8,7 +8,7 @@ export class UserResponseDto {
   providerId: string;
   email: string;
   nickname: string;
-  marketingConsent: MarketingConsent;
+  marketingConsent: boolean;
 
   constructor(user: User) {
     this.id = user.id;
