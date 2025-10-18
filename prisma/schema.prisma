@@ -285,7 +285,7 @@ model User {
   providerId String  @map("provider_id") // 소셜에서 제공하는 유저 ID
   email      String?  @db.VarChar(255)
   nickname   String?  @unique @db.VarChar(50)
-  marketingConsent MarketingConsent @default(NO) @map("marketing_consent") 
+  marketingConsent Boolean?  @map("marketing_consent") 
   refreshToken String? @db.Text @map("refresh_token")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -368,9 +368,4 @@ enum ScheduleType {
 enum Provider {
   kakao
   apple
-}
-
-enum MarketingConsent {
-  YES
-  NO
 }

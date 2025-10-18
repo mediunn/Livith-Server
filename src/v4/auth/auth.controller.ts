@@ -16,9 +16,11 @@ import { Response } from 'express';
 import axios from 'axios';
 import * as crypto from 'crypto';
 import { KakaoMobileLoginDto } from './dto/kakao-mobile-login.dto';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Provider } from '@prisma/client';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { SignupDto } from './dto/signup.dto';
 
 @Controller()
 export class AuthController {
@@ -168,5 +170,23 @@ export class AuthController {
       });
     }
     return { message: '로그아웃 완료' };
+  }
+
+  //회원가입
+  @Post('api/v4/auth/signup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '회원가입',
+    description: '간편 로그인 이후 닉네임, 이메일 등 추가 정보를 저장합니다.',
+  })
+  @ApiBody({ type: SignupDto })
+  async signup(@Req() req, @Body() body) {
+    const userId = req.user.userId;
+    return this.authService.signup(
+      userId,
+      body.marketingConsent,
+      body.nickname,
+    );
   }
 }

@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
+import { UserResponseDto } from '../user/dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -61,7 +64,7 @@ export class AuthService {
           provider: profile.provider,
           providerId: String(profile.providerId),
           email: profile.email,
-          marketingConsent: 'NO',
+          marketingConsent: false,
         },
       });
       isNewUser = true; // 새 유저임 표시
@@ -117,5 +120,33 @@ export class AuthService {
       where: { id: payload.userId },
       data: { refreshToken: null },
     });
+  }
+
+  //회원가입
+  async signup(userId, marketingConsent, nickname) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    //닉네임 중복 확인
+    const existingUser = await this.prisma.user.findUnique({
+      where: { nickname },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        nickname,
+        marketingConsent,
+      },
+    });
+
+    return new UserResponseDto(updatedUser);
   }
 }
