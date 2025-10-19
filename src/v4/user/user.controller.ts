@@ -99,4 +99,14 @@ export class UserController {
     const userId = req.user.userId;
     return this.userService.checkNickname(userId, query.nickname);
   }
+
+  // 탈퇴한 유저 여부 확인
+  @Get('check-deleted')
+  @ApiOperation({
+    summary: '탈퇴한 유저 여부 확인',
+    description: '해당 유저가 탈퇴한 적이 있는지 확인합니다.',
+  })
+  async checkDeletedUser(@Query('providerId') providerId: string) {
+    return this.userService.checkDeletedUser(providerId);
+  }
 }
