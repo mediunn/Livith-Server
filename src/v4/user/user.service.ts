@@ -8,6 +8,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { UserResponseDto } from './dto/user-response.dto';
+import { Provider } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -128,9 +129,9 @@ export class UserService {
   }
 
   //탈퇴한 유저 여부 확인
-  async checkDeletedUser(providerId: string) {
+  async checkDeletedUser(providerId: string, provider: Provider) {
     const user = await this.prismaService.user.findUnique({
-      where: { providerId },
+      where: { providerId, provider },
     });
 
     if (!user) {
@@ -142,14 +143,6 @@ export class UserService {
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7)
         throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
-      const restoredUser = await this.prismaService.user.update({
-        where: { providerId },
-        data: { deletedAt: null },
-      });
-      return {
-        message: '탈퇴 후 7일이 지나 탈퇴 이력을 삭제하였습니다.',
-        user: new UserResponseDto(restoredUser),
-      };
     }
     return {
       message: '정상적인 유저입니다.',

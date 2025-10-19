@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { CheckDeletedUser } from './dto/check-deleted-user.dto';
 
 @ApiTags('유저')
 @Controller('api/v4/users')
@@ -106,7 +107,7 @@ export class UserController {
     summary: '탈퇴한 유저 여부 확인',
     description: '해당 유저가 탈퇴한 적이 있는지 확인합니다.',
   })
-  async checkDeletedUser(@Query('providerId') providerId: string) {
-    return this.userService.checkDeletedUser(providerId);
+  async checkDeletedUser(@Query() query: CheckDeletedUser) {
+    return this.userService.checkDeletedUser(query.providerId, query.provider);
   }
 }

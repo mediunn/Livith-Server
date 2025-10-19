@@ -39,7 +39,7 @@ export class AuthService {
 
   // OAuth 로그인 처리 및 토큰 발급
   async validateOAuthLogin(profile: any) {
-    let user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
         provider: profile.provider,
         providerId: String(profile.providerId),
@@ -53,15 +53,10 @@ export class AuthService {
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7)
         throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
-      // 7일 지났으면 복구 처리
-      user = await this.prisma.user.update({
-        where: { providerId: user.providerId },
-        data: { deletedAt: null },
-      });
     }
 
     // 새 유저일 경우
-    if (!user) {
+    if (!user || user.deletedAt) {
       return {
         isNewUser: true,
         tempUserData: {
@@ -141,10 +136,24 @@ export class AuthService {
     if (existingUser) {
       throw new BadRequestException('이미 존재하는 닉네임이에요.');
     }
-    // 회원가입 시점에 DB 생성
-    const user = await this.prisma.user.create({
-      data: { provider, providerId, email, nickname, marketingConsent },
+
+    // providerId 기준 기존 유저 확인
+    let user = await this.prisma.user.findFirst({
+      where: { provider, providerId },
     });
+
+    if (user) {
+      // 기존 탈퇴 유저 업데이트
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { provider, email, nickname, marketingConsent, deletedAt: null },
+      });
+    } else {
+      // 완전 신규 유저 생성
+      user = await this.prisma.user.create({
+        data: { provider, providerId, email, nickname, marketingConsent },
+      });
+    }
 
     //토큰 발급
     const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
