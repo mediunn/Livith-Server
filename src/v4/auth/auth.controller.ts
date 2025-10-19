@@ -16,10 +16,12 @@ import { Response } from 'express';
 import axios from 'axios';
 import * as crypto from 'crypto';
 import { KakaoMobileLoginDto } from './dto/kakao-mobile-login.dto';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Provider } from '@prisma/client';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SignupDto } from './dto/signup.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { WidthDrawDto } from './dto/withdraw.dto';
 
 @Controller()
 export class AuthController {
@@ -114,6 +116,7 @@ export class AuthController {
     });
   }
 
+  //토큰 재발급
   @Post('api/v4/auth/refresh')
   @ApiOperation({
     summary: '토큰 재발급',
@@ -148,6 +151,7 @@ export class AuthController {
     }
   }
 
+  //로그아웃
   @Post('api/v4/auth/logout')
   @ApiOperation({
     summary: '로그아웃',
@@ -208,5 +212,19 @@ export class AuthController {
     }
 
     return result;
+  }
+
+  //회원 탈퇴
+  @Post('api/v4/auth/withdraw')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description: '로그인한 유저를 탈퇴 처리합니다.',
+  })
+  @ApiBody({ type: WidthDrawDto })
+  async withdraw(@Body() body: WidthDrawDto, @Req() req) {
+    const userId = req.user.userId;
+    return this.authService.withdraw(userId, body.reason);
   }
 }

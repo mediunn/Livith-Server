@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -165,5 +166,33 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  //회원 탈퇴
+  async withdraw(userId, reason) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    // 이미 탈퇴한 유저 확인
+    if (user.deletedAt) {
+      throw new BadRequestException('이미 탈퇴한 회원입니다.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        deletedAt: new Date(),
+        refreshToken: null, // 탈퇴 시 토큰 무효화
+      },
+    });
+    await this.prisma.resignation.create({
+      data: {
+        content: reason,
+      },
+    });
+    return { message: '회원 탈퇴가 완료되었습니다.' };
   }
 }
