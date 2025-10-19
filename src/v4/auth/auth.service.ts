@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -53,32 +52,34 @@ export class AuthService {
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7)
         throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+      // 7일 지났으면 복구 처리
+      user = await this.prisma.user.update({
+        where: { providerId: user.providerId },
+        data: { deletedAt: null },
+      });
     }
 
-    let isNewUser = false;
-
-    // 새 유저 생성
+    // 새 유저일 경우
     if (!user) {
-      user = await this.prisma.user.create({
-        data: {
+      return {
+        isNewUser: true,
+        tempUserData: {
           provider: profile.provider,
           providerId: String(profile.providerId),
           email: profile.email,
-          marketingConsent: false,
         },
-      });
-      isNewUser = true; // 새 유저임 표시
+      };
     }
 
+    //기존 유저
     const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
-
     // 리프레시 토큰 DB 저장
     await this.prisma.user.update({
       where: { id: user.id },
       data: { refreshToken },
     });
 
-    return { accessToken, refreshToken, isNewUser };
+    return { accessToken, refreshToken, isNewUser: false };
   }
 
   // 리프레시 토큰으로 새로운 토큰 발급
@@ -123,13 +124,14 @@ export class AuthService {
   }
 
   //회원가입
-  async signup(userId, marketingConsent, nickname) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
-    }
+  async signup(
+    provider,
+    providerId,
+    email,
+    marketingConsent,
+    nickname,
+    client,
+  ) {
     //닉네임 중복 확인
     const existingUser = await this.prisma.user.findUnique({
       where: { nickname },
@@ -138,15 +140,30 @@ export class AuthService {
     if (existingUser) {
       throw new BadRequestException('이미 존재하는 닉네임이에요.');
     }
-
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        nickname,
-        marketingConsent,
-      },
+    // 회원가입 시점에 DB 생성
+    const user = await this.prisma.user.create({
+      data: { provider, providerId, email, nickname, marketingConsent },
     });
 
-    return new UserResponseDto(updatedUser);
+    //토큰 발급
+    const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken,
+      },
+    });
+    if (client === 'web') {
+      return {
+        user: new UserResponseDto(updatedUser),
+        accessToken,
+      };
+    }
+    return {
+      user: new UserResponseDto(updatedUser),
+      accessToken,
+      refreshToken,
+    };
   }
 }
