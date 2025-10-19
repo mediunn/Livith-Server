@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -124,5 +125,35 @@ export class UserService {
       where: { nickname },
     });
     return { available: !existingUser };
+  }
+
+  //탈퇴한 유저 여부 확인
+  async checkDeletedUser(providerId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { providerId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    if (user.deletedAt) {
+      const daysSinceDelete =
+        (new Date().getTime() - user.deletedAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      if (daysSinceDelete < 7)
+        throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+      const restoredUser = await this.prismaService.user.update({
+        where: { providerId },
+        data: { deletedAt: null },
+      });
+      return {
+        message: '탈퇴 후 7일이 지나 탈퇴 이력을 삭제하였습니다.',
+        user: new UserResponseDto(restoredUser),
+      };
+    }
+    return {
+      message: '정상적인 유저입니다.',
+      user: new UserResponseDto(user),
+    };
   }
 }
