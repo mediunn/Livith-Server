@@ -4,23 +4,23 @@ ALTER TABLE `concert_info` DROP FOREIGN KEY `concert_info_concert_id_fkey`;
 -- DropForeignKey
 ALTER TABLE `cultures` DROP FOREIGN KEY `cultures_concert_id_fkey`;
 
--- DropIndex
-DROP INDEX `uk_artist` ON `artists`;
+-- -- DropIndex
+-- DROP INDEX `uk_artist` ON `artists`;
 
--- DropIndex
-DROP INDEX `uk_concert_category` ON `concert_info`;
+-- -- DropIndex
+-- DROP INDEX `uk_concert_category` ON `concert_info`;
 
--- DropIndex
-DROP INDEX `uk_title` ON `concerts`;
+-- -- DropIndex
+-- DROP INDEX `uk_title` ON `concerts`;
 
--- DropIndex
-DROP INDEX `uk_concert_title` ON `cultures`;
+-- -- DropIndex
+-- DROP INDEX `uk_concert_title` ON `cultures`;
 
--- DropIndex
-DROP INDEX `uk_title_artist` ON `setlists`;
+-- -- DropIndex
+-- DROP INDEX `uk_title_artist` ON `setlists`;
 
--- DropIndex
-DROP INDEX `uk_title_artist` ON `songs`;
+-- -- DropIndex
+-- DROP INDEX `uk_title_artist` ON `songs`;
 
 -- CreateTable
 CREATE TABLE `users` (
