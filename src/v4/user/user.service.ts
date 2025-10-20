@@ -53,6 +53,10 @@ export class UserService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
 
+    if (!user.concert) {
+      return null;
+    }
+
     return new ConcertResponseDto(
       user.concert,
       getDaysUntil(user.concert.startDate),
