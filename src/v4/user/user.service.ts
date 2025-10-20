@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
+import { UserResponseDto } from './dto/user-response.dto';
+import { Provider } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -46,6 +53,10 @@ export class UserService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
 
+    if (!user.concert) {
+      return null;
+    }
+
     return new ConcertResponseDto(
       user.concert,
       getDaysUntil(user.concert.startDate),
@@ -67,5 +78,79 @@ export class UserService {
     });
 
     return;
+  }
+
+  // 유저 정보 조회
+  async getUserInfo(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    return new UserResponseDto(user);
+  }
+
+  //닉네임 변경
+  async updateNickname(userId, nickname) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    //닉네임 중복 확인
+    const duplicate = await this.prismaService.user.findUnique({
+      where: { nickname: nickname },
+    });
+
+    if (duplicate) {
+      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+    }
+
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: { nickname: nickname },
+    });
+
+    return new UserResponseDto(updatedUser);
+  }
+
+  //닉네임 중복확인
+  async checkNickname(userId, nickname) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    //닉네임 중복 확인
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { nickname },
+    });
+    return { available: !existingUser };
+  }
+
+  //탈퇴한 유저 여부 확인
+  async checkDeletedUser(providerId: string, provider: Provider) {
+    const user = await this.prismaService.user.findUnique({
+      where: { providerId, provider },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+    if (user.deletedAt) {
+      const daysSinceDelete =
+        (new Date().getTime() - user.deletedAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      if (daysSinceDelete < 7)
+        throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+    }
+    return {
+      message: '정상적인 유저입니다.',
+      user: new UserResponseDto(user),
+    };
   }
 }

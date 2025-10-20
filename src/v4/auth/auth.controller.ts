@@ -16,9 +16,12 @@ import { Response } from 'express';
 import axios from 'axios';
 import * as crypto from 'crypto';
 import { KakaoMobileLoginDto } from './dto/kakao-mobile-login.dto';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Provider } from '@prisma/client';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { SignupDto } from './dto/signup.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { WidthDrawDto } from './dto/withdraw.dto';
 
 @Controller()
 export class AuthController {
@@ -55,22 +58,31 @@ export class AuthController {
     // 세션에서 nonce 삭제
     delete req.session.kakaoNonce;
 
-    const { accessToken, refreshToken, isNewUser } =
-      await this.authService.validateOAuthLogin(req.user);
+    const result = await this.authService.validateOAuthLogin(req.user);
 
-    // 리프레시 토큰은 httpOnly 쿠키로 저장
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-      sameSite: 'strict',
-      maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
-    });
+    let payload: any;
+
+    if (result.isNewUser) {
+      // 신규 유저 -> 회원가입 페이지로 안내
+      payload = { isNewUser: true, tempUserData: result.tempUserData };
+    } else {
+      // 기존 유저 -> 토큰 발급
+      // 리프레시 토큰은 httpOnly 쿠키로 저장
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
+        sameSite: 'strict',
+        maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
+      });
+
+      payload = { accessToken: result.accessToken, isNewUser: false };
+    }
 
     return res.send(`
         <html>
           <body>
             <script>
-              const payload = ${JSON.stringify({ accessToken, isNewUser })};
+              const payload = ${JSON.stringify(payload)};
               if (window.opener) {
                 window.opener.postMessage(payload, '${process.env.FRONTEND_URL}');
                 window.close();
@@ -97,17 +109,14 @@ export class AuthController {
     }
 
     // 서버 JWT + refresh token 발급
-    const { accessToken, refreshToken, isNewUser } =
-      await this.authService.validateOAuthLogin({
-        provider: Provider.kakao,
-        providerId: String(userRes.data.id),
-        email: userRes.data.kakao_account?.email, // 동의했으면 email도 가능
-      });
-
-    // JSON 반환 → 앱에서 저장
-    return { accessToken, refreshToken, isNewUser };
+    return await this.authService.validateOAuthLogin({
+      provider: Provider.kakao,
+      providerId: String(userRes.data.id),
+      email: userRes.data.kakao_account?.email,
+    });
   }
 
+  //토큰 재발급
   @Post('api/v4/auth/refresh')
   @ApiOperation({
     summary: '토큰 재발급',
@@ -142,6 +151,7 @@ export class AuthController {
     }
   }
 
+  //로그아웃
   @Post('api/v4/auth/logout')
   @ApiOperation({
     summary: '로그아웃',
@@ -168,5 +178,53 @@ export class AuthController {
       });
     }
     return { message: '로그아웃 완료' };
+  }
+
+  //회원가입
+  @Post('api/v4/auth/signup')
+  @ApiOperation({
+    summary: '회원가입',
+    description: '간편 로그인 이후 닉네임, 이메일 등 추가 정보를 저장합니다.',
+  })
+  @ApiBody({ type: SignupDto })
+  async signup(
+    @Res({ passthrough: true }) res,
+    @Req() req,
+    @Body() body,
+    @Query('client') client: string,
+  ) {
+    const result = await this.authService.signup(
+      body.provider,
+      body.providerId,
+      body.email,
+      body.marketingConsent,
+      body.nickname,
+      client,
+    );
+    if (client === 'web') {
+      // 리프레시 토큰은 httpOnly 쿠키로 저장
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
+        sameSite: 'strict',
+        maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
+      });
+    }
+
+    return result;
+  }
+
+  //회원 탈퇴
+  @Post('api/v4/auth/withdraw')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description: '로그인한 유저를 탈퇴 처리합니다.',
+  })
+  @ApiBody({ type: WidthDrawDto })
+  async withdraw(@Body() body: WidthDrawDto, @Req() req) {
+    const userId = req.user.userId;
+    return this.authService.withdraw(userId, body.reason);
   }
 }
