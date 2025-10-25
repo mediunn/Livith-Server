@@ -118,13 +118,7 @@ export class UserService {
   }
 
   //닉네임 중복확인
-  async checkNickname(userId, nickname) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
-    }
+  async checkNickname(nickname) {
     //닉네임 중복 확인
     const existingUser = await this.prismaService.user.findUnique({
       where: { nickname },

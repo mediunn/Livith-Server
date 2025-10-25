@@ -90,15 +90,12 @@ export class UserController {
 
   //닉네임 중복 확인
   @Get('check-nickname')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: '닉네임 중복 확인',
     description: '닉네임을 중복 확인합니다.',
   })
-  async checkNickname(@Req() req, @Query() query: UpdateNicknameDto) {
-    const userId = req.user.userId;
-    return this.userService.checkNickname(userId, query.nickname);
+  async checkNickname(@Query() query: UpdateNicknameDto) {
+    return this.userService.checkNickname(query.nickname);
   }
 
   // 탈퇴한 유저 여부 확인
