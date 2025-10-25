@@ -22,6 +22,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { WidthDrawDto } from './dto/withdraw.dto';
+import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 
 @Controller()
 export class AuthController {
@@ -52,47 +53,38 @@ export class AuthController {
 
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
-      throw new ForbiddenException('CSRF 검증 실패');
+      delete req.session.kakaoNonce;
+      const payload = { error: 'CSRF 검증 실패' };
+      return sendPostMessagePayload(res, payload);
     }
-
-    // 세션에서 nonce 삭제
     delete req.session.kakaoNonce;
 
-    const result = await this.authService.validateOAuthLogin(req.user);
+    try {
+      const result = await this.authService.validateOAuthLogin(req.user);
 
-    let payload: any;
+      let payload: any;
+      if (result.isNewUser) {
+        // 신규 유저 -> 회원가입 페이지로 안내
 
-    if (result.isNewUser) {
-      // 신규 유저 -> 회원가입 페이지로 안내
-      payload = { isNewUser: true, tempUserData: result.tempUserData };
-    } else {
-      // 기존 유저 -> 토큰 발급
-      // 리프레시 토큰은 httpOnly 쿠키로 저장
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-        sameSite: 'strict',
-        maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
-      });
+        payload = { isNewUser: true, tempUserData: result.tempUserData };
+      } else {
+        // 기존 유저 -> 토큰 발급
+        // 리프레시 토큰은 httpOnly 쿠키로 저장
+        res.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 4 * 24 * 60 * 60 * 1000,
+        });
+        payload = { accessToken: result.accessToken, isNewUser: false };
+      }
 
-      payload = { accessToken: result.accessToken, isNewUser: false };
+      return sendPostMessagePayload(res, payload);
+    } catch (error: any) {
+      // 여기서 에러 메시지를 팝업으로 전달
+      const payload = { error: error.message || '알 수 없는 오류' };
+      return sendPostMessagePayload(res, payload);
     }
-
-    return res.send(`
-        <html>
-          <body>
-            <script>
-              const payload = ${JSON.stringify(payload)};
-              if (window.opener) {
-                window.opener.postMessage(payload, '${process.env.FRONTEND_URL}');
-                window.close();
-              } else {
-                window.location.href = '${process.env.FRONTEND_URL}';
-              }
-            </script>
-          </body>
-        </html>
-      `);
   }
 
   @Post('api/v4/auth/kakao/mobile')
