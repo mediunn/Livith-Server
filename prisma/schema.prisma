@@ -8,39 +8,37 @@ datasource db {
 }
 
 model Concert {
-  id              Int              @id @default(autoincrement())
-  code            String?          @unique @db.VarChar(20)
-  title           String           @db.VarChar(300)
-  startDate       String           @map("start_date") @db.VarChar(20)
-  endDate         String           @map("end_date") @db.VarChar(20)
-  status          ConcertStatus    @default(ONGOING)
-  poster          String?          @db.VarChar(2048)
-  artist          String?          @db.VarChar(100)
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  artistId        Int              @map("artist_id")
-  ticketSite      String?          @map("ticket_site") @db.VarChar(50)
-  ticketUrl       String?          @map("ticket_url") @db.VarChar(2048)
-  venue           String?          @db.VarChar(100)
-  introduction    String?          @db.Text
-  label           String?          @db.VarChar(50)
-
-  concertInfos    ConcertInfo[]
-  concertSetlists ConcertSetlist[]
-  artist_rel      Artist           @relation(fields: [artistId], references: [id])
-  cultures        Culture[]
-  mdItems         Md[]
-  schedules       Schedule[]
-  homeConcertSections HomeConcertSection[]
+  id                    Int                    @id @default(autoincrement())
+  code                  String?                @unique @db.VarChar(20)
+  title                 String                 @unique(map: "uk_title") @db.VarChar(300)
+  startDate             String                 @map("start_date") @db.VarChar(20)
+  endDate               String                 @map("end_date") @db.VarChar(20)
+  status                ConcertStatus?
+  poster                String?                @db.VarChar(2048)
+  artist                String?                @db.VarChar(100)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  artistId              Int                    @map("artist_id")
+  ticketSite            String?                @map("ticket_site") @db.VarChar(50)
+  ticketUrl             String?                @map("ticket_url") @db.VarChar(2048)
+  venue                 String?                @db.VarChar(100)
+  introduction          String?                @db.Text
+  label                 String?                @db.VarChar(50)
+  concertComments       ConcertComment[]
+  concertGenre          ConcertGenre[]
+  concertInfos          ConcertInfo[]
+  concertSetlists       ConcertSetlist[]
+  artist_rel            Artist                 @relation(fields: [artistId], references: [id])
+  cultures              Culture[]
+  homeConcertSections   HomeConcertSection[]
+  mdItems               Md[]
+  schedules             Schedule[]
   searchConcertSections SearchConcertSection[]
-  concertGenre ConcertGenre[]
-  user User?
-  concertComments ConcertComment[]
+  user                  User?
 
-  @@index([artistId], map: "concerts_artist_id_fkey")
   @@unique([startDate, id])
   @@unique([title, id])
-  
+  @@index([artistId], map: "concerts_artist_id_fkey")
   @@fulltext([title, artist])
   @@map("concerts")
 }
@@ -48,7 +46,6 @@ model Concert {
 model Artist {
   id           Int       @id @default(autoincrement())
   artist       String    @db.VarChar(100)
-  debutDate    String?   @map("debut_date") @db.VarChar(30)
   category     String?   @db.VarChar(30)
   detail       String?   @db.Text
   instagramUrl String?   @map("instagram_url") @db.VarChar(2048)
@@ -56,6 +53,7 @@ model Artist {
   imgUrl       String?   @map("img_url") @db.VarChar(2048)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+  debutDate    String?   @map("debut_date") @db.VarChar(30)
   concerts     Concert[]
 
   @@map("artists")
@@ -71,7 +69,7 @@ model ConcertInfo {
   updatedAt DateTime @updatedAt @map("updated_at")
   concert   Concert  @relation(fields: [concertId], references: [id])
 
-  @@index([concertId], map: "concert_info_concert_id_fkey")
+  @@unique([concertId, category], map: "uk_concert_category")
   @@map("concert_info")
 }
 
@@ -90,16 +88,16 @@ model Md {
 }
 
 model Schedule {
-  id          Int      @id @default(autoincrement())
-  concertId   Int      @map("concert_id")
-  category    String   @db.VarChar(50)
-  scheduledAt DateTime @map("scheduled_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  concert     Concert  @relation(fields: [concertId], references: [id])
-  type ScheduleType?
+  id          Int           @id @default(autoincrement())
+  concertId   Int           @map("concert_id")
+  category    String        @db.VarChar(50)
+  scheduledAt DateTime      @map("scheduled_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  type        ScheduleType?
+  concert     Concert       @relation(fields: [concertId], references: [id])
 
-  @@index([concertId], map: "schedule_concert_id_fkey")
+  @@unique([concertId, scheduledAt], map: "unique_schedule")
   @@map("schedule")
 }
 
@@ -113,6 +111,7 @@ model Culture {
   title     String   @db.Text
   concert   Concert  @relation(fields: [concertId], references: [id])
 
+  @@unique([concertId, title(length: 255)], map: "uk_concert_title")
   @@index([concertId])
   @@map("cultures")
 }
@@ -149,23 +148,24 @@ model Setlist {
   setlistSongs    SetlistSong[]
 
   @@unique([startDate, endDate, id])
+  @@unique([title, artist], map: "uk_title_artist")
   @@map("setlists")
 }
 
 model SetlistSong {
-  id           Int      @id @default(autoincrement())
-  setlistId    Int      @map("setlist_id")
-  songId       Int      @map("song_id")
-  orderIndex   Int      @map("order_index")
-  fanchant     String?  @db.Text
-  fanchant_point String? @db.Text
-  createdAt    DateTime @default(now()) @map("created_at")
-  setlistDate  String   @map("setlist_date") @db.VarChar(20)
-  setlistTitle String   @map("setlist_title") @db.VarChar(300)
-  songTitle    String   @map("song_title") @db.VarChar(50)
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  setlist      Setlist  @relation(fields: [setlistId], references: [id])
-  song         Song     @relation(fields: [songId], references: [id])
+  id             Int      @id @default(autoincrement())
+  setlistId      Int      @map("setlist_id")
+  songId         Int      @map("song_id")
+  orderIndex     Int      @map("order_index")
+  fanchant       String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  setlistDate    String   @map("setlist_date") @db.VarChar(20)
+  setlistTitle   String   @map("setlist_title") @db.VarChar(300)
+  songTitle      String   @map("song_title") @db.VarChar(50)
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  fanchant_point String?  @db.Text
+  setlist        Setlist  @relation(fields: [setlistId], references: [id])
+  song           Song     @relation(fields: [songId], references: [id])
 
   @@unique([setlistId, orderIndex])
   @@index([setlistId, songId])
@@ -186,6 +186,7 @@ model Song {
   youtubeId     String?       @map("youtube_id") @db.VarChar(200)
   setlistSongs  SetlistSong[]
 
+  @@unique([title, artist], map: "uk_title_artist")
   @@map("songs")
 }
 
@@ -202,139 +203,131 @@ model Banner {
 }
 
 model HomeConcertSection {
-  id    Int @id @default(autoincrement())
-  homeSectionId Int  @map("home_section_id")
-  concertId Int @map("concert_id")
-  sectionTitle String @db.VarChar(30) @map("section_title")
-  concertTitle String @db.VarChar(300) @map("concert_title")
-  sortedIndex Int @map("sorted_index")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            Int         @id @default(autoincrement())
+  homeSectionId Int         @map("home_section_id")
+  concertId     Int         @map("concert_id")
+  sectionTitle  String      @map("section_title") @db.VarChar(30)
+  concertTitle  String      @map("concert_title") @db.VarChar(300)
+  sortedIndex   Int         @map("sorted_index")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  concert       Concert     @relation(fields: [concertId], references: [id])
+  homeSection   HomeSection @relation(fields: [homeSectionId], references: [id])
 
-  concert Concert @relation(fields: [concertId], references: [id])
-  homeSection HomeSection @relation(fields: [homeSectionId], references: [id])
-
+  @@index([concertId], map: "home_concert_sections_concert_id_fkey")
+  @@index([homeSectionId], map: "home_concert_sections_home_section_id_fkey")
   @@map("home_concert_sections")
 }
 
 model HomeSection {
-  id Int @id @default(autoincrement())
-  sectionTitle String @db.VarChar(30) @map("section_title")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  id                  Int                  @id @default(autoincrement())
+  sectionTitle        String               @map("section_title") @db.VarChar(30)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
   homeConcertSections HomeConcertSection[]
 
   @@map("home_sections")
 }
 
 model SearchConcertSection {
-  id    Int @id @default(autoincrement())
-  searchSectionId Int  @map("search_section_id")
-  concertId Int @map("concert_id")
-  sectionTitle String @db.VarChar(30) @map("section_title")
-  concertTitle String @db.VarChar(300) @map("concert_title")
-  sortedIndex Int @map("sorted_index")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              Int           @id @default(autoincrement())
+  searchSectionId Int           @map("search_section_id")
+  concertId       Int           @map("concert_id")
+  sectionTitle    String        @map("section_title") @db.VarChar(30)
+  concertTitle    String        @map("concert_title") @db.VarChar(300)
+  sortedIndex     Int           @map("sorted_index")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  concert         Concert       @relation(fields: [concertId], references: [id])
+  searchSection   SearchSection @relation(fields: [searchSectionId], references: [id])
 
-  concert Concert @relation(fields: [concertId], references: [id])
-  searchSection SearchSection @relation(fields: [searchSectionId], references: [id])
-
+  @@index([concertId], map: "search_concert_sections_concert_id_fkey")
+  @@index([searchSectionId], map: "search_concert_sections_search_section_id_fkey")
   @@map("search_concert_sections")
 }
 
 model SearchSection {
-  id Int @id @default(autoincrement())
-  sectionTitle String @db.VarChar(30) @map("section_title")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  id                    Int                    @id @default(autoincrement())
+  sectionTitle          String                 @map("section_title") @db.VarChar(30)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
   searchConcertSections SearchConcertSection[]
 
   @@map("search_sections")
 }
 
 model ConcertGenre {
-  id        Int      @id @default(autoincrement())
-  concertId Int @map("concert_id")
-  genreId   Int @map("genre_id")
-  concertTitle String @db.VarChar(300) @map("concert_title")
-  name GenreType
-
-  concert   Concert  @relation(fields: [concertId], references: [id])
-  genre     Genre    @relation(fields: [genreId], references: [id])
+  id           Int       @id @default(autoincrement())
+  concertId    Int       @map("concert_id")
+  concertTitle String    @map("concert_title") @db.VarChar(300)
+  genreId      Int       @map("genre_id")
+  name         GenreType
+  concert      Concert   @relation(fields: [concertId], references: [id])
+  genre        Genre     @relation(fields: [genreId], references: [id])
 
   @@unique([concertId, genreId])
+  @@index([genreId], map: "concert_genres_genre_id_fkey")
   @@map("concert_genres")
 }
 
 model Genre {
-  id       Int        @id @default(autoincrement())
-  name     GenreType  @unique
-
+  id           Int            @id @default(autoincrement())
+  name         GenreType      @unique
   concertGenre ConcertGenre[]
 
   @@map("genres")
 }
 
 model User {
-  id       Int        @id @default(autoincrement())
-  interestConcertId Int? @unique @map("interest_concert_id")
-  provider   Provider
-  providerId String  @map("provider_id") @unique// 소셜에서 제공하는 유저 ID
-  email      String?  @db.VarChar(255)
-  nickname   String?  @unique @db.VarChar(50)
-  marketingConsent Boolean?  @map("marketing_consent") 
-  refreshToken String? @db.Text @map("refresh_token")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
+  id                Int              @id @default(autoincrement())
+  interestConcertId Int?             @unique @map("interest_concert_id")
+  provider          Provider
+  providerId        String           @map("provider_id")
+  email             String?          @db.VarChar(255)
+  nickname          String?          @unique @db.VarChar(50)
+  marketingConsent  Boolean          @default(false) @map("marketing_consent")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  deletedAt         DateTime?        @map("deleted_at")
+  refreshToken      String?          @map("refresh_token") @db.Text
+  concertComments   ConcertComment[]
+  concert           Concert?         @relation(fields: [interestConcertId], references: [id])
 
-  concert Concert? @relation(fields: [interestConcertId], references:[id])
-  
-  concertComments ConcertComment[]
-  
   @@map("users")
 }
 
 model ConcertComment {
-  id Int @id @default(autoincrement())
-  concertId Int @map("concert_id")
-  userId Int @map("user_id")
-  content String @db.VarChar(500)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  concertId Int      @map("concert_id")
+  userId    Int      @map("user_id")
+  content   String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  concert   Concert  @relation(fields: [concertId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
-  concert Concert @relation(fields: [concertId], references:[id])
-  user User @relation(fields: [userId], references: [id])
-
-  reports Report[]
-
+  @@index([concertId], map: "concert_comments_concert_id_fkey")
+  @@index([userId], map: "concert_comments_user_id_fkey")
   @@map("concert_comments")
 }
 
-model Report{
-  id Int @id @default(autoincrement())
-  commentId Int? @map("comment_id")
-  commentUserId Int @map("comment_user_id") // 댓글 작성자 ID
-  commentContent String @db.VarChar(500) @map("comment_content")
-
-  reportReason String? @db.VarChar(300) @map("report_reason")
-
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  concertComment ConcertComment? @relation(fields: [commentId], references:[id], onDelete: SetNull)
+model Report {
+  id             Int      @id @default(autoincrement())
+  commentId      Int?     @map("comment_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  commentContent String   @map("comment_content") @db.VarChar(500)
+  commentUserId  Int      @map("comment_user_id")
+  reportReason   String?  @map("report_reason") @db.VarChar(300)
 
   @@map("reports")
 }
 
-model Resignation{
-  id Int @id @default(autoincrement())
-  content String @db.VarChar(300)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+model Resignation {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("resignations")
 }
@@ -343,6 +336,7 @@ enum ConcertStatus {
   ONGOING
   UPCOMING
   COMPLETED
+  CANCELED
 }
 
 enum SetlistType {
