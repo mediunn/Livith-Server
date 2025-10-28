@@ -73,7 +73,7 @@ export class AuthController {
         res.cookie('refreshToken', result.refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
+          sameSite: 'none',
           maxAge: 4 * 24 * 60 * 60 * 1000,
         });
         payload = { accessToken: result.accessToken, isNewUser: false };
@@ -134,7 +134,7 @@ export class AuthController {
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
       });
       return { accessToken };
@@ -166,7 +166,7 @@ export class AuthController {
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'none',
       });
     }
     return { message: '로그아웃 완료' };
@@ -198,7 +198,7 @@ export class AuthController {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
       });
     }
