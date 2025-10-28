@@ -1,5 +1,5 @@
 import { Concert, HomeConcertSection, HomeSection } from '@prisma/client';
-import { getDaysUntil } from 'src/v3/common/utils/date.util';
+import { getDaysUntil } from 'src/v4/common/utils/date.util';
 
 export class HomeSectionResponseDto {
   id: number;
