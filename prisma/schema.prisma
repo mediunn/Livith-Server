@@ -282,7 +282,7 @@ model User {
   id                Int              @id @default(autoincrement())
   interestConcertId Int?             @unique @map("interest_concert_id")
   provider          Provider
-  providerId        String           @map("provider_id")
+  providerId        String           @map("provider_id") @unique
   email             String?          @db.VarChar(255)
   nickname          String?          @unique @db.VarChar(50)
   marketingConsent  Boolean          @default(false) @map("marketing_consent")
@@ -292,8 +292,6 @@ model User {
   refreshToken      String?          @map("refresh_token") @db.Text
   concertComments   ConcertComment[]
   concert           Concert?         @relation(fields: [interestConcertId], references: [id])
-
-  @@unique([provider, providerId])
 
   @@map("users")
 }
