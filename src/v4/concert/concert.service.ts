@@ -13,6 +13,7 @@ import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
 import { CommentResponseDto } from '../comment/dto/comment-response.dto';
+import { ConcertStatus } from '@prisma/client';
 
 @Injectable()
 export class ConcertService {
@@ -23,6 +24,9 @@ export class ConcertService {
       cursor && id ? { startDate: cursor, id: Number(id) } : undefined;
 
     const concerts = await this.prismaService.concert.findMany({
+      where: {
+        status: { not: ConcertStatus.CANCELED }, // 콘서트 취소 상태 제외
+      },
       orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
       cursor: cursorValue,
       take: size,
