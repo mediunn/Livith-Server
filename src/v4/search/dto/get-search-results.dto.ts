@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ConcertGenre } from 'src/v3/common/enums/concert-genre.enum';
-import { ConcertSort } from 'src/v3/common/enums/concert-sort.enum';
-import { ConcertStatus } from 'src/v3/common/enums/concert-status.enum';
+import { ConcertSort } from 'src/v4/common/enums/concert-sort.enum';
+import { ConcertStatus } from 'src/v4/common/enums/concert-status.enum';
+import { ConcertGenre } from 'src/v4/common/enums/concert-genre.enum';
 
 export class GetSearchResultsDto {
   @ApiProperty({
