@@ -293,6 +293,8 @@ model User {
   concertComments   ConcertComment[]
   concert           Concert?         @relation(fields: [interestConcertId], references: [id])
 
+  @@unique([provider, providerId])
+
   @@map("users")
 }
 
