@@ -215,7 +215,17 @@ export class AuthController {
     description: '로그인한 유저를 탈퇴 처리합니다.',
   })
   @ApiBody({ type: WidthDrawDto })
-  async withdraw(@Body() body: WidthDrawDto, @Req() req) {
+  async withdraw(
+    @Res({ passthrough: true }) res,
+    @Body() body: WidthDrawDto,
+    @Req() req,
+  ) {
+    // 쿠키 삭제
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
     const userId = req.user.userId;
     return this.authService.withdraw(userId, body.reason);
   }
