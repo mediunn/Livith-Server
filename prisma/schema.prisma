@@ -34,7 +34,7 @@ model Concert {
   mdItems               Md[]
   schedules             Schedule[]
   searchConcertSections SearchConcertSection[]
-  user                  User?
+  user                  User[]
 
   @@unique([startDate, id])
   @@unique([title, id])
@@ -280,7 +280,7 @@ model Genre {
 
 model User {
   id                Int              @id @default(autoincrement())
-  interestConcertId Int?             @unique @map("interest_concert_id")
+  interestConcertId Int?             @map("interest_concert_id")
   provider          Provider
   providerId        String           @map("provider_id") @unique
   email             String?          @db.VarChar(255)
