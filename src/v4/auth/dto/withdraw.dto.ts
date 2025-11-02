@@ -1,13 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, MaxLength } from 'class-validator';
+import { IsNotEmpty } from 'class-validator';
 
 export class WithDrawDto {
   @ApiProperty({
-    description: 'provider',
-    example: 'kakao',
-    maxLength: 200,
+    description: '탈퇴사유',
+    example: '원하는 정보가 부족하거나 없어요',
   })
-  @MaxLength(200)
   @IsNotEmpty()
   reason: string;
 }

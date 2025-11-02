@@ -325,7 +325,7 @@ model Report {
 
 model Resignation {
   id        Int      @id @default(autoincrement())
-  content   String   @db.VarChar(300)
+  content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
