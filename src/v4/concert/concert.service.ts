@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -429,6 +430,10 @@ export class ConcertService {
     });
     if (!user) {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
     }
 
     // 댓글 작성
