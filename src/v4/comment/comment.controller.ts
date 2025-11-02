@@ -44,7 +44,9 @@ export class CommentController {
   reportComment(
     @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: ReportCommentDto,
+    @Req() req,
   ) {
-    return this.commentService.reportComment(id, dto.content);
+    const userId = req.user.userId;
+    return this.commentService.reportComment(id, userId, dto.content);
   }
 }
