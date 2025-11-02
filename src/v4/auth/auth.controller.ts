@@ -21,7 +21,7 @@ import { Provider } from '@prisma/client';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { WidthDrawDto } from './dto/withdraw.dto';
+import { WithDrawDto } from './dto/withdraw.dto';
 import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 
 @Controller()
@@ -214,10 +214,10 @@ export class AuthController {
     summary: '회원 탈퇴',
     description: '로그인한 유저를 탈퇴 처리합니다.',
   })
-  @ApiBody({ type: WidthDrawDto })
+  @ApiBody({ type: WithDrawDto })
   async withdraw(
     @Res({ passthrough: true }) res,
-    @Body() body: WidthDrawDto,
+    @Body() body: WithDrawDto,
     @Req() req,
   ) {
     // 쿠키 삭제

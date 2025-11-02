@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, MaxLength } from 'class-validator';
 
-export class WidthDrawDto {
+export class WithDrawDto {
   @ApiProperty({
     description: 'provider',
     example: 'kakao',
