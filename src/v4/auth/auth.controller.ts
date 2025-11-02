@@ -220,13 +220,22 @@ export class AuthController {
     @Body() body: WithDrawDto,
     @Req() req,
   ) {
-    // 쿠키 삭제
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
     const userId = req.user.userId;
-    return this.authService.withdraw(userId, body.reason);
+
+    try {
+      const result = await this.authService.withdraw(userId, body.reason);
+
+      // 탈퇴 성공 시 쿠키 삭제
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+
+      return result;
+    } catch (error) {
+      // 탈퇴 실패 시 쿠키 유지 + 에러 전달
+      throw error;
+    }
   }
 }
