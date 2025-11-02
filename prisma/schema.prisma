@@ -282,7 +282,7 @@ model User {
   id                Int              @id @default(autoincrement())
   interestConcertId Int?             @map("interest_concert_id")
   provider          Provider
-  providerId        String           @map("provider_id") @unique
+  providerId        String?           @map("provider_id") @unique
   email             String?          @db.VarChar(255)
   nickname          String?          @unique @db.VarChar(50)
   marketingConsent  Boolean          @default(false) @map("marketing_consent")
