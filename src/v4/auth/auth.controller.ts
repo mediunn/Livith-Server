@@ -21,7 +21,7 @@ import { Provider } from '@prisma/client';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { WidthDrawDto } from './dto/withdraw.dto';
+import { WithDrawDto } from './dto/withdraw.dto';
 import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 
 @Controller()
@@ -214,19 +214,28 @@ export class AuthController {
     summary: '회원 탈퇴',
     description: '로그인한 유저를 탈퇴 처리합니다.',
   })
-  @ApiBody({ type: WidthDrawDto })
+  @ApiBody({ type: WithDrawDto })
   async withdraw(
     @Res({ passthrough: true }) res,
-    @Body() body: WidthDrawDto,
+    @Body() body: WithDrawDto,
     @Req() req,
   ) {
-    // 쿠키 삭제
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
     const userId = req.user.userId;
-    return this.authService.withdraw(userId, body.reason);
+
+    try {
+      const result = await this.authService.withdraw(userId, body.reason);
+
+      // 탈퇴 성공 시 쿠키 삭제
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+      });
+
+      return result;
+    } catch (error) {
+      // 탈퇴 실패 시 쿠키 유지 + 에러 전달
+      throw error;
+    }
   }
 }

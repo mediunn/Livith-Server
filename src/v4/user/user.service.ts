@@ -32,6 +32,10 @@ export class UserService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
 
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
+
     // 관심 콘서트 설정
     await this.prismaService.user.update({
       where: { id: userId },
@@ -53,6 +57,10 @@ export class UserService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
 
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
+
     if (!user.concert) {
       return null;
     }
@@ -72,6 +80,9 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
     await this.prismaService.user.update({
       where: { id: userId },
       data: { interestConcertId: { set: null } },
@@ -88,6 +99,9 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
     return new UserResponseDto(user);
   }
 
@@ -98,6 +112,10 @@ export class UserService {
     });
     if (!user) {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
     }
 
     //닉네임 중복 확인
