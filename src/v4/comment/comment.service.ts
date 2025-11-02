@@ -28,6 +28,10 @@ export class CommentService {
       throw new NotFoundException('해당 유저가 존재하지 않습니다.');
     }
 
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
+
     // 본인 댓글인지 체크
     if (comment.userId !== userId) {
       throw new ForbiddenException('본인의 댓글만 삭제할 수 있습니다.');
@@ -49,13 +53,26 @@ export class CommentService {
   }
 
   // 댓글 신고
-  async reportComment(commentId: number, reason?: string) {
+  async reportComment(commentId: number, userId: number, reason?: string) {
     const comment = await this.prismaService.concertComment.findUnique({
       where: { id: commentId },
     });
 
     if (!comment) {
       throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    // 유저 ID가 유효한지 확인
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
     }
 
     // 댓글 신고 처리
