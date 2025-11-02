@@ -190,17 +190,20 @@ export class AuthService {
       throw new BadRequestException('이미 탈퇴한 회원입니다.');
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        deletedAt: new Date(),
-        refreshToken: null, // 탈퇴 시 토큰 무효화
-      },
-    });
-    await this.prisma.resignation.create({
-      data: {
-        content: reason,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          refreshToken: null,
+        },
+      });
+
+      await tx.resignation.create({
+        data: {
+          content: reason,
+        },
+      });
     });
     return { message: '회원 탈퇴가 완료되었습니다.' };
   }
