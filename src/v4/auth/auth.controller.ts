@@ -48,7 +48,7 @@ export class AuthController {
     req.session.appleNonce = nonce;
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&client_id=${process.env.APPLE_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/apple/callback&state=${state}&scope=name email`;
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${process.env.APPLE_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/apple/callback&state=${state}&scope=name email`;
     return res.redirect(appleAuthUrl);
   }
 
@@ -97,12 +97,12 @@ export class AuthController {
     }
   }
 
-  @Get('auth/apple/callback')
+  @Post('auth/apple/callback')
   @UseGuards(AuthGuard('apple'))
   async appleCallback(
     @Req() req,
     @Res() res: Response,
-    @Query('state') state: string,
+    @Body('state') state: string,
   ) {
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
 
