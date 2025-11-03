@@ -23,6 +23,7 @@ import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { WithDrawDto } from './dto/withdraw.dto';
 import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
+import { AppleMobileLoginDto } from './dto/apple-mobile-login.dto';
 
 @Controller()
 export class AuthController {
@@ -39,6 +40,16 @@ export class AuthController {
 
     const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${process.env.KAKAO_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/kakao/callback&state=${state}`;
     return res.redirect(kakaoAuthUrl);
+  }
+
+  @Get('api/v4/auth/apple/web')
+  async appleLoginWeb(@Req() req, @Res() res: Response) {
+    const nonce = crypto.randomBytes(16).toString('hex');
+    req.session.appleNonce = nonce;
+    const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
+
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&client_id=${process.env.APPLE_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/apple/callback&state=${state}&scope=name email`;
+    return res.redirect(appleAuthUrl);
   }
 
   @Get('auth/kakao/callback')
@@ -65,7 +76,6 @@ export class AuthController {
       let payload: any;
       if (result.isNewUser) {
         // 신규 유저 -> 회원가입 페이지로 안내
-
         payload = { isNewUser: true, tempUserData: result.tempUserData };
       } else {
         // 기존 유저 -> 토큰 발급
@@ -84,6 +94,41 @@ export class AuthController {
       // 여기서 에러 메시지를 팝업으로 전달
       const payload = { error: error.message || '알 수 없는 오류' };
       return sendPostMessagePayload(res, payload);
+    }
+  }
+
+  @Get('auth/apple/callback')
+  @UseGuards(AuthGuard('apple'))
+  async appleCallback(
+    @Req() req,
+    @Res() res: Response,
+    @Query('state') state: string,
+  ) {
+    const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+
+    if (decoded.nonce !== req.session.appleNonce) {
+      delete req.session.appleNonce;
+      return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
+    }
+    delete req.session.appleNonce;
+
+    const result = await this.authService.validateOAuthLogin(req.user);
+    if (result.isNewUser) {
+      return sendPostMessagePayload(res, {
+        isNewUser: true,
+        tempUserData: result.tempUserData,
+      });
+    } else {
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 4 * 24 * 60 * 60 * 1000,
+      });
+      return sendPostMessagePayload(res, {
+        accessToken: result.accessToken,
+        isNewUser: false,
+      });
     }
   }
 
@@ -106,6 +151,21 @@ export class AuthController {
       providerId: String(userRes.data.id),
       email: userRes.data.kakao_account?.email,
     });
+  }
+
+  @Post('api/v4/auth/apple/mobile')
+  @ApiOperation({
+    summary: '애플 모바일 로그인',
+  })
+  @ApiBody({ type: AppleMobileLoginDto })
+  async appleLoginMobile(@Body() dto) {
+    // 서버에서 Apple 서버로 token 검증
+    const userInfo = await this.authService.verifyAppleIdentity(
+      dto.identityToken,
+    );
+
+    const result = await this.authService.validateOAuthLogin(userInfo);
+    return result;
   }
 
   //토큰 재발급
