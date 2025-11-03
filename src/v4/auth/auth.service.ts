@@ -8,6 +8,9 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
+import axios from 'axios';
+import jwkToPem from 'jwk-to-pem';
+import jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +38,27 @@ export class AuthService {
     );
 
     return { accessToken, refreshToken };
+  }
+
+  // iOS에서 전달된 identityToken 검증
+  async verifyAppleIdentity(identityToken: string) {
+    // Apple 공개 키 가져오기
+    const appleKeysRes = await axios.get('https://appleid.apple.com/auth/keys');
+    const appleKeys = appleKeysRes.data.keys;
+    // JWT header에서 kid 확인
+    const decodedHeader: any = jwt.decode(identityToken, { complete: true });
+    const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
+    if (!key) throw new UnauthorizedException('Apple key not found');
+    const pem = jwkToPem(key);
+    // JWT 검증
+    const payload: any = jwt.verify(identityToken, pem, {
+      algorithms: ['RS256'],
+    });
+    return {
+      provider: 'apple',
+      providerId: payload.sub,
+      email: payload.email,
+    };
   }
 
   // OAuth 로그인 처리 및 토큰 발급
