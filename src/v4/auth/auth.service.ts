@@ -45,9 +45,14 @@ export class AuthService {
     // Apple 공개 키 가져오기
     const appleKeysRes = await axios.get('https://appleid.apple.com/auth/keys');
     const appleKeys = appleKeysRes.data.keys;
+
     // JWT header에서 kid 확인
-    const decodedHeader: any = jwt.decode(identityToken, { complete: true });
+    const decodedHeader: any = jwt.decode(identityToken, {
+      complete: true,
+    }).header;
+
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
+
     if (!key) throw new UnauthorizedException('Apple key not found');
     const pem = jwkToPem(key);
     // JWT 검증

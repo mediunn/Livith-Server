@@ -9,19 +9,25 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
       clientID: process.env.APPLE_CLIENT_ID, // Service ID (웹) / Bundle ID (iOS)
       teamID: process.env.APPLE_TEAM_ID,
       keyID: process.env.APPLE_KEY_ID,
-      privateKey: process.env.APPLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // env에서 줄바꿈 처리
+      privateKeyString: process.env.APPLE_PRIVATE_KEY,
       callbackURL: `${process.env.SERVER_URL}/auth/apple/callback`,
       passReqToCallback: true,
       scope: ['name', 'email'],
     });
   }
-
-  async validate(req, accessToken, refreshToken, idToken, profile) {
+  async validate(
+    req: any,
+    accessToken: string,
+    results: {
+      id_token: string;
+      refresh_token: string;
+      expires_in: number;
+      access_token: string;
+      token_type: string;
+    },
+  ) {
     return {
-      provider: 'apple',
-      providerId: profile.sub,
-      email: profile.email,
-      idToken,
+      idToken: results.id_token,
     };
   }
 }
