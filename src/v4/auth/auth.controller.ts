@@ -99,11 +99,10 @@ export class AuthController {
 
   @Post('auth/apple/callback')
   @UseGuards(AuthGuard('apple'))
-  async appleCallback(
-    @Req() req,
-    @Res() res: Response,
-    @Body('state') state: string,
-  ) {
+  async appleCallback(@Req() req, @Res() res: Response) {
+    const idToken = req.user.idToken;
+
+    const state = req.body.state;
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
 
     if (decoded.nonce !== req.session.appleNonce) {
@@ -112,7 +111,11 @@ export class AuthController {
     }
     delete req.session.appleNonce;
 
-    const result = await this.authService.validateOAuthLogin(req.user);
+    // 서버에서 Apple 서버로 token 검증
+    const userInfo = await this.authService.verifyAppleIdentity(idToken);
+
+    const result = await this.authService.validateOAuthLogin(userInfo);
+
     if (result.isNewUser) {
       return sendPostMessagePayload(res, {
         isNewUser: true,
