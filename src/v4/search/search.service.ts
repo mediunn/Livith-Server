@@ -27,6 +27,9 @@ export class SearchService {
     const recommendWords = await this.prismaService.concert.findMany({
       where: {
         OR: [{ title: { contains: letter } }, { artist: { contains: letter } }],
+        NOT: {
+          status: ConcertStatus.CANCELED,
+        },
       },
       take: 10,
     });
