@@ -1,0 +1,90 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from 'prisma/prisma.service';
+import { ReportResponseDto } from './dto/report-response.dto';
+
+@Injectable()
+export class CommentService {
+  constructor(private readonly prismaService: PrismaService) {}
+
+  // 댓글 삭제
+  async deleteComment(commentId: number, userId: number) {
+    const comment = await this.prismaService.concertComment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    // 유저 ID가 유효한지 확인
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
+
+    // 본인 댓글인지 체크
+    if (comment.userId !== userId) {
+      throw new ForbiddenException('본인의 댓글만 삭제할 수 있습니다.');
+    }
+
+    // 신고 기록이 있는 경우에만 comment 내용과 userId 업데이트
+    await this.prismaService.report.updateMany({
+      where: { commentId: comment.id },
+      data: {
+        commentUserId: comment.userId,
+        commentContent: comment.content,
+      },
+    });
+
+    await this.prismaService.concertComment.delete({
+      where: { id: commentId },
+    });
+    return;
+  }
+
+  // 댓글 신고
+  async reportComment(commentId: number, userId: number, reason?: string) {
+    const comment = await this.prismaService.concertComment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    // 유저 ID가 유효한지 확인
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('탈퇴한 회원입니다.');
+    }
+
+    // 댓글 신고 처리
+    const reportedComment = await this.prismaService.report.create({
+      data: {
+        commentId: commentId,
+        reportReason: reason,
+        commentUserId: comment.userId,
+        commentContent: comment.content,
+      },
+    });
+
+    return new ReportResponseDto(reportedComment);
+  }
+}
