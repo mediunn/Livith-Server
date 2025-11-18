@@ -61,7 +61,8 @@ export class AuthController {
   ) {
     // state 디코딩
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-
+    console.log('d', decoded);
+    console.log('r', req.session.kakaoNonce);
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
       delete req.session.kakaoNonce;
@@ -220,6 +221,7 @@ export class AuthController {
     @Body() body,
   ) {
     const refreshToken = req.cookies.refreshToken || body?.refreshToken || null;
+    console.log(refreshToken);
     if (!refreshToken)
       throw new UnauthorizedException('리프레시 토큰이 없습니다');
 
