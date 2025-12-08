@@ -20,8 +20,8 @@ export class ConcertResponseDto {
     this.id = concert.id;
     this.code = concert.code;
     this.title = concert.title;
-    this.startDate = concert.startDate;
-    this.endDate = concert.endDate;
+    this.startDate = concert.startDate.replaceAll('-', '.');
+    this.endDate = concert.endDate.replaceAll('-', '.');
     this.status = concert.status;
     this.poster = concert.poster;
     this.artist = concert.artist;
