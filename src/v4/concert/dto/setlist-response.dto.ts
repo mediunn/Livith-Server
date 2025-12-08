@@ -17,8 +17,8 @@ export class SetlistResponseDto {
     this.imgUrl = setlist.imgUrl;
     this.type = type as SetlistType;
     this.title = setlist.title;
-    this.startDate = setlist.startDate;
-    this.endDate = setlist.endDate;
+    this.startDate = setlist.startDate.replaceAll('-', '.');
+    this.endDate = setlist.endDate.replaceAll('-', '.');
     this.status = status;
     this.venue = setlist.venue;
     this.artist = setlist.artist;

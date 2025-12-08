@@ -1,5 +1,8 @@
 export function getDaysUntil(dateStr: string): number {
-  const [year, month, day] = dateStr.split('.').map(Number);
+  const [year, month, day] = dateStr
+    .replaceAll('-', '.')
+    .split('.')
+    .map(Number);
   const targetDate = new Date(year, month - 1, day); // JS에서 month는 0부터 시작
   const today = new Date();
 
