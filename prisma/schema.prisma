@@ -60,17 +60,28 @@ model Artist {
 }
 
 model ConcertInfo {
+  id           Int       @id @default(autoincrement())
+  concertId    Int       @map("concert_id")
+  infoId       Int       @map("info_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  concert   Concert  @relation(fields: [concertId], references: [id])
+  info      Info     @relation(fields: [infoId],references:[id])
+
+  @@map("concert_info")
+}
+
+model Info {
   id        Int      @id @default(autoincrement())
-  concertId Int      @map("concert_id")
   category  String   @db.VarChar(30)
   content   String   @db.VarChar(100)
   imgUrl    String?  @map("img_url") @db.VarChar(2048)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  concert   Concert  @relation(fields: [concertId], references: [id])
+  concertInfos ConcertInfo[]
 
-  @@unique([concertId, category], map: "uk_concert_category")
-  @@map("concert_info")
+  @@map("info")
 }
 
 model Md {
