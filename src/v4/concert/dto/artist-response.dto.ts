@@ -17,7 +17,9 @@ export class ArtistResponseDto {
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
-    this.keywords = artist.keywords.split(',').map((keyword) => keyword.trim());
+    this.keywords = artist.keywords
+      ? artist.keywords.split(',').map((keyword) => keyword.trim())
+      : [];
     this.imgUrl = artist.imgUrl;
   }
 }
