@@ -1,14 +1,15 @@
-import { ConcertInfo } from '@prisma/client';
-export class ConcertInfoResponseDto {
+import { Info } from '@prisma/client';
+
+export class InfoResponseDto {
   id: number;
   category: string;
   content: string;
   imgUrl: string;
 
-  constructor(concertInfo: ConcertInfo) {
-    this.id = concertInfo.id;
-    this.category = concertInfo.category;
-    this.content = concertInfo.content;
-    this.imgUrl = concertInfo.imgUrl;
+  constructor(info: Info) {
+    this.id = info.id;
+    this.category = info.category;
+    this.content = info.content;
+    this.imgUrl = info.imgUrl;
   }
 }

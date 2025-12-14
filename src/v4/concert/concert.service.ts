@@ -4,17 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConcertResponseDto } from './dto/concert-response.dto';
+import { CommentResponseDto } from '../comment/dto/comment-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { ArtistResponseDto } from './dto/artist-response.dto';
+import { InfoResponseDto } from './dto/concert-info-response.dto';
+import { ConcertResponseDto } from './dto/concert-response.dto';
 import { CultureResponseDto } from './dto/culture-response.dto';
 import { MDResponseDto } from './dto/md-response.dto';
-import { ConcertInfoResponseDto } from './dto/concert-info-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
-import { CommentResponseDto } from '../comment/dto/comment-response.dto';
-import { ConcertStatus } from '@prisma/client';
 
 @Injectable()
 export class ConcertService {
@@ -147,19 +147,26 @@ export class ConcertService {
     // 콘서트 ID가 유효한지 확인
     const concert = await this.prismaService.concert.findUnique({
       where: { id },
+      include: {
+        concertInfos: {
+          include: {
+            info: true,
+          },
+        },
+      },
     });
 
     if (!concert) {
       throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
     }
 
-    const concertInfos = await this.prismaService.concertInfo.findMany({
-      where: {
-        concertId: id,
-      },
-    });
+    // const concertInfos = await this.prismaService.concertInfo.findMany({
+    //   where: {
+    //     concertId: id,
+    //   },
+    // });
 
-    return concertInfos.map((info) => new ConcertInfoResponseDto(info));
+    return concert.concertInfos.map((ci) => new InfoResponseDto(ci.info));
   }
 
   // 콘서트 일정 목록 조회
