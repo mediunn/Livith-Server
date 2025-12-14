@@ -13,16 +13,16 @@ model Concert {
   title                 String                 @unique(map: "uk_title") @db.VarChar(300)
   startDate             String                 @map("start_date") @db.VarChar(20)
   endDate               String                 @map("end_date") @db.VarChar(20)
-  status                ConcertStatus?
-  poster                String?                @db.VarChar(2048)
-  artist                String?                @db.VarChar(100)
+  status                ConcertStatus
+  poster                String                @db.VarChar(2048)
+  artist                String                @db.VarChar(100)
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
   artistId              Int                    @map("artist_id")
   ticketSite            String?                @map("ticket_site") @db.VarChar(50)
   ticketUrl             String?                @map("ticket_url") @db.VarChar(2048)
-  venue                 String?                @db.VarChar(100)
-  introduction          String?                @db.Text
+  venue                 String                @db.VarChar(100)
+  introduction          String                @db.Text
   label                 String?                @db.VarChar(50)
   concertComments       ConcertComment[]
   concertGenre          ConcertGenre[]
@@ -137,13 +137,13 @@ model ConcertSetlist {
 model Setlist {
   id              Int              @id @default(autoincrement())
   title           String           @db.VarChar(300)
-  artist          String?          @db.VarChar(100)
+  artist          String          @db.VarChar(100)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   imgUrl          String?          @map("img_url") @db.VarChar(2048)
   endDate         String           @map("end_date") @db.VarChar(20)
   startDate       String           @map("start_date") @db.VarChar(20)
-  venue           String?          @db.VarChar(100)
+  venue           String          @db.VarChar(100)
   concertSetlists ConcertSetlist[]
   setlistSongs    SetlistSong[]
 
@@ -192,12 +192,12 @@ model Song {
 
 model Banner {
   id        Int      @id @default(autoincrement())
-  imgUrl    String?  @map("img_url") @db.VarChar(2048)
-  category  String?  @db.VarChar(30)
-  title     String?  @db.VarChar(50)
+  imgUrl    String  @map("img_url") @db.VarChar(2048)
+  category  String  @db.VarChar(30)
+  title     String  @db.VarChar(50)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  content   String?  @db.VarChar(100)
+  content   String  @db.VarChar(100)
 
   @@map("banners")
 }
@@ -284,7 +284,7 @@ model User {
   provider          Provider
   providerId        String?           @map("provider_id") @unique
   email             String?          @db.VarChar(255)
-  nickname          String?          @unique @db.VarChar(50)
+  nickname          String          @unique @db.VarChar(50)
   marketingConsent  Boolean          @default(false) @map("marketing_consent")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
