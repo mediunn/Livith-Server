@@ -107,10 +107,16 @@ export class AuthService {
 
     //기존 유저
     const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
+
+    // absolute 만료가 없으면 최초 1회 설정
+    const refreshTokenExpiresAt =
+      user.refreshTokenExpiresAt ??
+      new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+
     // 리프레시 토큰 DB 저장
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { refreshToken },
+      data: { refreshToken, refreshTokenExpiresAt },
     });
 
     return { accessToken, refreshToken, isNewUser: false };
@@ -129,6 +135,14 @@ export class AuthService {
 
       if (!user || user.refreshToken !== oldRefreshToken) {
         throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
+      }
+
+      // 토큰 absolute 만료 체크
+      if (
+        !user.refreshTokenExpiresAt ||
+        new Date() > user.refreshTokenExpiresAt
+      ) {
+        throw new UnauthorizedException('리프레시 토큰 만료');
       }
 
       const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
@@ -153,7 +167,7 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: payload.userId },
-      data: { refreshToken: null },
+      data: { refreshToken: null, refreshTokenExpiresAt: null },
     });
   }
 
@@ -187,6 +201,7 @@ export class AuthService {
       where: { id: user.id },
       data: {
         refreshToken,
+        refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
       },
     });
     if (client === 'web') {
