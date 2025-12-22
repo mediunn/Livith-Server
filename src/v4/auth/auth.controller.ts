@@ -1,15 +1,18 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Post,
   Query,
   Req,
   Res,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ForbiddenException,
+  UnauthorizedException,
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
@@ -145,7 +148,7 @@ export class AuthController {
     });
 
     if (!userRes.data || !userRes.data.id) {
-      throw new ForbiddenException('카카오 사용자 정보 조회 실패');
+      throw new ForbiddenException(ErrorCode.KAKAO_USER_INFO_FETCH_HEAD);
     }
 
     // 서버 JWT + refresh token 발급
@@ -187,7 +190,7 @@ export class AuthController {
     const oldRefreshToken = req.cookies.refreshToken || body?.refreshToken;
 
     if (!oldRefreshToken) {
-      throw new UnauthorizedException('리프레시 토큰이 없습니다');
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
     }
     const { accessToken, refreshToken } =
       await this.authService.refreshToken(oldRefreshToken);
@@ -222,7 +225,7 @@ export class AuthController {
     const refreshToken = req.cookies.refreshToken || body?.refreshToken || null;
 
     if (!refreshToken)
-      throw new UnauthorizedException('리프레시 토큰이 없습니다');
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
 
     await this.authService.logout(refreshToken);
     if (client === 'web') {

@@ -31,4 +31,6 @@ export const ErrorMessages: Record<ErrorCode, string> = {
     [ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED]: '리프레시 토큰 검증 실패',
     [ErrorCode.REFRESH_TOKEN_NOT_FOUND]: '리프레시 토큰이 없습니다.',
 
+    // Internal Server Error
+    [ErrorCode.INTERNAL_SERVER_ERROR]: '서버 에러가 발생했습니다.',
 }
