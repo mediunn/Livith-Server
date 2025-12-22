@@ -1,8 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import {
   ForbiddenException,
-  Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { PrismaService } from 'prisma/prisma.service';
 import { ReportResponseDto } from './dto/report-response.dto';
 
@@ -17,7 +18,7 @@ export class CommentService {
     });
 
     if (!comment) {
-      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+      throw new NotFoundException(ErrorCode.COMMENT_NOT_FOUND);
     }
 
     // 유저 ID가 유효한지 확인
@@ -25,16 +26,16 @@ export class CommentService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     // 본인 댓글인지 체크
     if (comment.userId !== userId) {
-      throw new ForbiddenException('본인의 댓글만 삭제할 수 있습니다.');
+      throw new ForbiddenException(ErrorCode.COMMENT_DELETE_FORBIDDEN);
     }
 
     // 신고 기록이 있는 경우에만 comment 내용과 userId 업데이트
@@ -59,7 +60,7 @@ export class CommentService {
     });
 
     if (!comment) {
-      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+      throw new NotFoundException(ErrorCode.COMMENT_NOT_FOUND);
     }
 
     // 유저 ID가 유효한지 확인
@@ -68,11 +69,11 @@ export class CommentService {
     });
 
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     // 댓글 신고 처리
