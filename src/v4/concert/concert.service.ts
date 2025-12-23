@@ -1,9 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { CommentResponseDto } from '../comment/dto/comment-response.dto';
@@ -63,7 +64,7 @@ export class ConcertService {
 
     // 콘서트가 없을 경우 예외 처리
     if (!concert) {
-      throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
@@ -82,7 +83,7 @@ export class ConcertService {
 
     // 콘서트가 없을 경우 예외 처리
     if (!artistId) {
-      throw new NotFoundException(`해당 콘서트를 찾을 수 없습니다.`);
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // 아티스트 정보 조회
@@ -94,7 +95,7 @@ export class ConcertService {
 
     // 아티스트가 없을 경우 예외 처리
     if (!artist) {
-      throw new NotFoundException(`해당 아티스트를 찾을 수 없습니다.`);
+      throw new NotFoundException(ErrorCode.ARTIST_NOT_FOUND);
     }
 
     return new ArtistResponseDto(artist);
@@ -108,7 +109,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // 문화 조회
@@ -129,7 +130,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // MD 조회
@@ -157,7 +158,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // const concertInfos = await this.prismaService.concertInfo.findMany({
@@ -177,7 +178,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     const schedules = await this.prismaService.schedule.findMany({
@@ -200,7 +201,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
     // ConcertSetlist 기준으로 연결된 Setlist 가져오기
     const concertSetlists = await this.prismaService.concertSetlist.findMany({
@@ -262,7 +263,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     const concertSetlist = await this.prismaService.concertSetlist.findMany({
@@ -307,7 +308,7 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // 셋리스트 ID가 유효한지 확인
@@ -315,7 +316,7 @@ export class ConcertService {
       where: { id: setlistId },
     });
     if (!setlist) {
-      throw new NotFoundException('해당 셋리스트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.SETLIST_NOT_FOUND);
     }
 
     // 콘서트 ID와 셋리스트 ID가 일치하는 콘서트셋리스트 확인
@@ -328,9 +329,7 @@ export class ConcertService {
 
     // 콘서트셋리스트가 없을 경우 예외 처리
     if (!concertSetlist) {
-      throw new NotFoundException(
-        '해당 셋리스트와 콘서트의 조합이 존재하지 않습니다.',
-      );
+      throw new NotFoundException(ErrorCode.SETLIST_CONCERT_NOT_FOUND);
     }
     // 해당 콘서트의 모든 셋리스트 중 가장 startDate가 최신인 것 찾기
     const latestSetlist = await this.prismaService.concertSetlist.findFirst({
@@ -366,7 +365,7 @@ export class ConcertService {
       where: { id },
     });
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     //댓글 전체 개수
@@ -383,7 +382,7 @@ export class ConcertService {
           id: parsed.id,
         };
       } catch (e) {
-        throw new BadRequestException('유효하지 않은 cursor 형식입니다.');
+        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
       }
     }
 
@@ -428,7 +427,7 @@ export class ConcertService {
       where: { id: concertId },
     });
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // 유저 ID가 유효한지 확인
@@ -436,11 +435,11 @@ export class ConcertService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     // 댓글 작성
