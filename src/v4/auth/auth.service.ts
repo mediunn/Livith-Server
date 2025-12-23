@@ -1,10 +1,11 @@
+import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable,
   NotFoundException,
   UnauthorizedException,
-} from '@nestjs/common';
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
@@ -53,7 +54,7 @@ export class AuthService {
 
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
 
-    if (!key) throw new UnauthorizedException('Apple key not found');
+    if (!key) throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
     const pem = jwkToPem(key);
     // JWT 검증
     const payload: any = jwt.verify(identityToken, pem, {
@@ -81,7 +82,7 @@ export class AuthService {
         (new Date().getTime() - user.deletedAt.getTime()) /
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7) {
-        throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+        throw new ForbiddenException(ErrorCode.WITHDRAWAL_PERIOD_NOT_PASSED);
       } else {
         //탈퇴한지 7일이 지났을 때
         await this.prisma.user.update({
@@ -134,7 +135,7 @@ export class AuthService {
       });
 
       if (!user || user.refreshToken !== oldRefreshToken) {
-        throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
+        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
       }
 
       // 토큰 absolute 만료 체크
@@ -142,7 +143,7 @@ export class AuthService {
         !user.refreshTokenExpiresAt ||
         new Date() > user.refreshTokenExpiresAt
       ) {
-        throw new UnauthorizedException('리프레시 토큰 만료');
+        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
       }
 
       const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
@@ -155,7 +156,7 @@ export class AuthService {
 
       return { accessToken, refreshToken };
     } catch (e) {
-      throw new UnauthorizedException('리프레시 토큰 검증 실패');
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED);
     }
   }
 
@@ -186,7 +187,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+      throw new BadRequestException(ErrorCode.NICKNAME_ALREADY_EXISTS);
     }
 
     // 완전 신규 유저 생성
@@ -223,11 +224,11 @@ export class AuthService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
     // 이미 탈퇴한 유저 확인
     if (user.deletedAt) {
-      throw new BadRequestException('이미 탈퇴한 회원입니다.');
+      throw new BadRequestException(ErrorCode.USER_ALREADY_DELETED);
     }
 
     await this.prisma.$transaction(async (tx) => {
