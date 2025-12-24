@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty, MaxLength } from 'class-validator';
+import { Provider } from '@prisma/client';
 
 export class SignupDto {
   @ApiProperty({
@@ -7,7 +8,7 @@ export class SignupDto {
     example: 'kakao',
   })
   @IsNotEmpty()
-  provider: string;
+  provider: Provider;
 
   @ApiProperty({
     description: 'provider ID',
