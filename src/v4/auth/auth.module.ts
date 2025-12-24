@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { KakaoStrategy } from './strategies/kakao.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';
+import { CookieService } from '../common/utils/cookie.util';
 @Module({
   imports: [JwtModule.register({})],
   controllers: [AuthController],
@@ -15,6 +16,7 @@ import { AppleStrategy } from './strategies/apple.strategy';
     KakaoStrategy,
     JwtStrategy,
     AppleStrategy,
+    CookieService,
   ],
 })
 export class AuthModule {}
