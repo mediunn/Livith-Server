@@ -12,12 +12,15 @@ import { UserResponseDto } from '../user/dto/user-response.dto';
 import axios from 'axios';
 import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
+import { Provider } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   // JWT 토큰 생성
@@ -25,16 +28,16 @@ export class AuthService {
     const accessToken = this.jwtService.sign(
       { userId, email },
       {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES,
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES'),
       },
     );
 
     const refreshToken = this.jwtService.sign(
       { userId, email },
       {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: process.env.JWT_REFRESH_EXPIRES,
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES'),
       },
     );
 
@@ -127,7 +130,7 @@ export class AuthService {
   async refreshToken(oldRefreshToken: string) {
     try {
       const payload = this.jwtService.verify(oldRefreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
       const user = await this.prisma.user.findUnique({
@@ -162,8 +165,10 @@ export class AuthService {
 
   // 로그아웃 처리 (리프레시 토큰 삭제)
   async logout(refreshToken: string) {
+    if(!refreshToken) return;
+
     const payload = this.jwtService.verify(refreshToken, {
-      secret: process.env.JWT_REFRESH_SECRET,
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
     });
 
     await this.prisma.user.update({
@@ -174,11 +179,11 @@ export class AuthService {
 
   //회원가입
   async signup(
-    provider,
-    providerId,
-    email,
-    marketingConsent,
-    nickname,
+    provider: Provider,
+    providerId: string,
+    email: string,
+    marketingConsent: boolean,
+    nickname: string,
     client,
   ) {
     //닉네임 중복 확인
@@ -191,35 +196,43 @@ export class AuthService {
     }
 
     // 완전 신규 유저 생성
-    const user = await this.prisma.user.create({
-      data: { provider, providerId, email, nickname, marketingConsent },
-    });
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. 유저 생성
+      const user = await tx.user.create({
+        data: { provider, providerId, email, nickname, marketingConsent },
+      });
 
-    //토큰 발급
-    const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
+      //토큰 발급
+      const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-      },
-    });
+      // 토큰 저장
+      const updatedUser = await tx.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken,
+          refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      return {user: updatedUser, accessToken, refreshToken};
+    })
+
+    
     if (client === 'web') {
       return {
-        user: new UserResponseDto(updatedUser),
-        accessToken,
+        user: new UserResponseDto(result.user),
+        accessToken: result.accessToken,
       };
     }
     return {
-      user: new UserResponseDto(updatedUser),
-      accessToken,
-      refreshToken,
+      user: new UserResponseDto(result.user),
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     };
   }
 
   //회원 탈퇴
-  async withdraw(userId, reason) {
+  async withdraw(userId: number, reason: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
