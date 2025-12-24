@@ -210,7 +210,7 @@ export class AuthController {
     @Req() req,
     @Res({ passthrough: true }) res: Response,
     @Query('client') client: string,
-    @Body() body?: RefreshTokenDto,
+    @Body() body,
   ) {
     const refreshToken = req.cookies.refreshToken || body?.refreshToken || null;
 
