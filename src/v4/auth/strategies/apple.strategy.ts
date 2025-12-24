@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-apple';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
-  constructor() {
+  constructor(private configService: ConfigService) {
     super({
-      clientID: process.env.APPLE_CLIENT_ID, // Service ID (웹) / Bundle ID (iOS)
-      teamID: process.env.APPLE_TEAM_ID,
-      keyID: process.env.APPLE_KEY_ID,
-      privateKeyString: process.env.APPLE_PRIVATE_KEY,
-      callbackURL: `${process.env.SERVER_URL}/auth/apple/callback`,
+      clientID: configService.get<string>('APPLE_CLIENT_ID'), // Service ID (웹) / Bundle ID (iOS)
+      teamID: configService.get<string>('APPLE_TEAM_ID'),
+      keyID: configService.get<string>('APPLE_KEY_ID'),
+      privateKeyString: configService.get<string>('APPLE_PRIVATE_KEY'),
+      callbackURL: `${configService.get<string>('SERVER_URL')}/auth/apple/callback`,
       passReqToCallback: true,
       scope: ['name', 'email'],
     });
