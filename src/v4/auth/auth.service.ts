@@ -159,13 +159,15 @@ export class AuthService {
 
       return { accessToken, refreshToken };
     } catch (e) {
-      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED);
+      throw new UnauthorizedException(
+        ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
+      );
     }
   }
 
   // 로그아웃 처리 (리프레시 토큰 삭제)
   async logout(refreshToken: string) {
-    if(!refreshToken) return;
+    if (!refreshToken) return;
 
     const payload = this.jwtService.verify(refreshToken, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -214,10 +216,9 @@ export class AuthService {
         },
       });
 
-      return {user: updatedUser, accessToken, refreshToken};
-    })
+      return { user: updatedUser, accessToken, refreshToken };
+    });
 
-    
     if (client === 'web') {
       return {
         user: new UserResponseDto(result.user),
