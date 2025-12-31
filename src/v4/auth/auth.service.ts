@@ -223,6 +223,7 @@ export class AuthService {
       return {
         user: new UserResponseDto(result.user),
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       };
     }
     return {
