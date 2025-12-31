@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 import { Provider } from '@prisma/client';
 
 export class SignupDto {
@@ -21,6 +27,8 @@ export class SignupDto {
     description: '이메일',
     example: 'livith@gmail.com',
   })
+  @IsEmail()
+  @IsOptional()
   email: string;
 
   @ApiProperty({
