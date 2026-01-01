@@ -25,11 +25,12 @@ export class SignupDto {
 
   @ApiProperty({
     description: '이메일',
+    required: false,
     example: 'livith@gmail.com',
   })
   @IsEmail()
   @IsOptional()
-  email: string;
+  email?: string;
 
   @ApiProperty({
     description: '유저 닉네임',
