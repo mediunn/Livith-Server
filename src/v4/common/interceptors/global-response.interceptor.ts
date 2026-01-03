@@ -53,6 +53,11 @@ export class GlobalResponseInterceptor implements NestInterceptor {
           response.end();
         }
       }),
+      tap((data) => {
+        if(data === null){
+          response.end();
+        }
+      })
     );
   }
 }
