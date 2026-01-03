@@ -22,11 +22,11 @@ export class GlobalResponseInterceptor implements NestInterceptor {
         const responseData = {
           statusCode: context.switchToHttp().getResponse().statusCode,
           message: '요청에 성공하였습니다.',
-          data: data || {},
+          data: data || null,
         };
 
         // GET 요청에 ETag 캐싱 적용
-        if(request.method === 'GET'){
+        if (request.method === 'GET') {
           // ETag 생성 (응답 데이터의 해시값)
           const responseString = JSON.stringify(responseData);
           const etag = crypto
@@ -40,13 +40,18 @@ export class GlobalResponseInterceptor implements NestInterceptor {
           // 클라이언트의 If-None-Match 헤더 확인
           const clientEtag = request.headers['if-none-match'];
 
-          if(clientEtag && clientEtag === `"${etag}"`){
+          if (clientEtag && clientEtag === `"${etag}"`) {
             // ETag 일치 시 304 반환
             response.status(304);
             return null;
           }
         }
         return responseData;
+      }),
+      tap((data) => {
+        if (data === null) {
+          response.end();
+        }
       }),
       tap((data) => {
         if(data === null){
