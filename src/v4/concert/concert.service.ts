@@ -22,8 +22,18 @@ export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: string, id?: number, size?: number) {
-    const cursorValue =
-      cursor && id ? { startDate: cursor, id: Number(id) } : undefined;
+    let cursorValue;
+    if (cursor && id) {
+      try {
+        const parsed = JSON.parse(cursor);
+        cursorValue = {
+          startDate: parsed.startDate,
+          id: parsed.id,
+        };
+      } catch (e) {
+        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
+      }
+    }
 
     const concerts = await this.prismaService.concert.findMany({
       where: {

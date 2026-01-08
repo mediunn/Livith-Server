@@ -9,6 +9,8 @@ import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { GenreType } from '@prisma/client';
 import { GetSearchResultsDto } from './dto/get-search-results.dto';
+import { BadRequestException } from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 
 @Injectable()
 export class SearchService {
@@ -76,7 +78,11 @@ export class SearchService {
     // cursor 파싱
     let parsedCursor: { value: string; id: number } | undefined;
     if (cursor) {
-      parsedCursor = JSON.parse(cursor);
+      try {
+        parsedCursor = JSON.parse(cursor);
+      } catch (e) {
+        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
+      }
     }
 
     // 키워드 검색 조건
