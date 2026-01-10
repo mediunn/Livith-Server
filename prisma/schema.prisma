@@ -77,6 +77,8 @@ model Info {
   category  String   @db.VarChar(30)
   content   String   @db.VarChar(100)
   imgUrl    String?  @map("img_url") @db.VarChar(2048)
+  venue        String?       @db.VarChar(255)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
   concertInfos ConcertInfo[]
