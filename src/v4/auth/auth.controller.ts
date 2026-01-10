@@ -99,36 +99,41 @@ export class AuthController {
       return sendPostMessagePayload(res, payload);
     }
   }
-
   @Post('auth/apple/callback')
   @UseGuards(AuthGuard('apple'))
   async appleCallback(@Req() req, @Res() res: Response) {
-    const idToken = req.user.idToken;
+    try {
+      const idToken = req.user.idToken;
 
-    const state = req.body.state;
-    const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+      const state = req.body.state;
+      const decoded = JSON.parse(
+        Buffer.from(state, 'base64').toString('utf-8'),
+      );
 
-    if (decoded.nonce !== req.session.appleNonce) {
+      if (decoded.nonce !== req.session.appleNonce) {
+        delete req.session.appleNonce;
+        return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
+      }
       delete req.session.appleNonce;
-      return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
-    }
-    delete req.session.appleNonce;
 
-    // 서버에서 Apple 서버로 token 검증
-    const userInfo = await this.authService.verifyAppleIdentity(idToken);
+      const userInfo = await this.authService.verifyAppleIdentity(idToken);
+      const result = await this.authService.validateOAuthLogin(userInfo);
 
-    const result = await this.authService.validateOAuthLogin(userInfo);
+      if (result.isNewUser) {
+        return sendPostMessagePayload(res, {
+          isNewUser: true,
+          tempUserData: result.tempUserData,
+        });
+      }
 
-    if (result.isNewUser) {
-      return sendPostMessagePayload(res, {
-        isNewUser: true,
-        tempUserData: result.tempUserData,
-      });
-    } else {
       this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
       return sendPostMessagePayload(res, {
         accessToken: result.accessToken,
         isNewUser: false,
+      });
+    } catch (error: any) {
+      return sendPostMessagePayload(res, {
+        error: error.message || '애플 로그인 중 오류가 발생했어요',
       });
     }
   }
