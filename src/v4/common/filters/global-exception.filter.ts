@@ -8,6 +8,8 @@ import {
 import { BusinessException } from '../exceptions/business.exception';
 import { ErrorCode } from '../enums/error-code.enum';
 import { ErrorMessages } from '../constants/error-messages';
+import { HTTP_STATUS_MESSAGES } from '../constants/http-status-messages';
+
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -17,8 +19,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if(exception instanceof BusinessException){
       const status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-      return response.status(status).json(exceptionResponse);
+      const exceptionResponse = exception.getResponse() as { statusCode: number; message: string };
+      
+      return response.status(status).json({
+        message: exceptionResponse.message,
+        error: HTTP_STATUS_MESSAGES[status] || 'Error',
+        statusCode: status,
+      });
     }
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -43,9 +50,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    response.status(status).json({
-      statusCode: status,
+    return response.status(status).json({
       message,
+      error: HTTP_STATUS_MESSAGES[status] || 'Error',
+      statusCode: status,
     });
   }
 }
