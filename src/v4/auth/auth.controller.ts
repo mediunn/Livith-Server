@@ -1,15 +1,18 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Post,
   Query,
   Req,
   Res,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ForbiddenException,
+  UnauthorizedException,
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
@@ -24,10 +27,16 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { WithDrawDto } from './dto/withdraw.dto';
 import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 import { AppleMobileLoginDto } from './dto/apple-mobile-login.dto';
+import { CookieService } from '../common/utils/cookie.util';
+import { ConfigService } from '@nestjs/config';
 
 @Controller()
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private cookieService: CookieService,
+    private configService: ConfigService,
+  ) {}
 
   @Get('api/v4/auth/kakao/web')
   async kakaoLoginWeb(@Req() req, @Res() res: Response) {
@@ -38,7 +47,7 @@ export class AuthController {
 
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${process.env.KAKAO_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/kakao/callback&state=${state}`;
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/kakao/callback&state=${state}`;
     return res.redirect(kakaoAuthUrl);
   }
 
@@ -48,7 +57,7 @@ export class AuthController {
     req.session.appleNonce = nonce;
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${process.env.APPLE_CLIENT_ID}&redirect_uri=${process.env.SERVER_URL}/auth/apple/callback&state=${state}&scope=name email`;
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/apple/callback&state=${state}&scope=name email`;
     return res.redirect(appleAuthUrl);
   }
 
@@ -61,8 +70,7 @@ export class AuthController {
   ) {
     // state 디코딩
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-    console.log('d', decoded);
-    console.log('r', req.session.kakaoNonce);
+
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
       delete req.session.kakaoNonce;
@@ -81,15 +89,9 @@ export class AuthController {
       } else {
         // 기존 유저 -> 토큰 발급
         // 리프레시 토큰은 httpOnly 쿠키로 저장
-        res.cookie('refreshToken', result.refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'none',
-          maxAge: 4 * 24 * 60 * 60 * 1000,
-        });
+        this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
         payload = { accessToken: result.accessToken, isNewUser: false };
       }
-
       return sendPostMessagePayload(res, payload);
     } catch (error: any) {
       // 여기서 에러 메시지를 팝업으로 전달
@@ -97,41 +99,41 @@ export class AuthController {
       return sendPostMessagePayload(res, payload);
     }
   }
-
   @Post('auth/apple/callback')
   @UseGuards(AuthGuard('apple'))
   async appleCallback(@Req() req, @Res() res: Response) {
-    const idToken = req.user.idToken;
+    try {
+      const idToken = req.user.idToken;
 
-    const state = req.body.state;
-    const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+      const state = req.body.state;
+      const decoded = JSON.parse(
+        Buffer.from(state, 'base64').toString('utf-8'),
+      );
 
-    if (decoded.nonce !== req.session.appleNonce) {
+      if (decoded.nonce !== req.session.appleNonce) {
+        delete req.session.appleNonce;
+        return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
+      }
       delete req.session.appleNonce;
-      return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
-    }
-    delete req.session.appleNonce;
 
-    // 서버에서 Apple 서버로 token 검증
-    const userInfo = await this.authService.verifyAppleIdentity(idToken);
+      const userInfo = await this.authService.verifyAppleIdentity(idToken);
+      const result = await this.authService.validateOAuthLogin(userInfo);
 
-    const result = await this.authService.validateOAuthLogin(userInfo);
+      if (result.isNewUser) {
+        return sendPostMessagePayload(res, {
+          isNewUser: true,
+          tempUserData: result.tempUserData,
+        });
+      }
 
-    if (result.isNewUser) {
-      return sendPostMessagePayload(res, {
-        isNewUser: true,
-        tempUserData: result.tempUserData,
-      });
-    } else {
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 4 * 24 * 60 * 60 * 1000,
-      });
+      this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
       return sendPostMessagePayload(res, {
         accessToken: result.accessToken,
         isNewUser: false,
+      });
+    } catch (error: any) {
+      return sendPostMessagePayload(res, {
+        error: error.message || '애플 로그인 중 오류가 발생했어요',
       });
     }
   }
@@ -139,14 +141,14 @@ export class AuthController {
   @Post('api/v4/auth/kakao/mobile')
   @ApiOperation({ summary: '카카오 모바일 로그인' })
   @ApiBody({ type: KakaoMobileLoginDto })
-  async kakaoLoginMobile(@Body() dto) {
+  async kakaoLoginMobile(@Body() dto: KakaoMobileLoginDto) {
     // 카카오 사용자 정보 조회
     const userRes = await axios.get('https://kapi.kakao.com/v2/user/me', {
       headers: { Authorization: `Bearer ${dto.accessToken}` },
     });
 
     if (!userRes.data || !userRes.data.id) {
-      throw new ForbiddenException('카카오 사용자 정보 조회 실패');
+      throw new ForbiddenException(ErrorCode.KAKAO_USER_INFO_FETCH_HEAD);
     }
 
     // 서버 JWT + refresh token 발급
@@ -162,7 +164,7 @@ export class AuthController {
     summary: '애플 모바일 로그인',
   })
   @ApiBody({ type: AppleMobileLoginDto })
-  async appleLoginMobile(@Body() dto) {
+  async appleLoginMobile(@Body() dto: AppleMobileLoginDto) {
     // 서버에서 Apple 서버로 token 검증
     const userInfo = await this.authService.verifyAppleIdentity(
       dto.identityToken,
@@ -183,24 +185,19 @@ export class AuthController {
     @Req() req,
     @Res({ passthrough: true }) res: Response,
     @Query('client') client: string,
-    @Body() body,
+    @Body() body?: RefreshTokenDto,
   ) {
     const oldRefreshToken = req.cookies.refreshToken || body?.refreshToken;
 
     if (!oldRefreshToken) {
-      throw new UnauthorizedException('리프레시 토큰이 없습니다');
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
     }
     const { accessToken, refreshToken } =
       await this.authService.refreshToken(oldRefreshToken);
 
     if (client === 'web') {
       // 새로운 리프레시 토큰을 쿠키에 저장
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-        sameSite: 'none',
-        maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
-      });
+      this.cookieService.setRefreshTokenCookie(res, refreshToken);
       return { accessToken };
     } else if (client === 'mobile') {
       return { accessToken, refreshToken };
@@ -218,21 +215,17 @@ export class AuthController {
     @Req() req,
     @Res({ passthrough: true }) res: Response,
     @Query('client') client: string,
-    @Body() body,
+    @Body() body?: RefreshTokenDto,
   ) {
     const refreshToken = req.cookies.refreshToken || body?.refreshToken || null;
-    console.log(refreshToken);
+
     if (!refreshToken)
-      throw new UnauthorizedException('리프레시 토큰이 없습니다');
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
 
     await this.authService.logout(refreshToken);
     if (client === 'web') {
       // 쿠키 삭제
-      res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-      });
+      this.cookieService.clearRefreshTokenCookie(res);
     }
     return { message: '로그아웃 완료' };
   }
@@ -247,7 +240,7 @@ export class AuthController {
   async signup(
     @Res({ passthrough: true }) res,
     @Req() req,
-    @Body() body,
+    @Body() body: SignupDto,
     @Query('client') client: string,
   ) {
     const result = await this.authService.signup(
@@ -260,12 +253,7 @@ export class AuthController {
     );
     if (client === 'web') {
       // 리프레시 토큰은 httpOnly 쿠키로 저장
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 배포 환경만 true
-        sameSite: 'none',
-        maxAge: 4 * 24 * 60 * 60 * 1000, // 4일
-      });
+      this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
     }
 
     return result;
@@ -291,12 +279,7 @@ export class AuthController {
       const result = await this.authService.withdraw(userId, body.reason);
 
       // 탈퇴 성공 시 쿠키 삭제
-      res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-      });
-
+      this.cookieService.clearRefreshTokenCookie(res);
       return result;
     } catch (error) {
       // 탈퇴 실패 시 쿠키 유지 + 에러 전달

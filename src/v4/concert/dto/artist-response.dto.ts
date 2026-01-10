@@ -13,11 +13,13 @@ export class ArtistResponseDto {
   constructor(artist: Artist) {
     this.id = artist.id;
     this.artist = artist.artist;
-    this.debutDate = artist.debutDate;
+    this.debutDate = artist.debutDate.replaceAll('-', '.');
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
-    this.keywords = artist.keywords.split(',').map((keyword) => keyword.trim());
+    this.keywords = artist.keywords
+      ? artist.keywords.split(',').map((keyword) => keyword.trim())
+      : [];
     this.imgUrl = artist.imgUrl;
   }
 }

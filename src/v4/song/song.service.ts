@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { NotFoundException } from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { PrismaService } from 'prisma/prisma.service';
 import { LyricsResponseDto } from './dto/lyrics-response.dto';
 
@@ -13,7 +15,7 @@ export class SongService {
     });
 
     if (!song) {
-      throw new NotFoundException('해당 곡이 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.SONG_NOT_FOUND);
     }
 
     return new LyricsResponseDto(song);

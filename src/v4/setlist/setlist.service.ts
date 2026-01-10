@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { NotFoundException } from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { PrismaService } from 'prisma/prisma.service';
 import { SongResponseDto } from './dto/song-response.dto';
 import { FanchantResponseDto } from './dto/fanchant-response.dto';
@@ -14,7 +16,7 @@ export class SetlistService {
       where: { id },
     });
     if (!setlist) {
-      throw new NotFoundException('해당 셋리스트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.SETLIST_NOT_FOUND);
     }
 
     // 셋리스트에 해당하는 곡 목록 조회
@@ -39,7 +41,7 @@ export class SetlistService {
       where: { id: setlistId },
     });
     if (!setlist) {
-      throw new NotFoundException('해당 셋리스트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.SETLIST_NOT_FOUND);
     }
 
     // 곡 ID가 유효한지 확인
@@ -47,7 +49,7 @@ export class SetlistService {
       where: { id: songId },
     });
     if (!song) {
-      throw new NotFoundException('해당 곡이 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.SONG_NOT_FOUND);
     }
 
     // 응원법 조회
@@ -60,7 +62,7 @@ export class SetlistService {
 
     if (!fanchant) {
       throw new NotFoundException(
-        '해당 셋리스트와 곡의 조합이 존재하지 않습니다.',
+        ErrorCode.SETLIST_SONG_NOT_FOUND
       );
     }
 

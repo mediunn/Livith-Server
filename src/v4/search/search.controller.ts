@@ -1,5 +1,7 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { BadRequestException } from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { SearchService } from './search.service';
 import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
@@ -31,7 +33,7 @@ export class SearchController {
   })
   getRecommendWords(@Query('letter') letter: string) {
     if (!letter?.trim()) {
-      throw new BadRequestException('검색어(letter)는 필수입니다.');
+      throw new BadRequestException(ErrorCode.SEARCH_KEYWORD_REQUIRED);
     }
     return this.searchService.getRecommendWords(letter);
   }
