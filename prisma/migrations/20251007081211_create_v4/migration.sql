@@ -1,8 +1,8 @@
 -- DropForeignKey
-ALTER TABLE `concert_info` DROP FOREIGN KEY `concert_info_concert_id_fkey`;
+-- ALTER TABLE `concert_info` DROP FOREIGN KEY `concert_info_concert_id_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `cultures` DROP FOREIGN KEY `cultures_concert_id_fkey`;
+-- ALTER TABLE `cultures` DROP FOREIGN KEY `cultures_concert_id_fkey`;
 
 -- -- DropIndex
 -- DROP INDEX `uk_artist` ON `artists`;

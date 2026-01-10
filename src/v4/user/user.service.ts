@@ -1,9 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
@@ -21,7 +22,7 @@ export class UserService {
       where: { id: concertId },
     });
     if (!concert) {
-      throw new NotFoundException('해당 콘서트가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     // 유저 ID가 유효한지 확인
@@ -29,11 +30,11 @@ export class UserService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     // 관심 콘서트 설정
@@ -54,11 +55,11 @@ export class UserService {
       include: { concert: true },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     if (!user.concert) {
@@ -78,10 +79,10 @@ export class UserService {
       include: { concert: true },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
     await this.prismaService.user.update({
       where: { id: userId },
@@ -97,10 +98,10 @@ export class UserService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
     return new UserResponseDto(user);
   }
@@ -111,11 +112,11 @@ export class UserService {
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.deletedAt) {
-      throw new ForbiddenException('탈퇴한 회원입니다.');
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     //닉네임 중복 확인
@@ -124,7 +125,7 @@ export class UserService {
     });
 
     if (duplicate) {
-      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+      throw new BadRequestException(ErrorCode.NICKNAME_ALREADY_EXISTS);
     }
 
     const updatedUser = await this.prismaService.user.update({
@@ -151,14 +152,14 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
     if (user.deletedAt) {
       const daysSinceDelete =
         (new Date().getTime() - user.deletedAt.getTime()) /
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7)
-        throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+        throw new ForbiddenException(ErrorCode.WITHDRAWAL_PERIOD_NOT_PASSED);
     }
     return {
       message: '정상적인 유저입니다.',

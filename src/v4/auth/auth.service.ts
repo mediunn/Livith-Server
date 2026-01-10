@@ -1,22 +1,26 @@
+import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable,
   NotFoundException,
   UnauthorizedException,
-} from '@nestjs/common';
+} from '../common/exceptions/business.exception';
+import { ErrorCode } from '../common/enums/error-code.enum';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import axios from 'axios';
 import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
+import { Provider } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   // JWT 토큰 생성
@@ -24,16 +28,16 @@ export class AuthService {
     const accessToken = this.jwtService.sign(
       { userId, email },
       {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES,
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES'),
       },
     );
 
     const refreshToken = this.jwtService.sign(
       { userId, email },
       {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: process.env.JWT_REFRESH_EXPIRES,
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES'),
       },
     );
 
@@ -53,7 +57,7 @@ export class AuthService {
 
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
 
-    if (!key) throw new UnauthorizedException('Apple key not found');
+    if (!key) throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
     const pem = jwkToPem(key);
     // JWT 검증
     const payload: any = jwt.verify(identityToken, pem, {
@@ -81,7 +85,7 @@ export class AuthService {
         (new Date().getTime() - user.deletedAt.getTime()) /
         (1000 * 60 * 60 * 24);
       if (daysSinceDelete < 7) {
-        throw new ForbiddenException('탈퇴 후 7일이 지나지 않았어요');
+        throw new ForbiddenException(ErrorCode.WITHDRAWAL_PERIOD_NOT_PASSED);
       } else {
         //탈퇴한지 7일이 지났을 때
         await this.prisma.user.update({
@@ -107,10 +111,16 @@ export class AuthService {
 
     //기존 유저
     const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
+
+    // absolute 만료가 없으면 최초 1회 설정
+    const refreshTokenExpiresAt =
+      user.refreshTokenExpiresAt ??
+      new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+
     // 리프레시 토큰 DB 저장
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { refreshToken },
+      data: { refreshToken, refreshTokenExpiresAt },
     });
 
     return { accessToken, refreshToken, isNewUser: false };
@@ -120,7 +130,7 @@ export class AuthService {
   async refreshToken(oldRefreshToken: string) {
     try {
       const payload = this.jwtService.verify(oldRefreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
       const user = await this.prisma.user.findUnique({
@@ -128,7 +138,15 @@ export class AuthService {
       });
 
       if (!user || user.refreshToken !== oldRefreshToken) {
-        throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
+        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
+      }
+
+      // 토큰 absolute 만료 체크
+      if (
+        !user.refreshTokenExpiresAt ||
+        new Date() > user.refreshTokenExpiresAt
+      ) {
+        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
       }
 
       const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
@@ -141,29 +159,33 @@ export class AuthService {
 
       return { accessToken, refreshToken };
     } catch (e) {
-      throw new UnauthorizedException('리프레시 토큰 검증 실패');
+      throw new UnauthorizedException(
+        ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
+      );
     }
   }
 
   // 로그아웃 처리 (리프레시 토큰 삭제)
   async logout(refreshToken: string) {
+    if (!refreshToken) return;
+
     const payload = this.jwtService.verify(refreshToken, {
-      secret: process.env.JWT_REFRESH_SECRET,
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
     });
 
     await this.prisma.user.update({
       where: { id: payload.userId },
-      data: { refreshToken: null },
+      data: { refreshToken: null, refreshTokenExpiresAt: null },
     });
   }
 
   //회원가입
   async signup(
-    provider,
-    providerId,
-    email,
-    marketingConsent,
-    nickname,
+    provider: Provider,
+    providerId: string,
+    email: string,
+    marketingConsent: boolean,
+    nickname: string,
     client,
   ) {
     //닉네임 중복 확인
@@ -172,47 +194,56 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new BadRequestException('이미 존재하는 닉네임이에요.');
+      throw new BadRequestException(ErrorCode.NICKNAME_ALREADY_EXISTS);
     }
 
     // 완전 신규 유저 생성
-    const user = await this.prisma.user.create({
-      data: { provider, providerId, email, nickname, marketingConsent },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. 유저 생성
+      const user = await tx.user.create({
+        data: { provider, providerId, email, nickname, marketingConsent },
+      });
+
+      //토큰 발급
+      const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
+
+      // 토큰 저장
+      const updatedUser = await tx.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken,
+          refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      return { user: updatedUser, accessToken, refreshToken };
     });
 
-    //토큰 발급
-    const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
-
-    const updatedUser = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken,
-      },
-    });
     if (client === 'web') {
       return {
-        user: new UserResponseDto(updatedUser),
-        accessToken,
+        user: new UserResponseDto(result.user),
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       };
     }
     return {
-      user: new UserResponseDto(updatedUser),
-      accessToken,
-      refreshToken,
+      user: new UserResponseDto(result.user),
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     };
   }
 
   //회원 탈퇴
-  async withdraw(userId, reason) {
+  async withdraw(userId: number, reason: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
     // 이미 탈퇴한 유저 확인
     if (user.deletedAt) {
-      throw new BadRequestException('이미 탈퇴한 회원입니다.');
+      throw new BadRequestException(ErrorCode.USER_ALREADY_DELETED);
     }
 
     await this.prisma.$transaction(async (tx) => {
