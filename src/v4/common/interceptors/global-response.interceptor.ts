@@ -20,9 +20,9 @@ export class GlobalResponseInterceptor implements NestInterceptor {
       map((data) => {
         // 응답이 null이나 undefined일 경우에도 처리할 수 있도록 기본값을 설정
         const responseData = {
-          statusCode: context.switchToHttp().getResponse().statusCode,
           message: '요청에 성공하였습니다.',
           data: data || null,
+          statusCode: context.switchToHttp().getResponse().statusCode,
         };
 
         // GET 요청에 ETag 캐싱 적용
