@@ -1,19 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-// import { AppModuleV1 } from './v1/app.module';
-// import { AppModuleV2 } from './v2/app.module';
-// import { AppModuleV3 } from './v3/app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModuleV4 } from './v4/app.module';
+import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
-import { GlobalExceptionFilter } from './v4/common/filters/global-exception.filter';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
 
-// import { ConcertSchedulerService } from './concert/concert-scheduler.service';
-// import { OpenApiService } from './open-api/open-api.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModuleV4);
+  const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
