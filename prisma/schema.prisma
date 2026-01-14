@@ -14,15 +14,15 @@ model Concert {
   startDate             String                 @map("start_date") @db.VarChar(20)
   endDate               String                 @map("end_date") @db.VarChar(20)
   status                ConcertStatus
-  poster                String                @db.VarChar(2048)
-  artist                String                @db.VarChar(100)
+  poster                String                 @db.VarChar(2048)
+  artist                String                 @db.VarChar(100)
   createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime              @default(now()) @updatedAt @map("updated_at")
+  updatedAt             DateTime               @default(now()) @updatedAt @map("updated_at")
   artistId              Int                    @map("artist_id")
   ticketSite            String?                @map("ticket_site") @db.VarChar(50)
   ticketUrl             String?                @map("ticket_url") @db.VarChar(2048)
-  venue                 String                @db.VarChar(100)
-  introduction          String                @db.Text
+  venue                 String                 @db.VarChar(100)
+  introduction          String                 @db.Text
   label                 String?                @db.VarChar(50)
   concertComments       ConcertComment[]
   concertGenre          ConcertGenre[]
@@ -60,27 +60,27 @@ model Artist {
 }
 
 model ConcertInfo {
-  id           Int       @id @default(autoincrement())
-  concertId    Int       @map("concert_id")
-  infoId       Int       @map("info_id")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  concertId Int      @map("concert_id")
+  infoId    Int      @map("info_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  concert   Concert  @relation(fields: [concertId], references: [id])
-  info      Info     @relation(fields: [infoId],references:[id])
+  concert Concert @relation(fields: [concertId], references: [id])
+  info    Info    @relation(fields: [infoId], references: [id])
 
   @@map("concert_info")
 }
 
 model Info {
-  id        Int      @id @default(autoincrement())
-  category  String   @db.VarChar(30)
-  content   String   @db.VarChar(100)
-  imgUrl    String?  @map("img_url") @db.VarChar(2048)
-  venue        String?       @db.VarChar(255)
+  id       Int     @id @default(autoincrement())
+  category String  @db.VarChar(30)
+  content  String  @db.VarChar(100)
+  imgUrl   String? @map("img_url") @db.VarChar(2048)
+  venue    String? @db.VarChar(255)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at")
   concertInfos ConcertInfo[]
 
   @@map("info")
@@ -93,7 +93,7 @@ model Md {
   price     String?  @db.VarChar(30)
   imgUrl    String?  @map("img_url") @db.VarChar(2048)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   concert   Concert  @relation(fields: [concertId], references: [id])
 
   @@index([concertId], map: "md_concert_id_fkey")
@@ -119,7 +119,7 @@ model Culture {
   content   String   @db.Text
   imgUrl    String?  @map("img_url") @db.VarChar(2048)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   title     String   @db.Text
   concert   Concert  @relation(fields: [concertId], references: [id])
 
@@ -149,13 +149,13 @@ model ConcertSetlist {
 model Setlist {
   id              Int              @id @default(autoincrement())
   title           String           @db.VarChar(300)
-  artist          String          @db.VarChar(100)
+  artist          String           @db.VarChar(100)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
   imgUrl          String?          @map("img_url") @db.VarChar(2048)
   endDate         String           @map("end_date") @db.VarChar(20)
   startDate       String           @map("start_date") @db.VarChar(20)
-  venue           String          @db.VarChar(100)
+  venue           String           @db.VarChar(100)
   concertSetlists ConcertSetlist[]
   setlistSongs    SetlistSong[]
 
@@ -174,7 +174,7 @@ model SetlistSong {
   setlistDate    String   @map("setlist_date") @db.VarChar(20)
   setlistTitle   String   @map("setlist_title") @db.VarChar(300)
   songTitle      String   @map("song_title") @db.VarChar(50)
-  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
   fanchant_point String?  @db.Text
   setlist        Setlist  @relation(fields: [setlistId], references: [id])
   song           Song     @relation(fields: [songId], references: [id])
@@ -204,12 +204,12 @@ model Song {
 
 model Banner {
   id        Int      @id @default(autoincrement())
-  imgUrl    String  @map("img_url") @db.VarChar(2048)
-  category  String  @db.VarChar(30)
-  title     String  @db.VarChar(50)
+  imgUrl    String   @map("img_url") @db.VarChar(2048)
+  category  String   @db.VarChar(30)
+  title     String   @db.VarChar(50)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
-  content   String  @db.VarChar(100)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  content   String   @db.VarChar(100)
 
   @@map("banners")
 }
@@ -283,30 +283,86 @@ model ConcertGenre {
 }
 
 model Genre {
-  id           Int            @id @default(autoincrement())
-  name         GenreType      @unique
-  concertGenre ConcertGenre[]
+  id                    Int                         @id @default(autoincrement())
+  name                  GenreType                   @unique
+  concertGenre          ConcertGenre[]
+  userGenres            UserGenre[]
+  representativeArtists RepresentativeArtist[]
 
   @@map("genres")
 }
 
 model User {
-  id                Int              @id @default(autoincrement())
-  interestConcertId Int?             @map("interest_concert_id")
-  provider          Provider
-  providerId        String?           @map("provider_id") @unique
-  email             String?          @db.VarChar(255)
-  nickname          String          @unique @db.VarChar(50)
-  marketingConsent  Boolean          @default(false) @map("marketing_consent")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at")
-  deletedAt         DateTime?        @map("deleted_at")
-  refreshToken      String?          @map("refresh_token") @db.Text
-  refreshTokenExpiresAt DateTime?    @map("refresh_token_expires_at")
-  concertComments   ConcertComment[]
-  concert           Concert?         @relation(fields: [interestConcertId], references: [id])
+  id                    Int              @id @default(autoincrement())
+  interestConcertId     Int?             @map("interest_concert_id")
+  provider              Provider
+  providerId            String?          @unique @map("provider_id")
+  email                 String?          @db.VarChar(255)
+  nickname              String           @unique @db.VarChar(50)
+  marketingConsent      Boolean          @default(false) @map("marketing_consent")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @default(now()) @updatedAt @map("updated_at")
+  deletedAt             DateTime?        @map("deleted_at")
+  refreshToken          String?          @map("refresh_token") @db.Text
+  refreshTokenExpiresAt DateTime?        @map("refresh_token_expires_at")
+  concertComments       ConcertComment[]
+  concert               Concert?         @relation(fields: [interestConcertId], references: [id])
+  userGenres            UserGenre[]
+  userFavoriteArtists   UserArtist[]
+  fcmTokens             FcmToken[]
+  notificationSet       NotificationSet?
 
   @@map("users")
+}
+
+model UserGenre {
+  id            Int         @id @default(autoincrement())
+  userId        Int         @map("user_id")
+  genreId       Int         @map("genre_id")
+  genre_name    GenreType   
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id])
+
+  @@unique([userId, genreId])
+  @@index([userId])
+  @@index([genreId])
+  @@map("user_genres")
+}
+
+model RepresentativeArtist {
+  id         Int      @id @default(autoincrement())
+  genreId    Int      @map("genre_id")
+  artistName String   @map("artist_name") @db.VarChar(100)
+  imgUrl     String   @map("img_url") @db.VarChar(2048)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  genre Genre @relation(fields: [genreId], references: [id])
+  userArtists UserArtist[]
+
+  @@unique([genreId, artistName])
+  @@index([genreId, createdAt])
+  @@map("representative_artists")
+}
+
+model UserArtist {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  artistId   Int      @map("artist_id")
+  artistName String   @map("artist_name") @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artist RepresentativeArtist @relation(fields: [artistId], references: [id]) 
+
+  @@unique([userId, artistId]) 
+  @@index([userId])
+  @@index([artistId])
+  @@map("user_artists")
 }
 
 model ConcertComment {
@@ -322,6 +378,35 @@ model ConcertComment {
   @@index([concertId], map: "concert_comments_concert_id_fkey")
   @@index([userId], map: "concert_comments_user_id_fkey")
   @@map("concert_comments")
+}
+
+model FcmToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("fcm_tokens")
+}
+
+model NotificationSet {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique @map("user_id")
+  ticketAlert   Boolean  @default(true)  @map("ticket_alert")
+  infoAlert     Boolean  @default(true)  @map("info_alert")
+  interestAlert Boolean  @default(true)  @map("interest_alert")
+  recommendAlert Boolean @default(true)  @map("recommend_alert")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_sets")
 }
 
 model Report {
