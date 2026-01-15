@@ -25,6 +25,7 @@ export class LastfmApiService implements MusicApiService{
         try{
             const params: any = {
                 method: 'artist.getSimilar',
+                artist: artistName,
                 api_key: this.apiKey,
                 format: 'json',
             };
