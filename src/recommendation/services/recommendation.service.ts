@@ -34,11 +34,11 @@ export class RecommendationService{
             this.lastfmApiService.getSimilarArtists(userArtist.artistName),
         );
 
-        const simllarArtistArrays = await Promise.all(similarArtists);
+        const simlarArtistArrays = await Promise.all(similarArtists);
 
         // 모든 유사 아티스트 이름 수집
         const allSimilarArtists = new Set<string>();
-        simllarArtistArrays.forEach((artists) => {
+        simlarArtistArrays.forEach((artists) => {
             artists.forEach((artist) => allSimilarArtists.add(artist));
         });
 
