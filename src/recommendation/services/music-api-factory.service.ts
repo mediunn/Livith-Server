@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { LastfmApiService } from "./last-fm.api.service";
+import { LastfmApiService } from "../integrations/lastfm/last-fm.api.service";
 import { ConfigService } from "@nestjs/config";
 import { MusicApiService } from "../interface/music-api.interface";
 import { MusicApiProvider } from "../enums/music-api-provider.enum";
