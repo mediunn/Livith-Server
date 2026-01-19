@@ -58,13 +58,12 @@ export class LastfmApiService implements MusicApiService{
         }
     }
 
-    async getTopArtistByTag(tag: string, limit: number = 50, page: number = 1): Promise<{name: string}[]>{
+    async getTopArtistByTag(tag: string, limit: number = 50): Promise<{name: string}[]>{
         try{
             const params: any = {
                 method: 'tag.getTopArtists',
                 tag: tag,
                 limit: limit,
-                page: page,
                 api_key: this.apiKey,
                 format: 'json',
             };

@@ -44,7 +44,6 @@ export class ArtistSyncService{
         const artists = await this.lastfmApiService.getTopArtistByTag(
             lastfmTag,
             200,
-            1
         );
 
         // DB에 Upsert
