@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
 import { LastfmApiService } from "../integrations/lastfm/last-fm.api.service";
 import { ArtistImageService } from "./artist-image.service";
@@ -7,7 +7,15 @@ import { getLastfmTag } from "../integrations/lastfm/genre-mapping.util";
 import { YoutubeApiService } from "../integrations/youtube/youtube.api.service";
 
 @Injectable()
-export class ArtistSyncService{
+export class ArtistSyncService implements OnModuleInit{
+
+    async onModuleInit() {
+        const count = await this.prismaService.representativeArtist.count();
+        if(count === 0){
+            await this.syncRepresentativeArtists();
+        }
+    }
+
     private readonly logger = new Logger(ArtistSyncService.name);
 
     constructor(
@@ -73,6 +81,7 @@ export class ArtistSyncService{
             where: {OR: [{imgUrl: ''}, {imgUrl: null}]},
             take: 95,
             orderBy: {createdAt: 'asc'},
+            include: {genre: true}, 
         });
 
         if(artistsWithoutImage.length === 0){
@@ -80,7 +89,15 @@ export class ArtistSyncService{
         }
 
         for(const artist of artistsWithoutImage){
-            const imgUrl = await this.youtubeApiService.getArtistImageUrl(artist.artistName);
+            let imgUrl = await this.youtubeApiService.getArtistImageUrl(artist.artistName);
+
+            // YouTube에서 이미지를 못 가져온 경우, 장르 이미지로 대체
+            if(!imgUrl){
+                imgUrl = artist.genre.imgUrl || '';
+                this.logger.warn(
+                    `YouTube image not found for ${artist.artistName}. Using genre image: ${imgUrl}`,
+                );
+            }
 
             await this.prismaService.representativeArtist.update({
                 where: {id: artist.id},
