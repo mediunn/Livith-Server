@@ -285,6 +285,7 @@ model ConcertGenre {
 model Genre {
   id                    Int                         @id @default(autoincrement())
   name                  GenreType                   @unique
+  imgUrl                String                      @map("img_url") @db.VarChar(2048)
   concertGenre          ConcertGenre[]
   userGenres            UserGenre[]
   representativeArtists RepresentativeArtist[]
