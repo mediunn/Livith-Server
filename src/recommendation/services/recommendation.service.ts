@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
-import { LastfmApiService } from "./last-fm.api.service";
+import { LastfmApiService } from "../integrations/lastfm/last-fm.api.service";
 import { ConcertStatus } from "src/common/enums/concert-status.enum";
 import { ConcertResponseDto } from "src/concert/dto/concert-response.dto";
 import { getDaysUntil } from "src/common/utils/date.util";
