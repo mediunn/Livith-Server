@@ -10,9 +10,12 @@ import { SetlistModule } from './setlist/setlist.module';
 import { SongModule } from './song/song.module';
 import { CommentModule } from './comment/comment.module';
 import { UserModule } from './user/user.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecommendationModule } from './recommendation/recommendation.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -24,6 +27,7 @@ import { UserModule } from './user/user.module';
     SongModule,
     CommentModule,
     UserModule,
+    RecommendationModule,
   ],
   controllers: [],
   providers: [
