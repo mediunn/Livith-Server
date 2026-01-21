@@ -79,7 +79,7 @@ export class ArtistSyncService implements OnModuleInit{
     async syncArtistImages(){
         const artistsWithoutImage = await this.prismaService.representativeArtist.findMany({
             where: {OR: [{imgUrl: ''}, {imgUrl: null}]},
-            take: 95,
+            take: 90,
             orderBy: {createdAt: 'asc'},
             include: {genre: true}, 
         });
