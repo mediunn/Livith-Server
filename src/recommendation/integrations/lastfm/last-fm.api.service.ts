@@ -89,4 +89,37 @@ export class LastfmApiService implements MusicApiService{
             );
         }
     }
+
+    async getGlobalTopArtists(limit: number = 1000, page: number = 1): Promise<{name: string}[]>{
+        try{
+            const params: any = {
+                method: 'chart.getTopArtists',
+                limit: limit,
+                page: page,
+                api_key: this.apiKey,
+                format: 'json',
+            };
+
+            const response = await firstValueFrom(
+                this.httpService.get(this.baseUrl, { params }),
+            );
+
+            if(response.data.error){
+                this.logger.warn(
+                    `Last.fm API error: ${response.data.error}-${response.data.message}`,
+                );
+                return [];
+            }
+
+            const artists = response.data.artists?.artist || [];
+            return Array.isArray(artists)
+                ? artists.map((a: any) => ({name: a.name}))
+                : [];
+        }catch(error){
+            this.logger.warn(
+                `Last.fm getTopArtists failed: ${error.message}`,
+            );
+            return [];
+        }
+    }
 }
