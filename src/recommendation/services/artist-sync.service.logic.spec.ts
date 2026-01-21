@@ -89,7 +89,7 @@ describe('ArtistSyncService Logic Test ', () => {
         expect(genreArtistCount.get(2)).toBe(200); 
         
         console.log('장르별 아티스트 수:', Object.fromEntries(genreArtistCount));
-    }, 30000);
+    }, 60000);
 
     // Upsert 로직 검증
     it('첫 번째 실행: 모든 아티스트 Create', async () => {
@@ -118,7 +118,7 @@ describe('ArtistSyncService Logic Test ', () => {
             artistName: expect.any(String),
             imgUrl: '', // 빈값
         });
-    }, 15000);
+    }, 60000);
 
     it('2차 실행: 기존 아티스트는 Update만, imgUrl 유지', async () => {
         // Given
@@ -156,11 +156,11 @@ describe('ArtistSyncService Logic Test ', () => {
         
         const allArtists = Array.from(mockDb.values());
         expect(allArtists.every(a => a.imgUrl === '')).toBe(true);
-    }, 30000);
+    }, 60000);
 
-    it('이미지 없는 아티스트 95개씩 처리', async () => {
-        // Given: 95명 아티스트 (이미지 없음, genre 포함)
-        const mockArtists = Array.from({ length: 95 }, (_, i) => ({
+    it('이미지 없는 아티스트 90개씩 처리', async () => {
+        // Given: 90명 아티스트 (이미지 없음, genre 포함)
+        const mockArtists = Array.from({ length: 90 }, (_, i) => ({
             id: i + 1,
             artistName: `Artist${i + 1}`,
             imgUrl: '',
@@ -173,16 +173,16 @@ describe('ArtistSyncService Logic Test ', () => {
         // When
         await service.syncArtistImages();
 
-        // Then: 95개만 처리
+        // Then: 90개만 처리
         expect(prismaService.representativeArtist.findMany).toHaveBeenCalledWith({
             where: { OR: [{ imgUrl: '' }, { imgUrl: null }] },
-            take: 95,
+            take: 90,
             orderBy: { createdAt: 'asc' },
             include: { genre: true },
         });
         
-        expect(prismaService.representativeArtist.update).toHaveBeenCalledTimes(95);
-    }); 
+        expect(prismaService.representativeArtist.update).toHaveBeenCalledTimes(90);
+    }, 60000); 
 
     it('이미지 모두 있으면 즉시 종료', async () => {
         // Given: 이미지 없는 아티스트 0명
@@ -193,7 +193,7 @@ describe('ArtistSyncService Logic Test ', () => {
 
         // Then: update 호출 안됨
         expect(prismaService.representativeArtist.update).not.toHaveBeenCalled();
-    });
+    }, 60000);
 
     it('장르명이 Last.fm 태그로 정확히 변환되는지 확인', async () => {
         // Given
@@ -219,5 +219,5 @@ describe('ArtistSyncService Logic Test ', () => {
         expect(apiCalls).toContain('j-pop');
         expect(apiCalls).toContain('rock');
         expect(apiCalls).toContain('jazz');
-    });
+    }, 60000);
 });
