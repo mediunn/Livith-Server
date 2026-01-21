@@ -2,6 +2,17 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { firstValueFrom } from "rxjs";
+import { AxiosError } from "axios";
+
+export enum YoutubeApiErrorType{
+    QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
+}
+
+export interface YoutubApiResult{
+    imgUrl: string | null;
+    errorType?: YoutubeApiErrorType;
+}
+
 
 @Injectable()
 export class YoutubeApiService{
@@ -20,7 +31,7 @@ export class YoutubeApiService{
         }
     }
 
-    async getArtistImageUrl(artistName: string): Promise<string>{
+    async getArtistImageUrl(artistName: string): Promise<YoutubApiResult>{
         try{
             const params = {
                 part: 'snippet',
@@ -35,15 +46,25 @@ export class YoutubeApiService{
             );
 
             const items = response.data.items || [];
-            if(items.length === 0) return null;
+            if(items.length === 0) return { imgUrl: null };
 
             const thumbnails = items[0].snippet?.thumbnails;
-            return thumbnails?.high?.url;
+            return { imgUrl: thumbnails?.high?.url || null };
         }catch(error){
-            this.logger.warn(
-                `YouTube API failed for ${artistName}: ${error.message}`,
-            );
-            return null;
+            if(this.isQuotaExceeded(error)){
+                return { imgUrl: null, errorType: YoutubeApiErrorType.QUOTA_EXCEEDED };
+            }
+            return { imgUrl: null };
         }
+    }
+
+    private isQuotaExceeded(error: any): boolean{
+        if(error instanceof AxiosError && error.response?.status === 403){
+            const errorData = error.response.data;
+            if(errorData?.error?.errors?.[0]?.reason === 'quotaExceeded'){
+                return true;
+            }
+        }
+        return false;
     }
 }
