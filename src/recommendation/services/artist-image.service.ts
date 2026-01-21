@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { YoutubeApiService } from "../integrations/youtube/youtube.api.service";
+import { YoutubeApiService, YoutubApiResult } from "../integrations/youtube/youtube.api.service";
 
 @Injectable()
 export class ArtistImageService{
@@ -11,11 +11,11 @@ export class ArtistImageService{
 
     async getArtistImageUrl(artistName: string): Promise<string| null>{
         // Youtube만 시도
-        const youtubeImage = await this.youtubeApiService.getArtistImageUrl(artistName);
+        const result: YoutubApiResult = await this.youtubeApiService.getArtistImageUrl(artistName);
 
-        if(youtubeImage){
+        if(result.imgUrl){
             this.logger.log(`Found YouTube image for ${artistName}`);
-            return youtubeImage;
+            return result.imgUrl;
         }
 
         this.logger.warn(`No YouTube image found for ${artistName}, will use genre default`);
