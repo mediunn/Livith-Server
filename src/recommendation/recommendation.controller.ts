@@ -1,23 +1,39 @@
-import { Controller, Get, Req, UseGuards } from "@nestjs/common";
-import { RecommendationService } from "./services/recommendation.service";
-import { ApiOperation } from "@nestjs/swagger";
+import { Controller, Post, Logger } from '@nestjs/common';
+import { ArtistSyncService } from './services/artist-sync.service';
 
+@Controller('/api/v5/recommendation')
+export class RecommendationController {
+  private readonly logger = new Logger(RecommendationController.name);
 
+  constructor(
+    private readonly artistSyncService: ArtistSyncService,
+  ) {}
 
+  /**
+   * 수동: 장르별 대표 아티스트 동기화
+   */
+  @Post('/sync/artists')
+  async syncArtists() {
+    this.logger.log('Manual artist sync triggered');
+    await this.artistSyncService.syncRepresentativeArtists();
+    return {
+      success: true,
+      message: 'Representative artists sync completed',
+    };
+  }
 
+  /**
+   * 수동: 아티스트 이미지 동기화
+   */
+  @Post('/sync/images')
+  async syncImages() {
+    this.logger.log('Manual image sync triggered');
+    await this.artistSyncService.syncArtistImages();
+    return {
+      success: true,
+      message: 'Artist images sync completed',
+    };
+  }
 
-@Controller('api/v5/recommendations')
-export class RecommendationController{
-    constructor(private readonly recommendationService: RecommendationService){}
-
-    // 추천 콘서트 조회
-    @Get('concerts')
-    @ApiOperation({
-        summary: '추천 콘서트 조회',
-        description: '유저의 선호 아티스트 기반으로 추천 콘서트를 조회합니다.'
-    })
-    async getRecommendConcerts(@Req() req){
-        const userId = req.user.userId;
-        return this.recommendationService.getRecommendConcerts(userId);
-    }
+  
 }
