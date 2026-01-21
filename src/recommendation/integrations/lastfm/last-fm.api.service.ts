@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { MusicApiService } from "../interface/music-api.interface";
+import { MusicApiService } from "../../interface/music-api.interface";
 import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
 import { firstValueFrom } from "rxjs";
@@ -56,6 +56,37 @@ export class LastfmApiService implements MusicApiService{
             );
             return [];
         }
+    }
 
+    async getTopArtistByTag(tag: string, limit: number = 50): Promise<{name: string}[]>{
+        try{
+            const params: any = {
+                method: 'tag.getTopArtists',
+                tag: tag,
+                limit: limit,
+                api_key: this.apiKey,
+                format: 'json',
+            };
+
+            const response = await firstValueFrom(
+                this.httpService.get(this.baseUrl, {params}),
+            );
+
+            if(response.data.error){
+                this.logger.warn(
+                    `Last.fm API error: ${response.data.error} - ${response.data.message}`,
+                );
+                return [];
+            }
+
+            const artists = response.data.topartists?.artist;
+            return Array.isArray(artists)
+                ? artists.map((a: any) => ({name: a.name}))
+                : [];
+        }catch(error){
+            this.logger.warn(
+                `Last.fm getTopArtistByTag failed for ${tag}: ${error.message}`,
+            );
+        }
     }
 }
