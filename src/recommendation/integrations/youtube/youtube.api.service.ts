@@ -31,7 +31,7 @@ export class YoutubeApiService{
             };
 
             const response = await firstValueFrom(
-                this.httpService.get(`${this.baseUrl}/search`, {params}),
+                this.httpService.get(`${this.baseUrl}/search`, {params, timeout: 0}),
             );
 
             const items = response.data.items || [];
