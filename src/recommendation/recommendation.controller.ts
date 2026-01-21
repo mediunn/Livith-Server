@@ -1,5 +1,7 @@
-import { Controller, Post, Logger } from '@nestjs/common';
+import { Controller, Post, Logger, UseGuards, Get, Request } from '@nestjs/common';
 import { ArtistSyncService } from './services/artist-sync.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RecommendationService } from './services/recommendation.service';
 
 @Controller('/api/v5/recommendation')
 export class RecommendationController {
@@ -7,6 +9,7 @@ export class RecommendationController {
 
   constructor(
     private readonly artistSyncService: ArtistSyncService,
+    private readonly recommendationService: RecommendationService,
   ) {}
 
   /**
@@ -35,5 +38,16 @@ export class RecommendationController {
     };
   }
 
-  
+  /**
+   * 취향 기반 추천 콘서트 조회
+   */
+  @UseGuards(JwtAuthGuard)  
+  @Get('/concerts')
+  async getRecommendConcerts(@Request() req){
+    const userId = req.user.id;
+
+    const concerts = await this.recommendationService.getRecommendConcerts(userId);
+
+    return concerts;
+  }
 }

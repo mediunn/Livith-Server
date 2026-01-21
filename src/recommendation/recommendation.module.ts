@@ -6,7 +6,6 @@ import { MusicApiFactoryService } from "./services/music-api-factory.service";
 import { YoutubeApiService } from "./integrations/youtube/youtube.api.service";
 import { ArtistImageService } from "./services/artist-image.service";
 import { ArtistSyncService } from "./services/artist-sync.service";
-import { GlobalArtistCacheService } from "./services/global-artist-cache.service";
 import { PrismaModule } from "prisma/prisma.module";
 import { RecommendationController } from "./recommendation.controller";
 import { RecommendationService } from "./services/recommendation.service";
@@ -23,8 +22,7 @@ import { RecommendationService } from "./services/recommendation.service";
         ArtistImageService,
         ArtistSyncService,
         RecommendationService,
-        GlobalArtistCacheService,
     ],
-    exports: [MusicApiFactoryService, LastfmApiService, GlobalArtistCacheService],
+    exports: [MusicApiFactoryService, LastfmApiService],
 })
 export class RecommendationModule{}
