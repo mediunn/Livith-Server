@@ -1,12 +1,17 @@
-import { Controller, Post, Logger } from '@nestjs/common';
+import { Controller, Post, Logger, UseGuards, Get, Request } from '@nestjs/common';
 import { ArtistSyncService } from './services/artist-sync.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RecommendationService } from './services/recommendation.service';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('추천')
 @Controller('/api/v5/recommendation')
 export class RecommendationController {
   private readonly logger = new Logger(RecommendationController.name);
 
   constructor(
     private readonly artistSyncService: ArtistSyncService,
+    private readonly recommendationService: RecommendationService,
   ) {}
 
   /**
@@ -35,5 +40,21 @@ export class RecommendationController {
     };
   }
 
-  
+  /**
+   * 취향 기반 추천 콘서트 조회
+   */
+  @UseGuards(JwtAuthGuard)  
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '취향 기반 콘서트 조회',
+    description: '유저의 선호 아티스트 기반 유산 아티스트 콘서트를 추천합니다. (최대 20개)',
+  })
+  @Get('/concerts')
+  async getRecommendConcerts(@Request() req){
+    const userId = req.user.id;
+
+    const concerts = await this.recommendationService.getRecommendConcerts(userId);
+
+    return concerts;
+  }
 }
