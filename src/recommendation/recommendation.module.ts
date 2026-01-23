@@ -7,12 +7,22 @@ import { YoutubeApiService } from "./integrations/youtube/youtube.api.service";
 import { ArtistImageService } from "./services/artist-image.service";
 import { ArtistSyncService } from "./services/artist-sync.service";
 import { PrismaModule } from "prisma/prisma.module";
+import { RecommendationController } from "./recommendation.controller";
+import { RecommendationService } from "./services/recommendation.service";
 
 
 
 @Module({
     imports: [HttpModule, ConfigModule, PrismaModule],
-    providers: [LastfmApiService, MusicApiFactoryService, YoutubeApiService, ArtistImageService, ArtistSyncService],
+    controllers: [RecommendationController],
+    providers: [
+        LastfmApiService, 
+        MusicApiFactoryService,
+        YoutubeApiService,
+        ArtistImageService,
+        ArtistSyncService,
+        RecommendationService,
+    ],
     exports: [MusicApiFactoryService, LastfmApiService],
 })
 export class RecommendationModule{}
