@@ -87,6 +87,7 @@ export class LastfmApiService implements MusicApiService{
             this.logger.warn(
                 `Last.fm getTopArtistByTag failed for ${tag}: ${error.message}`,
             );
+            return [];
         }
     }
 
