@@ -22,11 +22,11 @@ export class UserResponseDto {
     this.email = user.email;
     this.nickname = user.nickname;
     this.marketingConsent = user.marketingConsent;
-    this.favoriteGenres = user.userGenres.map((ug) => ({
+    this.favoriteGenres = (user.userGenres || []).map((ug) => ({
       id: ug.genreId,
       name: ug.genreName,
     }));
-    this.favoriteArtists = user.userArtists.map((ua) => ({
+    this.favoriteArtists = (user.userArtists || []).map((ua) => ({
       id: ua.artistId,
       name: ua.artistName,
     }));
