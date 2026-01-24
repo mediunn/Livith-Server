@@ -27,7 +27,7 @@ export class RecommendationService{
                 genreId: { in: genreIds },
             },
             },
-            status: { not: ConcertStatus.CANCELED },
+            status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
         },
         orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
         take: 20,
@@ -106,7 +106,7 @@ export class RecommendationService{
         const concerts = await this.prismaService.concert.findMany({
         where: {
             artistId: { in: matchedArtistIds },
-            status: { not: ConcertStatus.CANCELED },
+            status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
         },
         orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
         take: 20,
