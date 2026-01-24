@@ -71,7 +71,7 @@ export class ArtistSyncService {
     @Cron('0 3 * * *')
     async syncArtistImages(){
         const artistsWithoutImage = await this.prismaService.representativeArtist.findMany({
-            where: {OR: [{imgUrl: ''}, {imgUrl: null}]},
+            where: {imgUrl: ''},
             take: 90,
             orderBy: {createdAt: 'asc'},
             include: {genre: true}, 
