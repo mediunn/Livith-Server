@@ -273,7 +273,7 @@ model ConcertGenre {
   concertId    Int       @map("concert_id")
   concertTitle String    @map("concert_title") @db.VarChar(300)
   genreId      Int       @map("genre_id")
-  name         GenreType
+  name         GenreType 
   concert      Concert   @relation(fields: [concertId], references: [id])
   genre        Genre     @relation(fields: [genreId], references: [id])
 
@@ -309,7 +309,7 @@ model User {
   concertComments       ConcertComment[]
   concert               Concert?         @relation(fields: [interestConcertId], references: [id])
   userGenres            UserGenre[]
-  userFavoriteArtists   UserArtist[]
+  userArtists   UserArtist[]
   fcmTokens             FcmToken[]
   notificationSet       NotificationSet?
 
@@ -320,7 +320,7 @@ model UserGenre {
   id            Int         @id @default(autoincrement())
   userId        Int         @map("user_id")
   genreId       Int         @map("genre_id")
-  genre_name    GenreType   
+  genreName    GenreType    @map("genre_name")
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
 
