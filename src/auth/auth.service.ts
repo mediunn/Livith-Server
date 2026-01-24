@@ -77,6 +77,10 @@ export class AuthService {
         provider: profile.provider,
         providerId: String(profile.providerId),
       },
+      include: {
+        userGenres: true,
+        userArtists: true,
+      },
     });
 
     // 탈퇴 기록 확인 후 재가입 가능 처리
@@ -118,12 +122,21 @@ export class AuthService {
       new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
 
     // 리프레시 토큰 DB 저장
-    await this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: { refreshToken, refreshTokenExpiresAt },
+      include: {
+        userGenres: true,
+        userArtists: true,
+      },
     });
 
-    return { accessToken, refreshToken, isNewUser: false };
+    return {
+      user: new UserResponseDto(updatedUser),
+      accessToken,
+      refreshToken,
+      isNewUser: false,
+    };
   }
 
   // 리프레시 토큰으로 새로운 토큰 발급
@@ -187,22 +200,83 @@ export class AuthService {
     marketingConsent: boolean,
     nickname: string,
     client,
+    favoriteGenreIds: number[],
+    favoriteArtistIds?: number[],
   ) {
-    //닉네임 중복 확인
+    //유저 중복 확인
     const existingUser = await this.prisma.user.findUnique({
-      where: { nickname },
+      where: { providerId },
     });
 
     if (existingUser) {
+      throw new BadRequestException(ErrorCode.USER_ALREADY_EXISTS);
+    }
+
+    //닉네임 중복 확인
+    const existingNickname = await this.prisma.user.findUnique({
+      where: { nickname },
+    });
+
+    if (existingNickname) {
       throw new BadRequestException(ErrorCode.NICKNAME_ALREADY_EXISTS);
     }
 
     // 완전 신규 유저 생성
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. 유저 생성
+      // 유저 생성
       const user = await tx.user.create({
         data: { provider, providerId, email, nickname, marketingConsent },
       });
+
+      // 선호 장르 연결
+      if (favoriteGenreIds && favoriteGenreIds.length > 0) {
+        // 먼저 장르 정보를 조회
+        const genres = await tx.genre.findMany({
+          where: {
+            id: { in: favoriteGenreIds },
+          },
+        });
+
+        // 유효하지 않은 장르 ID가 있는지 확인
+        if (genres.length !== favoriteGenreIds.length) {
+          throw new BadRequestException(ErrorCode.GENRE_NOT_FOUND);
+        }
+
+        const genreConnections = genres.map((genre) => ({
+          userId: user.id,
+          genreId: genre.id,
+          genreName: genre.name,
+        }));
+
+        await tx.userGenre.createMany({
+          data: genreConnections,
+        });
+      }
+
+      // 선호 아티스트 연결
+      if (favoriteArtistIds && favoriteArtistIds.length > 0) {
+        // 먼저 대표 아티스트 정보를 조회
+        const artists = await tx.representativeArtist.findMany({
+          where: {
+            id: { in: favoriteArtistIds },
+          },
+        });
+
+        // 유효하지 않은 아티스트 ID가 있는지 확인
+        if (artists.length !== favoriteArtistIds.length) {
+          throw new BadRequestException(ErrorCode.ARTIST_NOT_FOUND);
+        }
+
+        const artistConnections = artists.map((artist) => ({
+          userId: user.id,
+          artistId: artist.id,
+          artistName: artist.artistName,
+        }));
+
+        await tx.userArtist.createMany({
+          data: artistConnections,
+        });
+      }
 
       //토큰 발급
       const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
@@ -213,6 +287,10 @@ export class AuthService {
         data: {
           refreshToken,
           refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+        },
+        include: {
+          userGenres: true,
+          userArtists: true,
         },
       });
 

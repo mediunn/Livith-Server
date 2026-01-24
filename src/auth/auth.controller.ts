@@ -250,6 +250,8 @@ export class AuthController {
       body.marketingConsent,
       body.nickname,
       client,
+      body.favoriteGenreIds,
+      body.favoriteArtistIds,
     );
     if (client === 'web') {
       // 리프레시 토큰은 httpOnly 쿠키로 저장
