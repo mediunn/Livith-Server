@@ -15,6 +15,30 @@ export class RecommendationService{
         private readonly lastfmApiService: LastfmApiService,
     ){}
 
+    private async getConcertByGenreIds(genreIds: number[]) {
+        if (!genreIds || genreIds.length === 0) {
+            return [];
+        }
+
+        const concerts = await this.prismaService.concert.findMany({
+        where: {
+            concertGenre: {
+            some: {
+                genreId: { in: genreIds },
+            },
+            },
+            status: { not: ConcertStatus.CANCELED },
+        },
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        take: 20,
+        distinct: ['id'],
+        });
+
+        return concerts.map(
+            (concert) => new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+        );
+    }
+
     // 추천 콘서트 조회
     async getRecommendConcerts(userId: number){
         // 유저의 선호 아티스트 조회
@@ -28,6 +52,15 @@ export class RecommendationService{
             // 장르 기반 추천
             return this.getConcertByUserGenres(userId);
         }
+
+        // 유저가 선택한 아티스트의 장르로 fallback 하기 위한 genreId 목록
+        const inferredGenreIds = Array.from(
+            new Set(
+                userArtists
+                    .map((ua) => ua.artist?.genreId)
+                    .filter((id): id is number => typeof id === 'number'),
+            ),
+        );
 
         // 병렬로 유사 아티스트 조회
         const similarArtists = userArtists.map((userArtist) => 
@@ -43,23 +76,36 @@ export class RecommendationService{
         });
 
         // 유사 아티스트 이름으로 Artist 테이블 조회하여 artistId 찾기
-        const artists = await this.prismaService.artist.findMany({
-            where: {
-                artist: { in: Array.from(allSimilarArtists) },
-            },
-            select: { id: true },
+        const similarArtistNames = Array.from(allSimilarArtists);
+        
+        const allArtists = await this.prismaService.artist.findMany({
+            select: { id: true, artist: true },
         });
 
-        const artistIds = artists.map((a) => a.id);
+        // 영문 이름만 추출 (괄호 앞부분, 공백 제거, 대소문자 무시)
+        const matchedArtistIds = allArtists
+            .filter((a) => {
+                const artistName = a.artist.split('(')[0].trim().toLowerCase();
+                return similarArtistNames.some(
+                    (similar) => similar.toLowerCase() === artistName
+                );
+            })
+            .map((a) => a.id);
 
-        if (artistIds.length === 0) {
+        if (matchedArtistIds.length === 0) {
+            // 1) 선택 아티스트 장르 기반 fallback
+            const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
+            if (genreFallback.length > 0) {
+                return genreFallback;
+            }
+            // 2) 기존 userGenre 기반 fallback
             return this.getConcertByUserGenres(userId);
         }
 
         // artistId로 콘서트 조회
         const concerts = await this.prismaService.concert.findMany({
         where: {
-            artistId: { in: artistIds },
+            artistId: { in: matchedArtistIds },
             status: { not: ConcertStatus.CANCELED },
         },
         orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
@@ -67,6 +113,12 @@ export class RecommendationService{
         });
 
         if (concerts.length === 0) {
+            // 1) 선택 아티스트 장르 기반 fallback
+            const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
+            if (genreFallback.length > 0) {
+                return genreFallback;
+            }
+            // 2) 기존 userGenre 기반 fallback
             return this.getConcertByUserGenres(userId);
         }
 
@@ -87,23 +139,6 @@ export class RecommendationService{
         }
 
         const genreIds = userGenres.map((ug) => ug.genreId);
-
-        const concerts = await this.prismaService.concert.findMany({
-        where: {
-            concertGenre: {
-            some: {
-                genreId: { in: genreIds },
-            },
-            },
-            status: { not: ConcertStatus.CANCELED },
-        },
-        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
-        take: 20,
-        distinct: ['id'],
-        });
-
-        return concerts.map(
-            (concert) => new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
-        );
+        return this.getConcertByGenreIds(genreIds);
     }
 }
