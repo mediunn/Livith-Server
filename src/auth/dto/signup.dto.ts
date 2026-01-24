@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -60,6 +61,7 @@ export class SignupDto {
   @IsNotEmpty()
   @ArrayMinSize(1)
   @ArrayMaxSize(3)
+  @IsArray()
   favoriteGenreIds: number[];
 
   @ApiProperty({
@@ -70,6 +72,7 @@ export class SignupDto {
     type: Number,
   })
   @IsOptional()
+  @IsArray()
   @ArrayMaxSize(3)
   favoriteArtistIds?: number[];
 }
