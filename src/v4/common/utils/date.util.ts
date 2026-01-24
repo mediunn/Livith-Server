@@ -11,7 +11,7 @@ export function getDaysUntil(dateStr: string): number {
   today.setHours(0, 0, 0, 0);
 
   const diffTime = targetDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 밀리초 → 일 수
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // 밀리초 → 일 수
 
   return diffDays;
 }
