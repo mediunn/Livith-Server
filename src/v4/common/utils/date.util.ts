@@ -1,17 +1,30 @@
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function parseYmd(dateStr: string): { year: number; month: number; day: number } | null {
+  const match = dateStr.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+
+  return { year, month, day };
+}
+
+function getTodayKstYmd(): { year: number; month: number; day: number } {
+  const kst = new Date(Date.now() + KST_OFFSET_MS);
+  return { year: kst.getUTCFullYear(), month: kst.getUTCMonth() + 1, day: kst.getUTCDate() };
+}
+
 export function getDaysUntil(dateStr: string): number {
-  const [year, month, day] = dateStr
-    .replaceAll('-', '.')
-    .split('.')
-    .map(Number);
-  const targetDate = new Date(year, month - 1, day); // JS에서 month는 0부터 시작
-  const today = new Date();
+  const target = parseYmd(dateStr);
+  if (!target) return 0;
 
-  // 시간은 무시하고 날짜만 비교하기 위해 시,분,초,ms를 0으로 맞춤
-  targetDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayKstYmd();
+  const targetUtcMs = Date.UTC(target.year, target.month - 1, target.day);
+  const todayUtcMs = Date.UTC(today.year, today.month - 1, today.day);
 
-  const diffTime = targetDate.getTime() - today.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // 밀리초 → 일 수
-
-  return diffDays;
+  return Math.trunc((targetUtcMs - todayUtcMs) / MS_PER_DAY);
 }
