@@ -219,43 +219,5 @@ describe('SearchService', () => {
         service.getArtistSearchResults(cursor, size, keyword),
       ).rejects.toThrow('DB Error');
     });
-
-    it('검색 결과가 없을 때 - 성공', async () => {
-      // Given
-      const cursor = undefined;
-      const size = 10;
-      const keyword = 'NonExistent';
-
-      mockPrismaService.representativeArtist.findMany.mockResolvedValue([]);
-      mockPrismaService.representativeArtist.count.mockResolvedValue(0);
-
-      // When
-      const result = await service.getArtistSearchResults(
-        cursor,
-        size,
-        keyword,
-      );
-
-      // Then
-      expect(result.data).toEqual([]);
-      expect(result.cursor).toBeNull();
-      expect(result.totalCount).toBe(0);
-    });
-
-    it('데이터베이스 에러 발생 - 실패', async () => {
-      // Given
-      const cursor = undefined;
-      const size = 10;
-      const keyword = undefined;
-
-      mockPrismaService.representativeArtist.findMany.mockRejectedValue(
-        new Error('DB Error'),
-      );
-
-      // When & Then
-      await expect(
-        service.getArtistSearchResults(cursor, size, keyword),
-      ).rejects.toThrow('DB Error');
-    });
   });
 });
