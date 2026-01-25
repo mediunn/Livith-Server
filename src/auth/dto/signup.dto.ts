@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -47,4 +50,29 @@ export class SignupDto {
   })
   @IsBoolean()
   marketingConsent: boolean;
+
+  @ApiProperty({
+    description: '유저의 장르 취향',
+    example: [1, 2, 3],
+    required: true,
+    isArray: true,
+    type: Number,
+  })
+  @IsNotEmpty()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(3)
+  @IsArray()
+  favoriteGenreIds: number[];
+
+  @ApiProperty({
+    description: '유저의 아티스트 취향',
+    example: [1, 2, 3],
+    required: false,
+    isArray: true,
+    type: Number,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  favoriteArtistIds?: number[];
 }

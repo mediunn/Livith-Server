@@ -96,6 +96,10 @@ export class UserService {
   async getUserInfo(userId: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
+      include: {
+        userGenres: true,
+        userArtists: true,
+      },
     });
     if (!user) {
       throw new NotFoundException(ErrorCode.USER_NOT_FOUND);

@@ -3,11 +3,12 @@ import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { SearchService } from './search.service';
-import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
-import { GetArtistSearchResultsDto } from './dto/get-artist-search-results.dto';
+import { GetSearchResultsDto } from './dto/get-search-results.dto';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
+
 
 @ApiTags('탐색')
-@Controller('api/v4/search')
+@Controller(`${API_PREFIX}/search`)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
   //배너 조회
