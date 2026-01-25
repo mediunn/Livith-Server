@@ -19,7 +19,9 @@ export class ArtistSyncService {
     ){}
 
     // 6개월마다 1일 새벽 2시: 아티스트 목록만 동기화
-    @Cron('0 2 1 */6 *')
+    @Cron('0 2 1 */6 *', {
+        timeZone: 'Asia/Seoul',
+    })
     async syncRepresentativeArtists(){ 
         this.logger.log('Starting representative artsits sync (every 6 months)');
 
@@ -68,7 +70,9 @@ export class ArtistSyncService {
         }
     }
 
-    @Cron('0 3 * * *')
+    @Cron('0 3 * * *', {
+        timeZone: 'Asia/Seoul',
+    })
     async syncArtistImages(){
         const artistsWithoutImage = await this.prismaService.representativeArtist.findMany({
             where: {imgUrl: ''},

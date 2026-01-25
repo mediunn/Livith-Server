@@ -6,7 +6,6 @@ import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
 
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(
@@ -51,7 +50,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
     .setDescription('Livith API 문서입니다.')
-    .setVersion('4.0')
+    .setVersion('5.0')
     .addBearerAuth() // JWT 인증 추가
     .build();
 

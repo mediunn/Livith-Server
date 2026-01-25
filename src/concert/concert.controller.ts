@@ -20,9 +20,10 @@ import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 import { GetCommentsDto } from './dto/get-comments.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('콘서트')
-@Controller('api/v4/concerts')
+@Controller(`${API_PREFIX}/concerts`)
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) {}
 
