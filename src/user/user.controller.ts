@@ -15,9 +15,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { CheckDeletedUser } from './dto/check-deleted-user.dto';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('유저')
-@Controller('api/v4/users')
+@Controller(`${API_PREFIX}/users`)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

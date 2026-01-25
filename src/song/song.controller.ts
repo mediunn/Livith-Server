@@ -1,9 +1,10 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SongService } from './song.service';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('노래')
-@Controller('api/v4/songs')
+@Controller(`${API_PREFIX}/songs`)
 export class SongController {
   //특정 노래 가사 정보 조회
   constructor(private readonly songService: SongService) {}

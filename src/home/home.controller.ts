@@ -1,9 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HomeService } from './home.service';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('홈')
-@Controller('api/v4/home')
+@Controller(`${API_PREFIX}/home`)
 export class HomeController {
   constructor(private readonly homeService: HomeService) {}
 
