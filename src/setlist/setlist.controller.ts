@@ -2,9 +2,10 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SetlistService } from './setlist.service';
 import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('셋리스트')
-@Controller('api/v5/setlists/')
+@Controller(`${API_PREFIX}/setlists`)
 export class SetlistController {
   constructor(private readonly setlistService: SetlistService) {}
 
