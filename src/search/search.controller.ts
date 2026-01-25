@@ -6,7 +6,7 @@ import { SearchService } from './search.service';
 import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
 @ApiTags('탐색')
-@Controller('api/v4/search')
+@Controller('api/v5/search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
   //배너 조회

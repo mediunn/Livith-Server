@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 @ApiTags('콘서트')
-@Controller('api/v4/concerts')
+@Controller('api/v5/concerts')
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) {}
 

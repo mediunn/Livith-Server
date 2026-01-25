@@ -38,7 +38,7 @@ export class AuthController {
     private configService: ConfigService,
   ) {}
 
-  @Get('api/v4/auth/kakao/web')
+  @Get('api/v5/auth/kakao/web')
   async kakaoLoginWeb(@Req() req, @Res() res: Response) {
     // 카카오 로그인 페이지로 리다이렉트
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -51,7 +51,7 @@ export class AuthController {
     return res.redirect(kakaoAuthUrl);
   }
 
-  @Get('api/v4/auth/apple/web')
+  @Get('api/v5/auth/apple/web')
   async appleLoginWeb(@Req() req, @Res() res: Response) {
     const nonce = crypto.randomBytes(16).toString('hex');
     req.session.appleNonce = nonce;
@@ -138,7 +138,7 @@ export class AuthController {
     }
   }
 
-  @Post('api/v4/auth/kakao/mobile')
+  @Post('api/v5/auth/kakao/mobile')
   @ApiOperation({ summary: '카카오 모바일 로그인' })
   @ApiBody({ type: KakaoMobileLoginDto })
   async kakaoLoginMobile(@Body() dto: KakaoMobileLoginDto) {
@@ -159,7 +159,7 @@ export class AuthController {
     });
   }
 
-  @Post('api/v4/auth/apple/mobile')
+  @Post('api/v5/auth/apple/mobile')
   @ApiOperation({
     summary: '애플 모바일 로그인',
   })
@@ -175,7 +175,7 @@ export class AuthController {
   }
 
   //토큰 재발급
-  @Post('api/v4/auth/refresh')
+  @Post('api/v5/auth/refresh')
   @ApiOperation({
     summary: '토큰 재발급',
     description: '리프레시 토큰으로 새로운 토큰을 발급합니다.',
@@ -205,7 +205,7 @@ export class AuthController {
   }
 
   //로그아웃
-  @Post('api/v4/auth/logout')
+  @Post('api/v5/auth/logout')
   @ApiOperation({
     summary: '로그아웃',
     description: '리프레시 토큰을 무효화하고 로그아웃합니다.',
@@ -231,7 +231,7 @@ export class AuthController {
   }
 
   //회원가입
-  @Post('api/v4/auth/signup')
+  @Post('api/v5/auth/signup')
   @ApiOperation({
     summary: '회원가입',
     description: '간편 로그인 이후 닉네임, 이메일 등 추가 정보를 저장합니다.',
@@ -262,7 +262,7 @@ export class AuthController {
   }
 
   //회원 탈퇴
-  @Post('api/v4/auth/withdraw')
+  @Post('api/v5/auth/withdraw')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({

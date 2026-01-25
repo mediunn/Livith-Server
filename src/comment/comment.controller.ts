@@ -14,7 +14,7 @@ import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 import { ReportCommentDto } from './dto/report-comment.dto';
 
 @ApiTags('댓글')
-@Controller('api/v4/comments')
+@Controller('api/v5/comments')
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
