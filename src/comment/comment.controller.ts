@@ -12,9 +12,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
 import { ReportCommentDto } from './dto/report-comment.dto';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('댓글')
-@Controller('api/v4/comments')
+@Controller(`${API_PREFIX}/comments`)
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
