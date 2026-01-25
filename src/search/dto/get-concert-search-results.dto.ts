@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ConcertSort } from 'src/common/enums/concert-sort.enum';
-import { ConcertStatus } from 'src/common/enums/concert-status.enum';
-import { ConcertGenre } from 'src/common/enums/concert-genre.enum';
+import { ConcertSort } from '../../common/enums/concert-sort.enum';
+import { ConcertStatus } from '../../common/enums/concert-status.enum';
+import { ConcertGenre } from '../../common/enums/concert-genre.enum';
 
-export class GetSearchResultsDto {
+export class GetConcertSearchResultsDto {
   @ApiProperty({
     description: '장르',
     isArray: true,

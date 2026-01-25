@@ -12,6 +12,7 @@ import { CommentModule } from './comment/comment.module';
 import { UserModule } from './user/user.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationModule } from './recommendation/recommendation.module';
+import { GenreModule } from './genre/genre.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RecommendationModule } from './recommendation/recommendation.module';
     CommentModule,
     UserModule,
     RecommendationModule,
+    GenreModule,
   ],
   controllers: [],
   providers: [

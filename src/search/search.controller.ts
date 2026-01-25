@@ -6,6 +6,7 @@ import { SearchService } from './search.service';
 import { GetSearchResultsDto } from './dto/get-search-results.dto';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 
+
 @ApiTags('탐색')
 @Controller(`${API_PREFIX}/search`)
 export class SearchController {
@@ -50,12 +51,26 @@ export class SearchController {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  @Get()
+  @Get('/concerts')
   @ApiOperation({
     summary: '필터에 따른 검색 결과 콘서트 목록 조회',
     description: '필터에 따른 검색 결과 콘서트 목록을 조회합니다.',
   })
-  getSearchResults(@Query() query: GetSearchResultsDto) {
-    return this.searchService.getSearchResults(query);
+  getConcertSearchResults(@Query() query: GetConcertSearchResultsDto) {
+    return this.searchService.getConcertSearchResults(query);
+  }
+
+  //대표 아티스트 검색 결과 목록 조회
+  @Get('/artists')
+  @ApiOperation({
+    summary: '대표 아티스트 검색 결과 목록 조회',
+    description: '대표 아티스트 검색 결과 목록을 조회합니다.',
+  })
+  async getSearchArtists(@Query() query: GetArtistSearchResultsDto) {
+    return this.searchService.getArtistSearchResults(
+      query.cursor,
+      query.size,
+      query.keyword,
+    );
   }
 }
