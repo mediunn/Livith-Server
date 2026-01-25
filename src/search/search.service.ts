@@ -184,19 +184,18 @@ export class SearchService {
         }
       : {};
 
-    const searchResults =
-      await this.prismaService.representativeArtist.findMany({
+    const [searchResults, totalCount] = await this.prismaService.$transaction([
+      this.prismaService.representativeArtist.findMany({
         where: keywordCondition,
         orderBy: [{ genreId: 'asc' }, { id: 'asc' }],
         skip: cursor ? 1 : 0,
         cursor: cursor ? { id: cursor } : undefined,
         take: size,
-      });
-
-    // 전체 개수
-    const totalCount = await this.prismaService.representativeArtist.count({
-      where: keywordCondition,
-    });
+      }),
+      this.prismaService.representativeArtist.count({
+        where: keywordCondition,
+      }),
+    ]);
 
     // 다음 커서 계산
     const last = searchResults[searchResults.length - 1];
