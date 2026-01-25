@@ -1,5 +1,5 @@
 import { Concert, SearchConcertSection, SearchSection } from '@prisma/client';
-import { getDaysUntil } from 'src/common/utils/date.util';
+import { getDaysUntil } from '../../common/utils/date.util';
 
 export class SearchSectionResponseDto {
   id: number;

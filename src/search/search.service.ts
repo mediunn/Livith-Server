@@ -8,9 +8,10 @@ import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { GenreType } from '@prisma/client';
-import { GetSearchResultsDto } from './dto/get-search-results.dto';
+import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
+import { RepresentativeArtistResponseDto } from './dto/representative-artist-response.dto';
 
 @Injectable()
 export class SearchService {
@@ -72,7 +73,7 @@ export class SearchService {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  async getSearchResults(query: GetSearchResultsDto) {
+  async getConcertSearchResults(query: GetConcertSearchResultsDto) {
     const { genre, status, sort, keyword, cursor, size } = query;
 
     // cursor 파싱
@@ -165,6 +166,44 @@ export class SearchService {
       data: searchResults.map(
         (concert) =>
           new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+      ),
+      cursor: nextCursor,
+      totalCount,
+    };
+  }
+
+  //대표 아티스트 검색 결과 목록 조회
+  async getArtistSearchResults(
+    cursor?: number,
+    size?: number,
+    keyword?: string,
+  ) {
+    const keywordCondition = keyword
+      ? {
+          artistName: { contains: keyword },
+        }
+      : {};
+
+    const [searchResults, totalCount] = await this.prismaService.$transaction([
+      this.prismaService.representativeArtist.findMany({
+        where: keywordCondition,
+        orderBy: [{ genreId: 'asc' }, { id: 'asc' }],
+        skip: cursor ? 1 : 0,
+        cursor: cursor ? { id: cursor } : undefined,
+        take: size,
+      }),
+      this.prismaService.representativeArtist.count({
+        where: keywordCondition,
+      }),
+    ]);
+
+    // 다음 커서 계산
+    const last = searchResults[searchResults.length - 1];
+    const nextCursor = last ? last.id : null;
+
+    return {
+      data: searchResults.map(
+        (artist) => new RepresentativeArtistResponseDto(artist),
       ),
       cursor: nextCursor,
       totalCount,
