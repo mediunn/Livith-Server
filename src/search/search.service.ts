@@ -8,7 +8,7 @@ import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { GenreType } from '@prisma/client';
-import { GetSearchResultsDto } from './dto/get-search-results.dto';
+import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 
@@ -72,7 +72,7 @@ export class SearchService {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  async getSearchResults(query: GetSearchResultsDto) {
+  async getConcertSearchResults(query: GetConcertSearchResultsDto) {
     const { genre, status, sort, keyword, cursor, size } = query;
 
     // cursor 파싱

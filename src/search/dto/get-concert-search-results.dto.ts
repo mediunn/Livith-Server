@@ -5,7 +5,7 @@ import { ConcertSort } from 'src/common/enums/concert-sort.enum';
 import { ConcertStatus } from 'src/common/enums/concert-status.enum';
 import { ConcertGenre } from 'src/common/enums/concert-genre.enum';
 
-export class GetSearchResultsDto {
+export class GetConcertSearchResultsDto {
   @ApiProperty({
     description: '장르',
     isArray: true,

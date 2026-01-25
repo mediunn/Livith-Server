@@ -3,7 +3,7 @@ import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { SearchService } from './search.service';
-import { GetSearchResultsDto } from './dto/get-search-results.dto';
+import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 
 @ApiTags('탐색')
 @Controller('api/v4/search')
@@ -49,12 +49,12 @@ export class SearchController {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  @Get()
+  @Get('/concerts')
   @ApiOperation({
     summary: '필터에 따른 검색 결과 콘서트 목록 조회',
     description: '필터에 따른 검색 결과 콘서트 목록을 조회합니다.',
   })
-  getSearchResults(@Query() query: GetSearchResultsDto) {
-    return this.searchService.getSearchResults(query);
+  getConcertSearchResults(@Query() query: GetConcertSearchResultsDto) {
+    return this.searchService.getConcertSearchResults(query);
   }
 }
