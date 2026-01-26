@@ -222,7 +222,7 @@ export class NotificationService{
             }
 
             // 마케팅 동의 처리
-            if(dto.marktetingConsent){
+            if(dto.marketingConsent){
                 // NotificationSet의 recommendAler를 true로 변경
                 await tx.notificationSet.update({
                     where: {userId},
