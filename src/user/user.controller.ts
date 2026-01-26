@@ -121,4 +121,17 @@ export class UserController {
     const userId = req.user.userId;
     return this.userService.getUserGenrePreferences(userId);
   }
+
+  // 유저 취향 아티스트 조회
+  @Get('artist-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저 취향 아티스트 조회',
+    description: '현재 로그인한 유저의 취향 아티스트를 조회합니다.',
+  })
+  async getUserArtistPreferences(@Req() req) {
+    const userId = req.user.userId;
+    return this.userService.getUserArtistPreferences(userId);
+  }
 }
