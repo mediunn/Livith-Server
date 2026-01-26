@@ -43,5 +43,7 @@ export class UpdateNotficationSettingDto{
         example: false,
         required: false,
     })
+    @IsOptional()
+    @IsBoolean()
     nightAlert?: boolean;
 }

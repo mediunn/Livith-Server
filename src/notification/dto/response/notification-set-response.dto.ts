@@ -22,7 +22,7 @@ export class NotificationSettingResponseDto{
 
     @ApiProperty({
         description: '취향 기반 콘서트 알림 (홍보성)',
-        example: true,
+        example: false,
     })
     recommendAlert: boolean;
 

@@ -8,7 +8,7 @@ export class NotificationConsentDto{
         example: true,
     })
     @IsBoolean()
-    marktetingConsent: boolean;
+    marketingConsent: boolean;
 
     @ApiProperty({
         description: '야간 푸시 알림 동의',
