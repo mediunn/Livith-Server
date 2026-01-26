@@ -108,4 +108,17 @@ export class UserController {
   async checkDeletedUser(@Query() query: CheckDeletedUser) {
     return this.userService.checkDeletedUser(query.providerId, query.provider);
   }
+
+  // 유저 취향 장르 조회
+  @Get('genre-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저 취향 장르 조회',
+    description: '현재 로그인한 유저의 취향 장르를 조회합니다.',
+  })
+  async getUserGenrePreferences(@Req() req) {
+    const userId = req.user.userId;
+    return this.userService.getUserGenrePreferences(userId);
+  }
 }
