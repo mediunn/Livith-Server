@@ -3,10 +3,10 @@ import { ConsentType, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { ErrorCode } from 'src/common/enums/error-code.enum';
 import { BadRequestException, ForbiddenException, NotFoundException } from 'src/common/exceptions/business.exception';
-import { FIELD_TO_CONSENT_TYPE, NOTIFICATION_DEFAULTS, PROMOTIONAL_FIELDS } from './constants/notification.constants';
 import { NotificationField } from './enums/notification-field.enum';
 import { NotificationConsentResponseDto } from './dto/response/notification-consent-response.dto';
 import { NotificationSettingResponseDto } from './dto/response/notification-set-response.dto';
+import { FIELD_TO_CONSENT_TYPE, NOTIFICATION_DEFAULTS, PROMOTIONAL_FIELDS } from './constants/notification.constants';
 
 @Injectable()
 export class NotificationService {
@@ -43,18 +43,9 @@ export class NotificationService {
       });
 
       // 2. 홍보성 알림 자동 켜기
-      await tx.notificationSet.upsert({
-        where: {userId},
-        update:{
-          benefitAlert: true,
-          nightAlert: true,
-        },
-        create:{
-          userId,
-          ...NOTIFICATION_DEFAULTS,
-          benefitAlert: true,
-          nightAlert: true,
-        },
+      await this.updateNotificationSet(tx, userId, {
+        benefitAlert: true,
+        nightAlert: true,
       });
 
       // 3. 동의 이력 저장 
@@ -141,6 +132,21 @@ export class NotificationService {
   }
 
   /**
+   * 알림 설정 업데이트
+   */
+  private async updateNotificationSet(
+    tx: any,
+    userId: number,
+    updates: Partial<Record<NotificationField, boolean>>
+  ): Promise<void>{
+    await tx.notificationSet.upsert({
+      where: {userId},
+      update: updates,
+      create: {userId, ...NOTIFICATION_DEFAULTS, ...updates},
+    });
+  }
+
+  /**
    * 알림 설정 및 동의 기록 업데이트(홍보성 알림인 경우 동의 기록 업데이트)
    */
   private async updateNotificationSetAndConsent(
@@ -151,11 +157,7 @@ export class NotificationService {
     isPromotional: boolean,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      await tx.notificationSet.upsert({
-        where: { userId },
-        update: { [field]: isAgreed },
-        create: { userId, ...NOTIFICATION_DEFAULTS, [field]: isAgreed },
-      });
+      await this.updateNotificationSet(tx, userId, { [field]: isAgreed});
 
       if (isPromotional) {
         await tx.notificationConsent.create({
