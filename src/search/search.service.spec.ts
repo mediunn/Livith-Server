@@ -29,6 +29,10 @@ describe('SearchService', () => {
 
   beforeEach(async () => {
     mockPrismaService = {
+      $transaction: jest.fn((queries) => {
+        // Transaction에 전달된 Promise들을 실행하고 결과를 배열로 반환
+        return Promise.all(queries);
+      }),
       representativeArtist: {
         findMany: jest.fn(),
         count: jest.fn(),
@@ -56,6 +60,9 @@ describe('SearchService', () => {
     }).compile();
 
     service = module.get<SearchService>(SearchService);
+
+    // Mock 리셋
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -210,9 +217,8 @@ describe('SearchService', () => {
       const size = 10;
       const keyword = undefined;
 
-      mockPrismaService.representativeArtist.findMany.mockRejectedValue(
-        new Error('DB Error'),
-      );
+      // Transaction 내부에서 에러가 발생하도록 설정
+      mockPrismaService.$transaction.mockRejectedValue(new Error('DB Error'));
 
       // When & Then
       await expect(

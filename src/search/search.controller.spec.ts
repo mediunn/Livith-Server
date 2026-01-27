@@ -14,10 +14,8 @@ describe('SearchController', () => {
       {
         id: 1,
         genreId: 1,
-        artistName: 'NewJeans',
+        name: 'NewJeans',
         imgUrl: 'https://example.com/newjeans.jpg',
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
     ],
     cursor: 1,
