@@ -182,6 +182,9 @@ export class UserService {
     if (!user) {
       throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
     }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
+    }
 
     return user.userGenres.map(
       (ug) => new UserGenreResponseDto(ug.genre, userId),
@@ -197,6 +200,9 @@ export class UserService {
 
     if (!user) {
       throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
     return user.userArtists.map(

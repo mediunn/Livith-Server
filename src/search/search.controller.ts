@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { BadRequestException } from '../common/exceptions/business.exception';
@@ -7,6 +7,7 @@ import { GetArtistSearchResultsDto } from './dto/get-artist-search-results.dto';
 import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 import { SearchService } from './search.service';
 
+@ApiTags('탐색')
 @Controller(`${API_PREFIX}/search`)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
