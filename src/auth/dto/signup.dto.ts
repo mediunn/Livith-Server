@@ -59,8 +59,8 @@ export class SignupDto {
     type: Number,
   })
   @IsNotEmpty()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(3)
+  @ArrayMinSize(1, { message: '최소 1개의 장르는 선택해야 합니다.' })
+  @ArrayMaxSize(3, { message: '최대 3개의 장르만 선택할 수 있습니다.' })
   @IsArray()
   preferredGenreIds: number[];
 
@@ -73,6 +73,6 @@ export class SignupDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(3, { message: '최대 3개의 아티스트만 선택할 수 있습니다.' })
   preferredArtistIds?: number[];
 }
