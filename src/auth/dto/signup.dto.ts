@@ -62,7 +62,7 @@ export class SignupDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(3)
   @IsArray()
-  favoriteGenreIds: number[];
+  preferredGenreIds: number[];
 
   @ApiProperty({
     description: '유저의 아티스트 취향',
@@ -74,5 +74,5 @@ export class SignupDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(3)
-  favoriteArtistIds?: number[];
+  preferredArtistIds?: number[];
 }

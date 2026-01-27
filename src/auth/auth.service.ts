@@ -200,8 +200,8 @@ export class AuthService {
     marketingConsent: boolean,
     nickname: string,
     client,
-    favoriteGenreIds: number[],
-    favoriteArtistIds?: number[],
+    preferredGenreIds: number[],
+    preferredArtistIds?: number[],
   ) {
     //유저 중복 확인
     const existingUser = await this.prisma.user.findUnique({
@@ -229,16 +229,16 @@ export class AuthService {
       });
 
       // 선호 장르 연결
-      if (favoriteGenreIds && favoriteGenreIds.length > 0) {
+      if (preferredGenreIds && preferredGenreIds.length > 0) {
         // 먼저 장르 정보를 조회
         const genres = await tx.genre.findMany({
           where: {
-            id: { in: favoriteGenreIds },
+            id: { in: preferredGenreIds },
           },
         });
 
         // 유효하지 않은 장르 ID가 있는지 확인
-        if (genres.length !== favoriteGenreIds.length) {
+        if (genres.length !== preferredGenreIds.length) {
           throw new BadRequestException(ErrorCode.GENRE_NOT_FOUND);
         }
 
@@ -254,16 +254,16 @@ export class AuthService {
       }
 
       // 선호 아티스트 연결
-      if (favoriteArtistIds && favoriteArtistIds.length > 0) {
+      if (preferredArtistIds && preferredArtistIds.length > 0) {
         // 먼저 대표 아티스트 정보를 조회
         const artists = await tx.representativeArtist.findMany({
           where: {
-            id: { in: favoriteArtistIds },
+            id: { in: preferredArtistIds },
           },
         });
 
         // 유효하지 않은 아티스트 ID가 있는지 확인
-        if (artists.length !== favoriteArtistIds.length) {
+        if (artists.length !== preferredArtistIds.length) {
           throw new BadRequestException(ErrorCode.ARTIST_NOT_FOUND);
         }
 
