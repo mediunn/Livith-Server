@@ -17,6 +17,20 @@ import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 export class UserService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  private async validateUser(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { userArtists: { include: { artist: true } } },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
+    }
+  }
+
   //관심 콘서트 설정
   async setInterestConcert(concertId: number, userId: number) {
     // 콘서트 ID가 유효한지 확인
@@ -27,17 +41,7 @@ export class UserService {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    // 유저 ID가 유효한지 확인
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     // 관심 콘서트 설정
     await this.prismaService.user.update({
@@ -56,13 +60,8 @@ export class UserService {
       where: { id: userId },
       include: { concert: true },
     });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
 
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     if (!user.concert) {
       return null;
@@ -76,16 +75,8 @@ export class UserService {
 
   // 관심 콘서트 삭제
   async removeInterestConcert(userId: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: { concert: true },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
+
     await this.prismaService.user.update({
       where: { id: userId },
       data: { interestConcertId: { set: null } },
@@ -103,27 +94,13 @@ export class UserService {
         userArtists: true,
       },
     });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
     return new UserResponseDto(user);
   }
 
   //닉네임 변경
   async updateNickname(userId, nickname) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     //닉네임 중복 확인
     const duplicate = await this.prismaService.user.findUnique({
@@ -179,12 +156,7 @@ export class UserService {
       where: { id: userId },
       include: { userGenres: { include: { genre: true } } },
     });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     return user.userGenres.map(
       (ug) => new UserGenreResponseDto(ug.genre, userId),
@@ -197,13 +169,7 @@ export class UserService {
       where: { id: userId },
       include: { userArtists: { include: { artist: true } } },
     });
-
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     return user.userArtists.map(
       (ua) => new UserArtistResponseDto(ua.artist, userId),
