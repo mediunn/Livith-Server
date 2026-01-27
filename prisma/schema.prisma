@@ -312,6 +312,8 @@ model User {
   userArtists   UserArtist[]
   fcmTokens             FcmToken[]
   notificationSet       NotificationSet?
+  notificationhistories NotificationHistories[]
+  notificationConsents  NotificationConsent[]
 
   @@map("users")
 }
@@ -395,19 +397,51 @@ model FcmToken {
 }
 
 model NotificationSet {
-  id            Int      @id @default(autoincrement())
-  userId        Int      @unique @map("user_id")
-  ticketAlert   Boolean  @default(true)  @map("ticket_alert")
-  infoAlert     Boolean  @default(true)  @map("info_alert")
-  interestAlert Boolean  @default(true)  @map("interest_alert")
-  recommendAlert Boolean @default(true)  @map("recommend_alert")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique @map("user_id")
+  benefitAlert    Boolean  @default(false) @map("benefit_alert")
+  nightAlert      Boolean  @default(false) @map("night_alert")
+  ticketAlert     Boolean  @default(true)  @map("ticket_alert")
+  infoAlert       Boolean  @default(true)  @map("info_alert")
+  interestAlert   Boolean  @default(true)  @map("interest_alert")
+  recommendAlert  Boolean  @default(false) @map("recommend_alert")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("notification_sets")
+}
+
+model NotificationHistories{
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique @map("user_id")
+  type        NotificationType
+  title       String    @db.VarChar(100)
+  content     String    @db.VarChar(500)
+  deepLink    String?   @map("deep_link") @db.VarChar(500)
+  isRead      Boolean   @default(false) @map("is_read")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+  @@map("notificationhistories")
+}
+
+model NotificationConsent{
+  id         Int        @id @default(autoincrement())
+  userId     Int        @map("user_id")
+  type       ConsentType
+  isAgreed   Boolean    @map("is_agreed")
+  agreedAt   DateTime   @default(now()) @map("agreed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("notification_consents")
 }
 
 model Report {
@@ -451,6 +485,21 @@ enum GenreType {
   CLASSIC_JAZZ
   ACOUSTIC
   ELECTRONIC
+}
+
+enum NotificationType{
+  INTEREST_CONCERT
+  TICKET_7D
+  TICKET_1D
+  TICKET_TODAY
+  CONCERT_INFO_UPDATE
+  ARTIST_CONCERT_OPEN
+  RECOMMEND
+}
+
+enum ConsentType{
+  BENEFIT_PUSH
+  NIGHT_PUSH
 }
 
 enum ScheduleType {

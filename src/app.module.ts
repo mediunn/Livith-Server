@@ -13,6 +13,7 @@ import { UserModule } from './user/user.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { GenreModule } from './genre/genre.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { GenreModule } from './genre/genre.module';
     UserModule,
     RecommendationModule,
     GenreModule,
+    NotificationModule,
   ],
   controllers: [],
   providers: [
