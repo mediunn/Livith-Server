@@ -399,11 +399,12 @@ model FcmToken {
 model NotificationSet {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique @map("user_id")
+  benefitAlert    Boolean  @default(false) @map("benefit_alert")
+  nightAlert      Boolean  @default(false) @map("night_alert")
   ticketAlert     Boolean  @default(true)  @map("ticket_alert")
   infoAlert       Boolean  @default(true)  @map("info_alert")
   interestAlert   Boolean  @default(true)  @map("interest_alert")
   recommendAlert  Boolean  @default(false) @map("recommend_alert")
-  nightAlert      Boolean  @default(false) @map("night_alert")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -497,7 +498,7 @@ enum NotificationType{
 }
 
 enum ConsentType{
-  MARKETING_PUSH
+  BENEFIT_PUSH
   NIGHT_PUSH
 }
 
