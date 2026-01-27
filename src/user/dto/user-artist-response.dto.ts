@@ -1,14 +1,15 @@
 import { RepresentativeArtist } from '@prisma/client';
 
-export class RepresentativeArtistResponseDto {
+export class UserArtistResponseDto {
   id: number;
+  userId: number;
   name: string;
-  genreId: number;
   imgUrl: string;
-  constructor(artist: RepresentativeArtist) {
+
+  constructor(artist: RepresentativeArtist, userId: number) {
     this.id = artist.id;
+    this.userId = userId;
     this.name = artist.artistName;
-    this.genreId = artist.genreId;
     this.imgUrl = artist.imgUrl;
   }
 }

@@ -16,6 +16,7 @@ import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { CheckDeletedUser } from './dto/check-deleted-user.dto';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
+import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)
@@ -107,5 +108,29 @@ export class UserController {
   })
   async checkDeletedUser(@Query() query: CheckDeletedUser) {
     return this.userService.checkDeletedUser(query.providerId, query.provider);
+  }
+
+  // 유저 취향 장르 조회
+  @Get('genre-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저 취향 장르 조회',
+    description: '현재 로그인한 유저의 취향 장르를 조회합니다.',
+  })
+  async getUserGenrePreferences(@CurrentUser() user) {
+    return this.userService.getUserGenrePreferences(user.userId);
+  }
+
+  // 유저 취향 아티스트 조회
+  @Get('artist-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저 취향 아티스트 조회',
+    description: '현재 로그인한 유저의 취향 아티스트를 조회합니다.',
+  })
+  async getUserArtistPreferences(@CurrentUser() user) {
+    return this.userService.getUserArtistPreferences(user.userId);
   }
 }
