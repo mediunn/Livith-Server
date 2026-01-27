@@ -10,6 +10,8 @@ import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { UserResponseDto } from './dto/user-response.dto';
 import { Provider } from '@prisma/client';
+import { UserGenreResponseDto } from './dto/user-genre-response.dto';
+import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 
 @Injectable()
 export class UserService {
@@ -169,5 +171,42 @@ export class UserService {
       message: '정상적인 유저입니다.',
       user: new UserResponseDto(user),
     };
+  }
+
+  //유저 취향 장르 조회
+  async getUserGenrePreferences(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { userGenres: { include: { genre: true } } },
+    });
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
+    }
+
+    return user.userGenres.map(
+      (ug) => new UserGenreResponseDto(ug.genre, userId),
+    );
+  }
+
+  //유저 취향 아티스트 조회
+  async getUserArtistPreferences(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { userArtists: { include: { artist: true } } },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
+    }
+
+    return user.userArtists.map(
+      (ua) => new UserArtistResponseDto(ua.artist, userId),
+    );
   }
 }
