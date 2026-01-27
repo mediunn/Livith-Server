@@ -1,268 +1,172 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "prisma/prisma.service";
-import { ErrorCode } from "src/common/enums/error-code.enum";
-import { ForbiddenException, NotFoundException } from "src/common/exceptions/business.exception";
-import { NotificationSettingResponseDto } from "./dto/response/notification-set-response.dto";
-import { UpdateNotficationSettingDto } from "./dto/request/update-notification-set.dto";
-import { ConsentType } from "@prisma/client";
-import { NotificationConsentDto } from "./dto/request/notification-consent.dto";
-import { NotificationConsenResponseDto } from "./dto/response/notification-consent-response.dto";
-
+import { Injectable } from '@nestjs/common';
+import { ConsentType, User } from '@prisma/client';
+import { PrismaService } from 'prisma/prisma.service';
+import { ErrorCode } from 'src/common/enums/error-code.enum';
+import { BadRequestException, ForbiddenException, NotFoundException } from 'src/common/exceptions/business.exception';
+import { FIELD_TO_CONSENT_TYPE, NOTIFICATION_DEFAULTS, PROMOTIONAL_FIELDS } from './constants/notification.constants';
+import { NotificationField } from './enums/notification-field.enum';
+import { NotificationConsentResponseDto } from './dto/response/notification-consent-response.dto';
+import { NotificationSettingResponseDto } from './dto/response/notification-set-response.dto';
 
 @Injectable()
-export class NotificationService{
-    constructor(private readonly prismaService: PrismaService){}
+export class NotificationService {
+  constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * 알림 설정 조회
+   */
+  async getNotificationSettings(userId: number): Promise<NotificationSettingResponseDto> {
+    const user = await this.validateUser(userId);
+    const defaults = this.buildDefaults(user.marketingConsent);
+
+    const notificationSet = await this.prisma.notificationSet.upsert({
+      where: { userId },
+      update: {},
+      create: { userId, ...defaults },
+    });
+    return new NotificationSettingResponseDto(notificationSet);
+  }
+
+  /**
+   * 마케팅 동의 + 홍보성 알림 자동 활성화
+   */
+  async agreeMarketingConsent(userId: number): Promise<NotificationConsentResponseDto>{
+    const user = await this.validateUser(userId);
+
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. 마케팅 동의
+      await tx.user.update({
+        where: {id: userId},
+        data: {marketingConsent: true},
+      });
+
+      // 2. 홍보성 알림 자동 켜기
+      await tx.notificationSet.upsert({
+        where: {userId},
+        update:{
+          benefitAlert: true,
+          nightAlert: true,
+        },
+        create:{
+          userId,
+          ...NOTIFICATION_DEFAULTS,
+          benefitAlert: true,
+          nightAlert: true,
+        },
+      });
+
+      // 3. 동의 이력 저장 
+      await tx.notificationConsent.createMany({
+        data: PROMOTIONAL_FIELDS.map((field) => ({
+          userId,
+          type: FIELD_TO_CONSENT_TYPE[field],
+          isAgreed: true,
+          agreedAt: now,
+        })),
+      });
+    });
+
+    return new NotificationConsentResponseDto(now, true);
+  }
+
+  /**
+   * 개별 알림 동의 처리
+   */
+  async createNotificationConsent(
+    userId: number,
+    field: NotificationField,
+    isAgreed: boolean,
+  ): Promise<NotificationConsentResponseDto> {
+    const user = await this.validateUser(userId);
+
+    const isPromotional = this.isPromotionalField(field);
     
-    // 알림 설정 조회
-    async getNotificationSettings(userId: number){
-        // 유저 확인
-        const user = await this.prismaService.user.findUnique({
-            where: {id: userId},
-        });
-
-        if(!user){
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        if(user.deletedAt){
-            throw new ForbiddenException(ErrorCode.USER_DELETED);
-        }
-
-        // NotificationSet 조회 + 생성
-        let notificationSet = await this.prismaService.notificationSet.findUnique({
-            where: {userId},
-        });
-
-        if(!notificationSet){
-            // 기본값 생성
-            notificationSet = await this.prismaService.notificationSet.create({
-                data: {
-                    userId,
-                    ticketAlert: true,
-                    infoAlert: true,
-                    interestAlert: true,
-                    recommendAlert: false,
-                    nightAlert: false,
-                },
-            });
-        }
-
-        return new NotificationSettingResponseDto(
-            notificationSet,
-            user.marketingConsent
-        );
+    if(isPromotional && isAgreed && !user.marketingConsent){
+      return this.agreeMarketingConsent(userId);
     }
 
-    // 알림 설정 변경
-    async updateNotficationSettings(
-        userId: number,
-        dto: UpdateNotficationSettingDto,
-    ){
-        // 유저 확인
-        const user = await this.prismaService.user.findUnique({
-            where: {id: userId},
-        });
+    const now = new Date();
+    await this.updateNotificationSetAndConsent(userId, field, isAgreed, now, isPromotional);
 
-        if(!user){
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
+    return new NotificationConsentResponseDto(now, isAgreed);
+  }
 
-        if(user.deletedAt){
-            throw new ForbiddenException(ErrorCode.USER_DELETED);
-        }
+  /**
+   * 유저 검증
+   */
+  private async validateUser(userId: number): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-        // Notification 조회 + 생성
-        let notificationSet = await this.prismaService.notificationSet.findUnique({
-            where: {userId},
-        });
-
-        if(!notificationSet){
-            notificationSet = await this.prismaService.notificationSet.create({
-                data:{
-                    userId,
-                    ticketAlert: true,
-                    infoAlert: true,
-                    interestAlert: true,
-                    recommendAlert: false,
-                    nightAlert: false,
-                },
-            });
-        }
-
-        // 변경할 데이터 준비
-        const updateData: {
-            ticketAlert?: boolean;
-            infoAlert?: boolean;
-            interestAlert?: boolean;
-            recommendAlert?: boolean;
-            nightAlert?: boolean;
-        } = {};
-
-        if(dto.ticketAlert !== undefined){
-            updateData.ticketAlert = dto.ticketAlert;
-        }
-        if(dto.infoAlert !== undefined){
-            updateData.infoAlert = dto.infoAlert;
-        }
-        if(dto.interestAlert !== undefined){
-            updateData.interestAlert = dto.interestAlert;
-        }
-        if(dto.recommendAlert !== undefined){
-            updateData.recommendAlert = dto.recommendAlert;
-        }
-        if(dto.nightAlert !== undefined){
-            updateData.nightAlert = dto.nightAlert;
-        }
-
-        // recommendAlert와 nightAlert 변경 시 동의 이력 기록
-        const now = new Date();
-        const consentRecords = [];
-        
-        if(dto.recommendAlert !== undefined){
-            if(dto.recommendAlert){
-                // 켤 때: 동의 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.MARKETING_PUSH,
-                    isAgreed: true,
-                    agreedAt: now,
-                });
-            }else{
-                // 끌 때: 거부 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.MARKETING_PUSH,
-                    isAgreed: false,
-                    agreedAt: now,
-                });
-            }
-        }
-
-        if(dto.nightAlert !== undefined){
-            if(dto.nightAlert){
-                // 켤 때: 동의 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.NIGHT_PUSH,
-                    isAgreed: true,
-                    agreedAt: now,
-                });
-            }else{
-                // 끌 때: 거부 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.NIGHT_PUSH,
-                    isAgreed: false,
-                    agreedAt: now,
-                });
-            }
-        }
-
-        // 트랜잭션으로 처리
-        const result = await this.prismaService.$transaction(async (tx) => {
-            // NotificationSet 업데이트
-            const updated = await tx.notificationSet.update({
-                where: {userId},
-                data: updateData,
-            });
-
-            // 동의 이력 기록
-            if(consentRecords.length > 0){
-                await tx.notificationConsent.createMany({
-                    data: consentRecords,
-                })
-            }
-
-            return updated;
-        });
-
-        return new NotificationSettingResponseDto(result, user.marketingConsent);
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
 
-    // 홍보성 알림 동의
-    async createNotificationConsent(
-        userId: number,
-        dto: NotificationConsentDto,
-    ){
-        // 유저 확인
-        const user = await this.prismaService.user.findUnique({
-            where: {id: userId},
-        });
+    return user;
+  }
 
-        if(!user){
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
+  /**
+   * 기본값 세팅(홍보성 알림)
+  */
+  private buildDefaults(hasMarketingConsent: boolean): Record<NotificationField, boolean> {
+    const defaults: Record<NotificationField, boolean> = { ...NOTIFICATION_DEFAULTS };
 
-        if(user.deletedAt){
-            throw new ForbiddenException(ErrorCode.USER_DELETED);
-        }
-
-        const now = new Date();
-        const consentRecords = [];
-
-        // 트랜잭션으로 처리
-        await this.prismaService.$transaction(async (tx) => {
-            // Notification 조회 + 생성
-            let notificationSet = await tx.notificationSet.findUnique({
-                where: {userId},
-            });
-
-            if(!notificationSet){
-                notificationSet = await tx.notificationSet.create({
-                    data: {
-                        userId,
-                        ticketAlert: true,
-                        infoAlert: true,
-                        interestAlert: true,
-                        recommendAlert: false,
-                        nightAlert: false,
-                    },
-                });
-            }
-
-            // 마케팅 동의 처리
-            if(dto.marketingConsent){
-                // NotificationSet의 recommendAler를 true로 변경
-                await tx.notificationSet.update({
-                    where: {userId},
-                    data: {recommendAlert: true},
-                });
-
-                // 동의 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.MARKETING_PUSH,
-                    isAgreed: true,
-                    agreedAt: now,
-                });
-            }
-
-            // 야간 알림 동의 처리
-            if(dto.nightAlertConsent){
-                // NotificationSet의 nightAlert를 true로 변경
-                await tx.notificationSet.update({
-                    where: {userId},
-                    data: {nightAlert: true},
-                });
-
-                // 동의 이력 기록
-                consentRecords.push({
-                    userId,
-                    consentType: ConsentType.NIGHT_PUSH,
-                    isAgreed: true,
-                    agreedAt: now,
-                });
-            }
-
-            // 동의 이력 저장
-            if(consentRecords.length > 0){
-                await tx.notificationConsent.createMany({
-                    data: consentRecords,
-                });
-            }
-        });
-
-        return new NotificationConsenResponseDto(now);
+    if (hasMarketingConsent) {
+      PROMOTIONAL_FIELDS.forEach((field) => {
+        defaults[field] = true;
+      });
     }
+
+    return defaults;
+  }
+
+  /**
+   * 프로모션 알림 필드 여부 확인
+   */
+  private isPromotionalField(field: NotificationField): boolean {
+    return PROMOTIONAL_FIELDS.includes(field as typeof PROMOTIONAL_FIELDS[number]);
+  }
+
+  /**
+   * 알림 필드를 ConsentType으로 변환
+   */
+  private getConsentType(field: NotificationField): ConsentType | null{
+    return FIELD_TO_CONSENT_TYPE[field] ?? null;
+  }
+
+  /**
+   * 알림 설정 및 동의 기록 업데이트(홍보성 알림인 경우 동의 기록 업데이트)
+   */
+  private async updateNotificationSetAndConsent(
+    userId: number,
+    field: NotificationField,
+    isAgreed: boolean,
+    now: Date,
+    isPromotional: boolean,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.notificationSet.upsert({
+        where: { userId },
+        update: { [field]: isAgreed },
+        create: { userId, ...NOTIFICATION_DEFAULTS, [field]: isAgreed },
+      });
+
+      if (isPromotional) {
+        await tx.notificationConsent.create({
+          data: {
+            userId,
+            type: this.getConsentType(field),
+            isAgreed,
+            agreedAt: now,
+          },
+        });
+      }
+    });
+  }
 }
