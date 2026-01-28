@@ -39,7 +39,7 @@ export class NotificationResponseDto{
     isRead: boolean;
 
     @ApiProperty({
-        description: '알림 생성 일시 (년도.월.일 시:분 형식)',
+        description: '알림 생성 일시 (yyyy.mm.dd hh:mm)',
         example: '2026.01.20 14:30'
     })
     createdAt: string;
