@@ -98,7 +98,7 @@ export class NotificationService {
       userId,
       ...(cursor && { id: { lt: cursor } }),  // cursor보다 작은 id만 조회
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'desc' },
       take: size,
     });
 
@@ -129,7 +129,7 @@ export class NotificationService {
       where: { id: notificationId },
     });
 
-    if (!notification) {
+    if (!notification || notification.userId !== userId) {
       throw new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND);
     }
 
@@ -147,7 +147,7 @@ export class NotificationService {
       where: { id: notificationId },
     });
 
-    if (!notification) {
+    if (!notification || notification.userId !== userId) {
       throw new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND);
     }
     
