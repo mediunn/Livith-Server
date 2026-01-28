@@ -175,4 +175,68 @@ export class UserService {
       (ua) => new UserArtistResponseDto(ua.artist, userId),
     );
   }
+
+  //유저 취향 장르 설정
+  async setUserGenrePreferences(userId: number, genreIds: number[]) {
+    await this.validateUser(userId);
+
+    // 장르 존재 여부 확인
+    const genres = await this.prismaService.genre.findMany({
+      where: { id: { in: genreIds } },
+    });
+
+    if (genres.length !== genreIds.length) {
+      throw new NotFoundException(ErrorCode.GENRE_NOT_FOUND);
+    }
+
+    // 기존 취향 장르 삭제
+    await this.prismaService.userGenre.deleteMany({
+      where: { userId: userId },
+    });
+
+    // 새로운 취향 장르 생성
+    const createData = genres.map((genre) => ({
+      userId: userId,
+      genreId: genre.id,
+      genreName: genre.name,
+    }));
+
+    await this.prismaService.userGenre.createMany({
+      data: createData,
+    });
+
+    return genres.map((genre) => new UserGenreResponseDto(genre, userId));
+  }
+
+  //유저 취향 아티스트 설정
+  async setUserArtistPreferences(userId: number, artistIds: number[]) {
+    await this.validateUser(userId);
+
+    // 아티스트 존재 여부 확인
+    const artists = await this.prismaService.representativeArtist.findMany({
+      where: { id: { in: artistIds } },
+    });
+
+    if (artists.length !== artistIds.length) {
+      throw new NotFoundException(ErrorCode.ARTIST_NOT_FOUND);
+    }
+
+    // 기존 취향 아티스트 삭제
+    await this.prismaService.userArtist.deleteMany({
+      where: { userId: userId },
+    });
+
+    // 새로운 취향 아티스트 생성
+    const createData = artists.map((artist) => ({
+      userId: userId,
+      artistId: artist.id,
+      artistName: artist.artistName,
+    }));
+
+    await this.prismaService.userArtist.createMany({
+      data: createData,
+    });
+
+    return artists.map((artist) => new UserArtistResponseDto(artist, userId));
+  }
 }
