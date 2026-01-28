@@ -416,7 +416,7 @@ model NotificationSet {
 
 model NotificationHistories{
   id          Int       @id @default(autoincrement())
-  userId      Int       @unique @map("user_id")
+  userId      Int       @map("user_id")
   type        NotificationType
   title       String    @db.VarChar(100)
   content     String    @db.VarChar(500)
