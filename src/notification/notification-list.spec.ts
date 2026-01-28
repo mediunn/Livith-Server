@@ -77,12 +77,12 @@ describe('NotificationService - 알림 목록', () => {
       // Then
       expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { id: 'desc' },
         take: 20,
       });
       expect(result).toHaveLength(3);
       expect(result[0].id).toBe(3);
-      expect(result[0].createdAt).toBe('2026.01.20');
+      expect(result[0].createdAt).toMatch(/^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/);
     });
 
     it('알림 목록 조회 - 성공(cursor 사용)', async () => {
@@ -98,7 +98,7 @@ describe('NotificationService - 알림 목록', () => {
       // Then
       expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
         where: { userId, id: { lt: cursor } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { id: 'desc' },
         take: 20,
       });
       expect(result).toHaveLength(2);
@@ -117,7 +117,7 @@ describe('NotificationService - 알림 목록', () => {
       // Then
       expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { id: 'desc' },
         take: size,
       });
       expect(result).toHaveLength(2);
