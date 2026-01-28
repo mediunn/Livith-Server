@@ -85,7 +85,7 @@ describe('NotificationService - 알림 목록', () => {
       expect(result[0].createdAt).toBe('2026.01.20');
     });
 
-    it('알림 목록 조회 - 성공 ', async () => {
+    it('알림 목록 조회 - 성공(cursor 사용)', async () => {
       // Given
       const userId = 1;
       const cursor = 3;
@@ -104,7 +104,7 @@ describe('NotificationService - 알림 목록', () => {
       expect(result).toHaveLength(2);
     });
 
-    it('알림 목록 조회', async () => {
+    it('알림 목록 조회 - 성공(size 지정)', async () => {
       // Given
       const userId = 1;
       const size = 2;
