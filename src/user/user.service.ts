@@ -20,7 +20,6 @@ export class UserService {
   private async validateUser(userId: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
-      include: { userArtists: { include: { artist: true } } },
     });
 
     if (!user) {
