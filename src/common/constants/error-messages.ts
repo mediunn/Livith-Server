@@ -13,6 +13,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.SETLIST_CONCERT_NOT_FOUND]:
     '해당 셋리스트와 콘서트의 조합이 존재하지 않습니다.',
   [ErrorCode.GENRE_NOT_FOUND]: '해당 장르를 찾을 수 없습니다.',
+  [ErrorCode.NOTIFICATION_NOT_FOUND]: '해당 알림을 찾을 수 없습니다.',
 
   // Bad Request
   [ErrorCode.INVALID_CURSOR_FORMAT]: '유효하지 않은 cursor 형식입니다.',
