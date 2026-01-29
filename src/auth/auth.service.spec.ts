@@ -76,8 +76,8 @@ describe('AuthService', () => {
       marketingConsent: true,
       nickname: '테스트유저',
       client: 'web',
-      favoriteGenreIds: [1, 2],
-      favoriteArtistIds: [1],
+      preferredGenreIds: [1, 2],
+      preferredArtistIds: [1],
     };
 
     const mockUser = {
@@ -133,8 +133,8 @@ describe('AuthService', () => {
         signupData.marketingConsent,
         signupData.nickname,
         signupData.client,
-        signupData.favoriteGenreIds,
-        signupData.favoriteArtistIds,
+        signupData.preferredGenreIds,
+        signupData.preferredArtistIds,
       );
 
       // Assert
@@ -158,8 +158,8 @@ describe('AuthService', () => {
           signupData.marketingConsent,
           signupData.nickname,
           signupData.client,
-          signupData.favoriteGenreIds,
-          signupData.favoriteArtistIds,
+          signupData.preferredGenreIds,
+          signupData.preferredArtistIds,
         ),
       ).rejects.toThrow(new BadRequestException(ErrorCode.USER_ALREADY_EXISTS));
     });
@@ -178,8 +178,8 @@ describe('AuthService', () => {
           signupData.marketingConsent,
           signupData.nickname,
           signupData.client,
-          signupData.favoriteGenreIds,
-          signupData.favoriteArtistIds,
+          signupData.preferredGenreIds,
+          signupData.preferredArtistIds,
         ),
       ).rejects.toThrow(
         new BadRequestException(ErrorCode.NICKNAME_ALREADY_EXISTS),
@@ -211,8 +211,8 @@ describe('AuthService', () => {
           signupData.marketingConsent,
           signupData.nickname,
           signupData.client,
-          signupData.favoriteGenreIds,
-          signupData.favoriteArtistIds,
+          signupData.preferredGenreIds,
+          signupData.preferredArtistIds,
         ),
       ).rejects.toThrow(new BadRequestException(ErrorCode.GENRE_NOT_FOUND));
     });
@@ -242,15 +242,18 @@ describe('AuthService', () => {
           signupData.marketingConsent,
           signupData.nickname,
           signupData.client,
-          signupData.favoriteGenreIds,
-          signupData.favoriteArtistIds,
+          signupData.preferredGenreIds,
+          signupData.preferredArtistIds,
         ),
       ).rejects.toThrow(new BadRequestException(ErrorCode.ARTIST_NOT_FOUND));
     });
 
     it('빈 장르 배열로 회원가입 성공', async () => {
       // Arrange
-      const signupDataWithEmptyGenres = { ...signupData, favoriteGenreIds: [] };
+      const signupDataWithEmptyGenres = {
+        ...signupData,
+        preferredGenreIds: [],
+      };
       prismaService.user.findUnique.mockResolvedValue(null);
       prismaService.$transaction.mockImplementation(async (callback) => {
         const mockTx = {
@@ -276,8 +279,8 @@ describe('AuthService', () => {
         signupDataWithEmptyGenres.marketingConsent,
         signupDataWithEmptyGenres.nickname,
         signupDataWithEmptyGenres.client,
-        signupDataWithEmptyGenres.favoriteGenreIds,
-        signupDataWithEmptyGenres.favoriteArtistIds,
+        signupDataWithEmptyGenres.preferredGenreIds,
+        signupDataWithEmptyGenres.preferredArtistIds,
       );
 
       // Assert
