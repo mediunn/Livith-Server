@@ -105,7 +105,7 @@ export class NotificationController {
   @Delete('fcm-token')
   @ApiOperation({
     summary: 'FCM 토큰 삭제',
-    description: '로그아웃 시 호출됩니다. 요청 바디로 삭제할 토큰을 받거나, 현재 기기의 토큰만 삭제합니다.',
+    description: '로그아웃 시 호출됩니다. 요청 바디로 삭제할 특정 토큰을 받거나, 토큰이 제공되지 않으면 해당 사용자의 모든 FCM 토큰을 삭제합니다.',
   })
   async deleteFcmToken(
     @CurrentUser() user: JwtPayload,

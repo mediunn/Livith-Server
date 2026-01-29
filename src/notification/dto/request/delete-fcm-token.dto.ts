@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class DeleteFcmTokenDto{
     @ApiProperty({
@@ -9,5 +9,6 @@ export class DeleteFcmTokenDto{
     })
     @IsString()
     @IsOptional()
+    @IsNotEmpty({ message: 'FCM 토큰은 비어있을 수 없습니다.' })
     token?: string;
 }
