@@ -7,6 +7,8 @@ import { CreateNotificationConsentDto } from './dto/request/create-notification-
 import { CurrentUser } from '../common/decorator/current-user.decorator';
 import { GetNotificationDto } from './dto/request/get-notification.dto';
 import { NotificationResponseDto } from './dto/response/notification-response.dto';
+import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
+import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 
 
 
@@ -84,5 +86,37 @@ export class NotificationController {
   ): Promise<{ success: boolean; message: string }> {
     await this.notificationService.deleteNotification(user.userId, notificationId);
     return { success: true, message: '알림을 삭제했습니다.' };
-  } 
+  }
+  
+  
+  @Post('fcm-token')
+  @ApiOperation({
+    summary: 'FCM 토큰 등록',
+    description: '앱이 실행될 때마다 호출됩니다. 이미 존재하는 토큰이면 updatedAt만 갱신하고, 새 토큰이면 INSERT합니다.(upsert)',
+  })
+  async registerFcmToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RegisterFcmTokenDto,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.notificationService.registerFcmToken(user.userId, dto.token);
+    return { success: true, message: 'FCM 토큰이 등록되었습니다.' };
+  }
+
+  @Delete('fcm-token')
+  @ApiOperation({
+    summary: 'FCM 토큰 삭제',
+    description: '로그아웃 시 호출됩니다. 요청 바디로 삭제할 토큰을 받거나, 현재 기기의 토큰만 삭제합니다.',
+  })
+  async deleteFcmToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: DeleteFcmTokenDto,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.notificationService.deleteFcmToken(user.userId, dto.token);
+    return { 
+      success: true, 
+      message: dto.token 
+        ? 'FCM 토큰이 삭제되었습니다.' 
+        : '모든 FCM 토큰이 삭제되었습니다.' 
+    };
+  }
 }
