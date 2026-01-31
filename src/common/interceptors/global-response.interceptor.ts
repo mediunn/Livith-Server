@@ -49,10 +49,10 @@ export class GlobalResponseInterceptor implements NestInterceptor {
         return responseData;
       }),
       tap((data) => {
-        if(data === null){
+        if (data === null) {
           response.end();
         }
-      })
+      }),
     );
   }
 }

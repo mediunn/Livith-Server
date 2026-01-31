@@ -1,4 +1,4 @@
-export enum MusicApiProvider{
-    LASTFM = 'lastfm',
-    SPOTIFY = 'spotify',
+export enum MusicApiProvider {
+  LASTFM = 'lastfm',
+  SPOTIFY = 'spotify',
 }

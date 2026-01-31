@@ -1,144 +1,145 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "prisma/prisma.service";
-import { LastfmApiService } from "../integrations/lastfm/last-fm.api.service";
-import { ConcertStatus } from "src/common/enums/concert-status.enum";
-import { ConcertResponseDto } from "src/concert/dto/concert-response.dto";
-import { getDaysUntil } from "src/common/utils/date.util";
-
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from 'prisma/prisma.service';
+import { LastfmApiService } from '../integrations/lastfm/last-fm.api.service';
+import { ConcertStatus } from 'src/common/enums/concert-status.enum';
+import { ConcertResponseDto } from 'src/concert/dto/concert-response.dto';
+import { getDaysUntil } from 'src/common/utils/date.util';
 
 @Injectable()
-export class RecommendationService{
-    private readonly logger = new Logger(RecommendationService.name);
+export class RecommendationService {
+  private readonly logger = new Logger(RecommendationService.name);
 
-    constructor(
-        private readonly prismaService: PrismaService,
-        private readonly lastfmApiService: LastfmApiService,
-    ){}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly lastfmApiService: LastfmApiService,
+  ) {}
 
-    private async getConcertByGenreIds(genreIds: number[]) {
-        if (!genreIds || genreIds.length === 0) {
-            return [];
-        }
+  private async getConcertByGenreIds(genreIds: number[]) {
+    if (!genreIds || genreIds.length === 0) {
+      return [];
+    }
 
-        const concerts = await this.prismaService.concert.findMany({
-        where: {
-            concertGenre: {
-            some: {
-                genreId: { in: genreIds },
-            },
-            },
-            status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
+    const concerts = await this.prismaService.concert.findMany({
+      where: {
+        concertGenre: {
+          some: {
+            genreId: { in: genreIds },
+          },
         },
-        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
-        take: 20,
-        distinct: ['id'],
-        });
+        status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
+      },
+      orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+      take: 20,
+      distinct: ['id'],
+    });
 
-        return concerts.map(
-            (concert) => new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
-        );
+    return concerts.map(
+      (concert) =>
+        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+    );
+  }
+
+  // 추천 콘서트 조회
+  async getRecommendConcerts(userId: number) {
+    // 유저의 선호 아티스트 조회
+    const userArtists = await this.prismaService.userArtist.findMany({
+      where: { userId },
+      include: { artist: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (userArtists.length === 0) {
+      // 장르 기반 추천
+      return this.getConcertByUserGenres(userId);
     }
 
-    // 추천 콘서트 조회
-    async getRecommendConcerts(userId: number){
-        // 유저의 선호 아티스트 조회
-        const userArtists = await this.prismaService.userArtist.findMany({
-            where: {userId},
-            include: {artist: true},
-            orderBy: {createdAt: 'desc'}
-        });
+    // 유저가 선택한 아티스트의 장르로 fallback 하기 위한 genreId 목록
+    const inferredGenreIds = Array.from(
+      new Set(
+        userArtists
+          .map((ua) => ua.artist?.genreId)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
 
-        if(userArtists.length === 0){
-            // 장르 기반 추천
-            return this.getConcertByUserGenres(userId);
-        }
+    // 병렬로 유사 아티스트 조회
+    const similarArtists = userArtists.map((userArtist) =>
+      this.lastfmApiService.getSimilarArtists(userArtist.artistName),
+    );
 
-        // 유저가 선택한 아티스트의 장르로 fallback 하기 위한 genreId 목록
-        const inferredGenreIds = Array.from(
-            new Set(
-                userArtists
-                    .map((ua) => ua.artist?.genreId)
-                    .filter((id): id is number => typeof id === 'number'),
-            ),
+    const simlarArtistArrays = await Promise.all(similarArtists);
+
+    // 모든 유사 아티스트 이름 수집
+    const allSimilarArtists = new Set<string>();
+    simlarArtistArrays.forEach((artists) => {
+      artists.forEach((artist) => allSimilarArtists.add(artist));
+    });
+
+    // 유사 아티스트 이름으로 Artist 테이블 조회하여 artistId 찾기
+    const similarArtistNames = Array.from(allSimilarArtists);
+
+    const allArtists = await this.prismaService.artist.findMany({
+      select: { id: true, artist: true },
+    });
+
+    // 영문 이름만 추출 (괄호 앞부분, 공백 제거, 대소문자 무시)
+    const matchedArtistIds = allArtists
+      .filter((a) => {
+        const artistName = a.artist.split('(')[0].trim().toLowerCase();
+        return similarArtistNames.some(
+          (similar) => similar.toLowerCase() === artistName,
         );
+      })
+      .map((a) => a.id);
 
-        // 병렬로 유사 아티스트 조회
-        const similarArtists = userArtists.map((userArtist) => 
-            this.lastfmApiService.getSimilarArtists(userArtist.artistName),
-        );
-
-        const simlarArtistArrays = await Promise.all(similarArtists);
-
-        // 모든 유사 아티스트 이름 수집
-        const allSimilarArtists = new Set<string>();
-        simlarArtistArrays.forEach((artists) => {
-            artists.forEach((artist) => allSimilarArtists.add(artist));
-        });
-
-        // 유사 아티스트 이름으로 Artist 테이블 조회하여 artistId 찾기
-        const similarArtistNames = Array.from(allSimilarArtists);
-        
-        const allArtists = await this.prismaService.artist.findMany({
-            select: { id: true, artist: true },
-        });
-
-        // 영문 이름만 추출 (괄호 앞부분, 공백 제거, 대소문자 무시)
-        const matchedArtistIds = allArtists
-            .filter((a) => {
-                const artistName = a.artist.split('(')[0].trim().toLowerCase();
-                return similarArtistNames.some(
-                    (similar) => similar.toLowerCase() === artistName
-                );
-            })
-            .map((a) => a.id);
-
-        if (matchedArtistIds.length === 0) {
-            // 1) 선택 아티스트 장르 기반 fallback
-            const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
-            if (genreFallback.length > 0) {
-                return genreFallback;
-            }
-            // 2) 기존 userGenre 기반 fallback
-            return this.getConcertByUserGenres(userId);
-        }
-
-        // artistId로 콘서트 조회
-        const concerts = await this.prismaService.concert.findMany({
-        where: {
-            artistId: { in: matchedArtistIds },
-            status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
-        },
-        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
-        take: 20,
-        });
-
-        if (concerts.length === 0) {
-            // 1) 선택 아티스트 장르 기반 fallback
-            const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
-            if (genreFallback.length > 0) {
-                return genreFallback;
-            }
-            // 2) 기존 userGenre 기반 fallback
-            return this.getConcertByUserGenres(userId);
-        }
-
-        return concerts.map(
-            (concert) => new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
-        );
+    if (matchedArtistIds.length === 0) {
+      // 1) 선택 아티스트 장르 기반 fallback
+      const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
+      if (genreFallback.length > 0) {
+        return genreFallback;
+      }
+      // 2) 기존 userGenre 기반 fallback
+      return this.getConcertByUserGenres(userId);
     }
 
-    // 장르 기반 추천 
-    private async getConcertByUserGenres(userId: number){
-        const userGenres = await this.prismaService.userGenre.findMany({
-            where: {userId},
-            include: {genre: true},
-        });
+    // artistId로 콘서트 조회
+    const concerts = await this.prismaService.concert.findMany({
+      where: {
+        artistId: { in: matchedArtistIds },
+        status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
+      },
+      orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+      take: 20,
+    });
 
-        if(userGenres.length === 0){
-            return [];
-        }
-
-        const genreIds = userGenres.map((ug) => ug.genreId);
-        return this.getConcertByGenreIds(genreIds);
+    if (concerts.length === 0) {
+      // 1) 선택 아티스트 장르 기반 fallback
+      const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
+      if (genreFallback.length > 0) {
+        return genreFallback;
+      }
+      // 2) 기존 userGenre 기반 fallback
+      return this.getConcertByUserGenres(userId);
     }
+
+    return concerts.map(
+      (concert) =>
+        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+    );
+  }
+
+  // 장르 기반 추천
+  private async getConcertByUserGenres(userId: number) {
+    const userGenres = await this.prismaService.userGenre.findMany({
+      where: { userId },
+      include: { genre: true },
+    });
+
+    if (userGenres.length === 0) {
+      return [];
+    }
+
+    const genreIds = userGenres.map((ug) => ug.genreId);
+    return this.getConcertByGenreIds(genreIds);
+  }
 }
