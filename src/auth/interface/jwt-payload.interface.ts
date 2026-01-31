@@ -1,3 +1,3 @@
-interface JwtPayload{
+interface JwtPayload {
   userId: number;
 }

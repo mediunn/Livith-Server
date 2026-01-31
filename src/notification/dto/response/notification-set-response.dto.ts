@@ -15,7 +15,10 @@ export class NotificationSettingResponseDto {
   @ApiProperty({ description: '콘서트 정보 업데이트 알림', example: true })
   infoAlert: boolean;
 
-  @ApiProperty({ description: '좋아하는 아티스트 콘서트 오픈 알림', example: true })
+  @ApiProperty({
+    description: '좋아하는 아티스트 콘서트 오픈 알림',
+    example: true,
+  })
   interestAlert: boolean;
 
   @ApiProperty({ description: '취향 기반 콘서트 알림', example: true })
