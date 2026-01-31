@@ -413,7 +413,9 @@ export class NotificationService {
     const available: number[] = [];
     for (const userId of userIds) {
       const ns = setByUser.get(userId);
-      const fieldOn = ns ? (ns[field] as boolean) : true;
+      const fieldOn = ns
+        ? (ns[field] as boolean)
+        : NOTIFICATION_DEFAULTS[field];
       if (!fieldOn) continue;
       if (isNight) {
         const nightOn = ns ? ns.nightAlert : false;

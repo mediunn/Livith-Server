@@ -122,7 +122,7 @@ describe('NotificationService (푸시 발송)', () => {
             type: NotificationType.CONCERT_INFO_UPDATE,
             title: '제목',
             content: '내용',
-            deepLink: '123',
+            targetId: '123',
             isRead: false,
           },
         ],
