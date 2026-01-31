@@ -288,7 +288,7 @@ export class NotificationService {
           type,
           title: finalTitle,
           content: finalContent,
-          deepLink: targetId ?? null,
+          targetId: targetId ?? null,
           isRead: false,
         })),
       });
