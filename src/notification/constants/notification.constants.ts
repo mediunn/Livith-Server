@@ -35,9 +35,7 @@ export const NOTIFICATION_TYPE_TO_SET_FIELD: Record<
   [NotificationType.RECOMMEND]: NotificationField.RECOMMEND_ALERT,
 };
 
-export const PROMOTIONAL_NOTIFICATION_TYPES: NotificationType[] = [
-  NotificationType.RECOMMEND,
-];
+export const PROMOTIONAL_NOTIFICATION_TYPES: NotificationType[] = [];
 
 export const AD_PREFIX = '(광고) ';
 export const AD_SUFFIX = '\n 수신 거부: 마이페이지 > 알림 설정';
