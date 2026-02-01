@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -9,9 +21,6 @@ import { GetNotificationDto } from './dto/request/get-notification.dto';
 import { NotificationResponseDto } from './dto/response/notification-response.dto';
 import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
-
-
-
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
@@ -32,9 +41,10 @@ export class NotificationController {
   @Post('marketing-consent')
   @ApiOperation({
     summary: '마케팅 동의',
-    description: '홍보성 알림 수신을 위한 마케팅 동의를 처리하고, 홍보성 알림을 자동으로 활성화합니다.',
+    description:
+      '홍보성 알림 수신을 위한 마케팅 동의를 처리하고, 홍보성 알림을 자동으로 활성화합니다.',
   })
-  async agreeMarketingConsent(@CurrentUser() user: JwtPayload){
+  async agreeMarketingConsent(@CurrentUser() user: JwtPayload) {
     return this.notificationService.agreeMarketingConsent(user.userId);
   }
 
@@ -47,35 +57,45 @@ export class NotificationController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateNotificationConsentDto,
   ) {
-    return this.notificationService.createNotificationConsent(user.userId, dto.field, dto.isAgreed);
+    return this.notificationService.createNotificationConsent(
+      user.userId,
+      dto.field,
+      dto.isAgreed,
+    );
   }
 
   @Get()
-  @ApiOperation({summary: '알림 목록 조회'})
+  @ApiOperation({ summary: '알림 목록 조회' })
   async getNotifications(
     @CurrentUser() user: JwtPayload,
     @Query() dto: GetNotificationDto,
-  ): Promise<NotificationResponseDto[]>{
-    return this.notificationService.getNotifications(user.userId, dto.cursor, dto.size);
+  ): Promise<NotificationResponseDto[]> {
+    return this.notificationService.getNotifications(
+      user.userId,
+      dto.cursor,
+      dto.size,
+    );
   }
 
   @Get('unread-count')
-  @ApiOperation({summary: '읽지 않는 알림 개수 조회'})
+  @ApiOperation({ summary: '읽지 않는 알림 개수 조회' })
   async getUnreadCount(
-    @CurrentUser() user: JwtPayload
-  ): Promise<{unreadCount: number}>{
-    const unreadCount = await this.notificationService.getUnreadCount(user.userId);
-    return {unreadCount};
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ unreadCount: number }> {
+    const unreadCount = await this.notificationService.getUnreadCount(
+      user.userId,
+    );
+    return { unreadCount };
   }
 
   @Patch(':id/read')
-  @ApiOperation({summary: '알림 읽음 처리'})
+  @ApiOperation({ summary: '알림 읽음 처리' })
   async markAsRead(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) notificationId: number,
-  ): Promise<{success: boolean, message: string}>{
+  ): Promise<{ success: boolean; message: string }> {
     await this.notificationService.markAsRead(user.userId, notificationId);
-    return {success: true, message: '알림을 읽음 처리했습니다.'};
+    return { success: true, message: '알림을 읽음 처리했습니다.' };
   }
 
   @Delete(':id')
@@ -84,15 +104,18 @@ export class NotificationController {
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) notificationId: number,
   ): Promise<{ success: boolean; message: string }> {
-    await this.notificationService.deleteNotification(user.userId, notificationId);
+    await this.notificationService.deleteNotification(
+      user.userId,
+      notificationId,
+    );
     return { success: true, message: '알림을 삭제했습니다.' };
   }
-  
-  
+
   @Post('fcm-token')
   @ApiOperation({
     summary: 'FCM 토큰 등록',
-    description: '앱이 실행될 때마다 호출됩니다. 이미 존재하는 토큰이면 updatedAt만 갱신하고, 새 토큰이면 INSERT합니다.(upsert)',
+    description:
+      '앱이 실행될 때마다 호출됩니다. 이미 존재하는 토큰이면 updatedAt만 갱신하고, 새 토큰이면 INSERT합니다.(upsert)',
   })
   async registerFcmToken(
     @CurrentUser() user: JwtPayload,
@@ -105,18 +128,19 @@ export class NotificationController {
   @Delete('fcm-token')
   @ApiOperation({
     summary: 'FCM 토큰 삭제',
-    description: '로그아웃 시 호출됩니다. 요청 바디로 삭제할 특정 토큰을 받거나, 토큰이 제공되지 않으면 해당 사용자의 모든 FCM 토큰을 삭제합니다.',
+    description:
+      '로그아웃 시 호출됩니다. 요청 바디로 삭제할 특정 토큰을 받거나, 토큰이 제공되지 않으면 해당 사용자의 모든 FCM 토큰을 삭제합니다.',
   })
   async deleteFcmToken(
     @CurrentUser() user: JwtPayload,
     @Body() dto: DeleteFcmTokenDto,
   ): Promise<{ success: boolean; message: string }> {
     await this.notificationService.deleteFcmToken(user.userId, dto.token);
-    return { 
-      success: true, 
-      message: dto.token 
-        ? 'FCM 토큰이 삭제되었습니다.' 
-        : '모든 FCM 토큰이 삭제되었습니다.' 
+    return {
+      success: true,
+      message: dto.token
+        ? 'FCM 토큰이 삭제되었습니다.'
+        : '모든 FCM 토큰이 삭제되었습니다.',
     };
   }
 }

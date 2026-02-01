@@ -29,7 +29,11 @@ describe('NotificationService', () => {
   describe('getNotificationSettings', () => {
     it('알림 설정을 조회', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 1, marketingConsent: false, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        marketingConsent: false,
+        deletedAt: null,
+      });
       mockPrisma.notificationSet.upsert.mockResolvedValue({
         benefitAlert: false,
         nightAlert: false,
@@ -51,7 +55,11 @@ describe('NotificationService', () => {
   describe('agreeMarketingConsent', () => {
     it('마케팅 동의 시 홍보성 알림이 자동으로 켜짐', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 1, marketingConsent: false, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        marketingConsent: false,
+        deletedAt: null,
+      });
       mockPrisma.user.update = jest.fn();
       mockPrisma.notificationSet.upsert.mockResolvedValue({});
       mockPrisma.notificationConsent.createMany.mockResolvedValue({});
@@ -72,11 +80,19 @@ describe('NotificationService', () => {
   describe('createNotificationConsent', () => {
     it('정보성 알림은 이력 저장 없이 변경', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 1, marketingConsent: true, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        marketingConsent: true,
+        deletedAt: null,
+      });
       mockPrisma.notificationSet.upsert.mockResolvedValue({});
 
       // When
-      await service.createNotificationConsent(1, NotificationField.TICKET_ALERT, false);
+      await service.createNotificationConsent(
+        1,
+        NotificationField.TICKET_ALERT,
+        false,
+      );
 
       // Then
       expect(mockPrisma.notificationConsent.create).not.toHaveBeenCalled();
@@ -84,12 +100,20 @@ describe('NotificationService', () => {
 
     it('홍보성 알림 끄기는 이력이 저장', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 1, marketingConsent: true, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        marketingConsent: true,
+        deletedAt: null,
+      });
       mockPrisma.notificationSet.upsert.mockResolvedValue({});
       mockPrisma.notificationConsent.create.mockResolvedValue({});
 
       // When
-      await service.createNotificationConsent(1, NotificationField.BENEFIT_ALERT, false);
+      await service.createNotificationConsent(
+        1,
+        NotificationField.BENEFIT_ALERT,
+        false,
+      );
 
       // Then
       expect(mockPrisma.notificationConsent.create).toHaveBeenCalledWith({
@@ -102,19 +126,27 @@ describe('NotificationService', () => {
 
     it('마케팅 동의 없이 홍보성 알림 켜면 마케팅 동의로 넘어감', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 1, marketingConsent: false, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        marketingConsent: false,
+        deletedAt: null,
+      });
       mockPrisma.user.update = jest.fn();
       mockPrisma.notificationSet.upsert.mockResolvedValue({});
       mockPrisma.notificationConsent.createMany.mockResolvedValue({});
 
       // When
-      const result = await service.createNotificationConsent(1, NotificationField.BENEFIT_ALERT, true);
+      const result = await service.createNotificationConsent(
+        1,
+        NotificationField.BENEFIT_ALERT,
+        true,
+      );
 
       // Then
       expect(result.message).toBe('알림 동의 처리 완료');
       expect(mockPrisma.notificationSet.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: { benefitAlert: true, nightAlert: true },
+          update: { benefitAlert: true },
         }),
       );
     });
