@@ -18,6 +18,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# pem key
+*.pem
+
 # OS
 .DS_Store
 
@@ -47,6 +50,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+
+# firebase admin sdk
+*firebase*.json
+*service-account*.json
 
 # temp directory
 .temp

@@ -5,8 +5,5 @@
     "test",
     "dist",
     "**/*spec.ts",
-    "src/v1",
-    "src/v2",
-    "src/v3"
   ]
 }
