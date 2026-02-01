@@ -3,7 +3,7 @@ import { GenreService } from './genre.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('장르')
-@Controller('api/v4/genres')
+@Controller('api/v5/genres')
 export class GenreController {
   constructor(private readonly genreService: GenreService) {}
 
