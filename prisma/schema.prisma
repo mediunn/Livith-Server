@@ -421,7 +421,7 @@ model NotificationHistories{
   type        NotificationType
   title       String    @db.VarChar(100)
   content     String    @db.VarChar(500)
-  deepLink    String?   @map("deep_link") @db.VarChar(500)
+  targetId    String?   @map("target_id") @db.VarChar(500)
   isRead      Boolean   @default(false) @map("is_read")
   createdAt   DateTime  @default(now()) @map("created_at")
 

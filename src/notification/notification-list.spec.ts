@@ -39,7 +39,7 @@ describe('NotificationService - 알림 목록', () => {
         type: NotificationType.TICKET_7D,
         title: '예매 일정',
         content: '7일 뒤 예매 시작',
-        deepLink: 'livith://concert/123',
+        targetId: '123',
         isRead: false,
         createdAt: new Date('2026.01.20'),
       },
@@ -49,7 +49,7 @@ describe('NotificationService - 알림 목록', () => {
         type: NotificationType.ARTIST_CONCERT_OPEN,
         title: '아티스트 콘서트 오픈',
         content: '콘서트 오픈',
-        deepLink: null,
+        targetId: null,
         isRead: true,
         createdAt: new Date('2026.01.19'),
       },
@@ -59,7 +59,7 @@ describe('NotificationService - 알림 목록', () => {
         type: NotificationType.RECOMMEND,
         title: '(광고) 추천 콘서트',
         content: '추천 콘서트',
-        deepLink: 'livith://concert/456',
+        targetId: '456',
         isRead: false,
         createdAt: new Date('2026.01.18'),
       },
@@ -68,8 +68,13 @@ describe('NotificationService - 알림 목록', () => {
     it('알림 목록 조회 - 성공 (cursor 없음)', async () => {
       // Given
       const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue(mockNotifications);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
+      mockPrisma.notificationHistories.findMany.mockResolvedValue(
+        mockNotifications,
+      );
 
       // When
       const result = await service.getNotifications(userId);
@@ -89,8 +94,14 @@ describe('NotificationService - 알림 목록', () => {
       // Given
       const userId = 1;
       const cursor = 3;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue([mockNotifications[1], mockNotifications[2]]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
+      mockPrisma.notificationHistories.findMany.mockResolvedValue([
+        mockNotifications[1],
+        mockNotifications[2],
+      ]);
 
       // When
       const result = await service.getNotifications(userId, cursor);
@@ -108,8 +119,14 @@ describe('NotificationService - 알림 목록', () => {
       // Given
       const userId = 1;
       const size = 2;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue([mockNotifications[0], mockNotifications[1]]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
+      mockPrisma.notificationHistories.findMany.mockResolvedValue([
+        mockNotifications[0],
+        mockNotifications[1],
+      ]);
 
       // When
       const result = await service.getNotifications(userId, undefined, size);
@@ -139,7 +156,10 @@ describe('NotificationService - 알림 목록', () => {
     it('읽지 않은 알림 개수 조회 - 성공', async () => {
       // Given
       const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
       mockPrisma.notificationHistories.count.mockResolvedValue(3);
 
       // When
@@ -155,7 +175,10 @@ describe('NotificationService - 알림 목록', () => {
     it('읽지 않은 알림 없음 - 성공', async () => {
       // Given
       const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
       mockPrisma.notificationHistories.count.mockResolvedValue(0);
 
       // When
@@ -176,9 +199,17 @@ describe('NotificationService - 알림 목록', () => {
         userId,
         isRead: false,
       };
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(mockNotification);
-      mockPrisma.notificationHistories.update.mockResolvedValue({ ...mockNotification, isRead: true });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
+      mockPrisma.notificationHistories.findUnique.mockResolvedValue(
+        mockNotification,
+      );
+      mockPrisma.notificationHistories.update.mockResolvedValue({
+        ...mockNotification,
+        isRead: true,
+      });
 
       // When
       await service.markAsRead(userId, notificationId);
@@ -197,7 +228,10 @@ describe('NotificationService - 알림 목록', () => {
       // Given
       const userId = 1;
       const notificationId = 999;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
       mockPrisma.notificationHistories.findUnique.mockResolvedValue(null);
 
       // When & Then
@@ -216,9 +250,16 @@ describe('NotificationService - 알림 목록', () => {
         id: notificationId,
         userId,
       };
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(mockNotification);
-      mockPrisma.notificationHistories.delete.mockResolvedValue(mockNotification);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
+      mockPrisma.notificationHistories.findUnique.mockResolvedValue(
+        mockNotification,
+      );
+      mockPrisma.notificationHistories.delete.mockResolvedValue(
+        mockNotification,
+      );
 
       // When
       await service.deleteNotification(userId, notificationId);
@@ -236,11 +277,16 @@ describe('NotificationService - 알림 목록', () => {
       // Given
       const userId = 1;
       const notificationId = 999;
-      mockPrisma.user.findUnique.mockResolvedValue({ id: userId, deletedAt: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        deletedAt: null,
+      });
       mockPrisma.notificationHistories.findUnique.mockResolvedValue(null);
 
       // When & Then
-      await expect(service.deleteNotification(userId, notificationId)).rejects.toThrow(
+      await expect(
+        service.deleteNotification(userId, notificationId),
+      ).rejects.toThrow(
         new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND),
       );
     });
