@@ -56,13 +56,17 @@ export function isNightTimeKst(date?: Date): boolean {
  * KST 기준 "오늘 + daysfromToday" 일자의 UTC 시각 범위
  * DB의 scheduledAt 범위 조회
  */
-export function getKstDayRange(daysfromToday: number):{start: Date; end: Date}{
+export function getKstDayRange(daysfromToday: number): {
+  start: Date;
+  end: Date;
+} {
   const today = getTodayKstYmd();
-  const startOfDayKst = 
-    Date.UTC(today.year, today.month - 1, today.day) + 
-    daysfromToday * MS_PER_DAY - KST_OFFSET_MS;
+  const startOfDayKst =
+    Date.UTC(today.year, today.month - 1, today.day) +
+    daysfromToday * MS_PER_DAY -
+    KST_OFFSET_MS;
 
-  return{
+  return {
     start: new Date(startOfDayKst),
     end: new Date(startOfDayKst + MS_PER_DAY - 1),
   };
@@ -71,7 +75,7 @@ export function getKstDayRange(daysfromToday: number):{start: Date; end: Date}{
 /**
  * Date를 KST 기준 "N시" 문자열로
  */
-export function formatKstHour(date: Date): string{
+export function formatKstHour(date: Date): string {
   const kst = new Date(date.getTime() + KST_OFFSET_MS);
   return `${kst.getUTCHours()}시`;
 }

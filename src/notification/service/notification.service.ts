@@ -312,28 +312,33 @@ export class NotificationService {
       concertTitle?: string;
       content?: string;
     },
-  ): Promise<{sent: number, failed: number}>{
+  ): Promise<{ sent: number; failed: number }> {
     let concertTitle: string | null = options?.concertTitle ?? null;
-    if(concertTitle === null){
+    if (concertTitle === null) {
       const concert = await this.prisma.concert.findUnique({
-        where:{id: concertId},
-        select: {title: true},
+        where: { id: concertId },
+        select: { title: true },
       });
-      if(!concert) return {sent: 0, failed: 0};
+      if (!concert) return { sent: 0, failed: 0 };
       concertTitle = concert.title;
     }
 
-    const userIds = await this.prisma.user.findMany({
-      where:{
-        interestConcertId: concertId,
-        deletedAt: null,
-      },
-      select: {id: true},
-    })
-    .then((list) => list.map((u) => u.id));
+    const userIds = await this.prisma.user
+      .findMany({
+        where: {
+          interestConcertId: concertId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+      .then((list) => list.map((u) => u.id));
 
     const defaultContent = `${concertTitle} 정보가 업데이트되었어요!`;
-    const content = options?.content ?? (options?.updateType ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle) : defaultContent);
+    const content =
+      options?.content ??
+      (options?.updateType
+        ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle)
+        : defaultContent);
 
     return this.sendPushNotification({
       type: NotificationType.CONCERT_INFO_UPDATE,
@@ -344,7 +349,6 @@ export class NotificationService {
     });
   }
 
-
   /**
    * 아티스트 콘서트 오픈 알림
    * - 새 콘서트 등록 시 호출
@@ -352,29 +356,35 @@ export class NotificationService {
    */
   async sendArtistConcertOpenNotification(
     concertId: number,
-  ): Promise<{sent: number, failed: number}>{
+  ): Promise<{ sent: number; failed: number }> {
     const concert = await this.prisma.concert.findUnique({
-      where: {id: concertId},
-      select: {id: true, title: true, artist: true},
+      where: { id: concertId },
+      select: { id: true, title: true, artist: true },
     });
-    if(!concert) return {sent: 0, failed: 0};
+    if (!concert) return { sent: 0, failed: 0 };
 
     const concertArtistNormalized = normalizeArtistName(concert.artist);
     const allCandidates = await this.prisma.representativeArtist.findMany({
-      select: {id: true, artistName: true},
+      select: { id: true, artistName: true },
     });
-    const representativeArtistIds = allCandidates.filter((ra) => normalizeArtistName(ra.artistName) === concertArtistNormalized).map((ra) => ra.id);
+    const representativeArtistIds = allCandidates
+      .filter(
+        (ra) => normalizeArtistName(ra.artistName) === concertArtistNormalized,
+      )
+      .map((ra) => ra.id);
 
-    if(representativeArtistIds.length == 0) return {sent: 0, failed: 0};
+    if (representativeArtistIds.length == 0) return { sent: 0, failed: 0 };
 
-    const userIds = await this.prisma.userArtist.findMany({
-      where: {artistId: {in: representativeArtistIds}},
-      select: {userId: true},
-    }).then((list) => [...new Set(list.map((ua) => ua.userId))]);
+    const userIds = await this.prisma.userArtist
+      .findMany({
+        where: { artistId: { in: representativeArtistIds } },
+        select: { userId: true },
+      })
+      .then((list) => [...new Set(list.map((ua) => ua.userId))]);
 
     const validateUsers = await this.prisma.user.findMany({
-      where: {id: {in: userIds}, deletedAt: null},
-      select: {id: true},
+      where: { id: { in: userIds }, deletedAt: null },
+      select: { id: true },
     });
     const validUserIds = validateUsers.map((u) => u.id);
 
