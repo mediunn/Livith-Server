@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { NotificationService } from './notification.service';
+import { NotificationService } from './service/notification.service';
 import { CreateNotificationConsentDto } from './dto/request/create-notification-consent.dto';
 import { CurrentUser } from '../common/decorator/current-user.decorator';
 import { GetNotificationDto } from './dto/request/get-notification.dto';
