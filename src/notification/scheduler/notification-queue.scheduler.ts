@@ -2,11 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
-
-const EVENT_TYPE = {
-  ARTIST_CONCERT_OPEN: 'ARTIST_CONCERT_OPEN',
-  CONCERT_INFO_UPDATE: 'CONCERT_INFO_UPDATE',
-} as const;
+import {
+  CONCERT_NOTIFICATION_EVENT_TYPE,
+  CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE,
+} from '../constants/notification.constants';
 
 @Injectable()
 export class NotificationQueueScheduler {
@@ -28,13 +27,18 @@ export class NotificationQueueScheduler {
 
     for (const row of rows) {
       try {
-        if (row.eventType === EVENT_TYPE.ARTIST_CONCERT_OPEN) {
+        if (
+          row.eventType === CONCERT_NOTIFICATION_EVENT_TYPE.ARTIST_CONCERT_OPEN
+        ) {
           await this.notificationService.sendArtistConcertOpenNotification(
             row.concertId,
           );
-        } else if (row.eventType === EVENT_TYPE.CONCERT_INFO_UPDATE) {
+        } else if (row.eventType.startsWith('CONCERT_INFO_UPDATE')) {
+          const updateType =
+            CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE[row.eventType];
           await this.notificationService.sendConcertInfoUpdateNotification(
             row.concertId,
+            updateType ? { updateType } : undefined,
           );
         }
       } catch (err) {
