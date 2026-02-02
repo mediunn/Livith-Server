@@ -5,6 +5,16 @@ import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 // 홍보성 알림 필드
 export const PROMOTIONAL_FIELDS = [NotificationField.BENEFIT_ALERT] as const;
 
+// 배치 처리 크기 상수
+// 일반 사용자 배치 처리: sendPushNotification에 전달할 사용자 ID 배치 크기
+export const NOTIFICATION_BATCH_SIZE = 1000;
+
+// 아티스트 조회 배치 처리: representativeArtist 테이블 조회 시 배치 크기
+export const NOTIFICATION_ARTIST_BATCH_SIZE = 1000;
+
+// 추천 알림 사용자 처리: 각 사용자마다 개별 추천 콘서트 조회 필요(100명씩 배치 크기 적용)
+export const NOTIFICATION_RECOMMEND_BATCH_SIZE = 100;
+
 // 알림 필드 -> ConsentType 매핑
 export const FIELD_TO_CONSENT_TYPE: Partial<
   Record<NotificationField, ConsentType>
@@ -33,7 +43,7 @@ export const CONCERT_INFO_UPDATE_MESSAGES: Record<
     `기다리던 ${t}콘서트의 공식 굿즈 라인업이 공개 됐어요! 어떤 아이템들이 있는지 지금 바로 확인해보아요!`,
   [ConcertInfoUpdateType.CONCERT_DETAIL]: (t) =>
     `${t}콘서트의 새로운 소식이 도착했어요! 공연을 더 풍성하게 즐길 수 있는지 추가 안내 사항을 지금 확인해 보세요!`,
-  [ConcertInfoUpdateType.SCEDULE]: (t) =>
+  [ConcertInfoUpdateType.SCHEDULE]: (t) =>
     `${t}콘서트의 일정이 업데이트 되었어요! 소중한 관람 기회를 놓치지 않도록 일정을 꼭 체크해 주세요!`,
   [ConcertInfoUpdateType.TICKET]: (t) =>
     `${t}콘서트 티켓 예매 정보가 업데이트 됐어요! 티켓팅 성공을 위해 상세 내용을 미리 확인해 보세요!`,
@@ -60,7 +70,7 @@ export const CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE: Partial<
   [CONCERT_NOTIFICATION_EVENT_TYPE.CONCERT_INFO_UPDATE_CONCERT_DETAIL]:
     ConcertInfoUpdateType.CONCERT_DETAIL,
   [CONCERT_NOTIFICATION_EVENT_TYPE.CONCERT_INFO_UPDATE_SCHEDULE]:
-    ConcertInfoUpdateType.SCEDULE,
+    ConcertInfoUpdateType.SCHEDULE,
   [CONCERT_NOTIFICATION_EVENT_TYPE.CONCERT_INFO_UPDATE_TICKET]:
     ConcertInfoUpdateType.TICKET,
 };

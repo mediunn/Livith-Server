@@ -132,7 +132,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(50, { updateType: ConcertInfoUpdateType.SCEDULE });
+    ).toHaveBeenCalledWith(50, { updateType: ConcertInfoUpdateType.SCHEDULE });
   });
 
   it('CONCERT_INFO_UPDATE_TICKET 큐 행이면 updateType=TICKET로 호출', async () => {
