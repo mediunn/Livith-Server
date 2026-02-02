@@ -49,7 +49,7 @@ CREATE TRIGGER after_concert_update_ticket
 AFTER UPDATE ON concerts
 FOR EACH ROW
 BEGIN
-  IF (OLD.ticket_site != NEW.ticket_site OR OLD.ticket_url != NEW.ticket_url) THEN
+  IF (OLD.ticket_site <=> NEW.ticket_site AND OLD.ticket_url <=> NEW.ticket_url) THEN
     INSERT INTO concert_notification_queue (concert_id, event_type, processed)
     VALUES (NEW.id, 'CONCERT_INFO_UPDATE_TICKET', 0);
   END IF;

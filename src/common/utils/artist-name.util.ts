@@ -8,7 +8,7 @@
 export function normalizeArtistName(name: string): string {
   return name
     .trim()
-    .replace(/\s*\([^)]*\)\s*/g, '')
+    .replace(/\s*\([^)]*\)$/, '')
     .trim()
     .toLowerCase();
 }

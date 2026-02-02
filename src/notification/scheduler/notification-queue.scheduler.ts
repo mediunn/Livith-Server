@@ -41,15 +41,15 @@ export class NotificationQueueScheduler {
             updateType ? { updateType } : undefined,
           );
         }
+        await this.prisma.concertNotificationQueue.update({
+          where: { id: row.id },
+          data: { processed: true },
+        });
       } catch (err) {
         this.logger.warn(
           `NotificationQueue id=${row.id} failed: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
-      await this.prisma.concertNotificationQueue.update({
-        where: { id: row.id },
-        data: { processed: true },
-      });
     }
     this.logger.log(
       `Processed ${rows.length} concert notification queue item(s)`,

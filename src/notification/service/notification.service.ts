@@ -16,6 +16,8 @@ import {
   CONCERT_INFO_UPDATE_MESSAGES,
   FCM_INVALID_TOKEN_ERROR_CODES,
   FIELD_TO_CONSENT_TYPE,
+  NOTIFICATION_ARTIST_BATCH_SIZE,
+  NOTIFICATION_BATCH_SIZE,
   NOTIFICATION_DEFAULTS,
   NOTIFICATION_TYPE_TO_SET_FIELD,
   PROMOTIONAL_FIELDS,
@@ -323,16 +325,6 @@ export class NotificationService {
       concertTitle = concert.title;
     }
 
-    const userIds = await this.prisma.user
-      .findMany({
-        where: {
-          interestConcertId: concertId,
-          deletedAt: null,
-        },
-        select: { id: true },
-      })
-      .then((list) => list.map((u) => u.id));
-
     const defaultContent = `${concertTitle} 정보가 업데이트되었어요!`;
     const content =
       options?.content ??
@@ -340,13 +332,39 @@ export class NotificationService {
         ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle)
         : defaultContent);
 
-    return this.sendPushNotification({
-      type: NotificationType.CONCERT_INFO_UPDATE,
-      title: '콘서트 정보 업데이트',
-      content,
-      targetId: String(concertId),
-      userIds,
-    });
+    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+    let totalSent = 0;
+    let totalFailed = 0;
+    let skip = 0;
+
+    while (true) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          interestConcertId: concertId,
+          deletedAt: null,
+        },
+        select: { id: true },
+        skip,
+        take: BATCH_SIZE,
+      });
+
+      if (users.length === 0) break;
+
+      const batchUserIds = users.map((u) => u.id);
+      const result = await this.sendPushNotification({
+        type: NotificationType.CONCERT_INFO_UPDATE,
+        title: '콘서트 정보 업데이트',
+        content,
+        targetId: String(concertId),
+        userIds: batchUserIds,
+      });
+
+      totalSent += result.sent;
+      totalFailed += result.failed;
+      skip += BATCH_SIZE;
+    }
+
+    return { sent: totalSent, failed: totalFailed };
   }
 
   /**
@@ -364,37 +382,72 @@ export class NotificationService {
     if (!concert) return { sent: 0, failed: 0 };
 
     const concertArtistNormalized = normalizeArtistName(concert.artist);
-    const allCandidates = await this.prisma.representativeArtist.findMany({
-      select: { id: true, artistName: true },
-    });
-    const representativeArtistIds = allCandidates
-      .filter(
-        (ra) => normalizeArtistName(ra.artistName) === concertArtistNormalized,
-      )
-      .map((ra) => ra.id);
 
-    if (representativeArtistIds.length == 0) return { sent: 0, failed: 0 };
+    // 배치 처리(1000명 단위)
+    const BATCH_SIZE_ARTIST = NOTIFICATION_ARTIST_BATCH_SIZE;
+    const representativeArtistIds: number[] = [];
+    let skip = 0;
+
+    while (true) {
+      const candidates = await this.prisma.representativeArtist.findMany({
+        select: { id: true, artistName: true },
+        skip,
+        take: BATCH_SIZE_ARTIST,
+      });
+
+      if (candidates.length === 0) break;
+
+      const matchedIds = candidates
+        .filter(
+          (ra) =>
+            normalizeArtistName(ra.artistName) === concertArtistNormalized,
+        )
+        .map((ra) => ra.id);
+
+      representativeArtistIds.push(...matchedIds);
+      skip += BATCH_SIZE_ARTIST;
+    }
+
+    if (representativeArtistIds.length === 0) return { sent: 0, failed: 0 };
 
     const userIds = await this.prisma.userArtist
       .findMany({
-        where: { artistId: { in: representativeArtistIds } },
+        where: {
+          artistId: { in: representativeArtistIds },
+          user: { deletedAt: null },
+        },
         select: { userId: true },
       })
       .then((list) => [...new Set(list.map((ua) => ua.userId))]);
 
-    const validateUsers = await this.prisma.user.findMany({
-      where: { id: { in: userIds }, deletedAt: null },
-      select: { id: true },
-    });
-    const validUserIds = validateUsers.map((u) => u.id);
+    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+    let totalSent = 0;
+    let totalFailed = 0;
 
-    return this.sendPushNotification({
-      type: NotificationType.ARTIST_CONCERT_OPEN,
-      title: '아티스트 콘서트 오픈',
-      content: `${concert.artist} 콘서트가 등록되었어요!`,
-      targetId: String(concertId),
-      userIds: validUserIds,
-    });
+    for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+      const batchUserIds = userIds.slice(i, i + BATCH_SIZE);
+
+      const validateUsers = await this.prisma.user.findMany({
+        where: { id: { in: batchUserIds }, deletedAt: null },
+        select: { id: true },
+      });
+      const validUserIds = validateUsers.map((u) => u.id);
+
+      if (validUserIds.length > 0) {
+        const result = await this.sendPushNotification({
+          type: NotificationType.ARTIST_CONCERT_OPEN,
+          title: '아티스트 콘서트 오픈',
+          content: `${concert.artist} 콘서트가 등록되었어요!`,
+          targetId: String(concertId),
+          userIds: validUserIds,
+        });
+
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      }
+    }
+
+    return { sent: totalSent, failed: totalFailed };
   }
 
   // ======== Private 메서드(Helper) ===========

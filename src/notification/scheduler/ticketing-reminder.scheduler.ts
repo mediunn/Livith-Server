@@ -4,6 +4,7 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
+import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 
 @Injectable()
 export class TicketingReminderScheduler {
@@ -46,16 +47,33 @@ export class TicketingReminderScheduler {
     });
 
     for (const schedule of schedules) {
-      const userIds = await this.getInterestUserIds(schedule.concertId);
-      if (userIds.length === 0) continue;
+      const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+      let skip = 0;
 
-      await this.notificationService.sendPushNotification({
-        type,
-        title: '예매 일정',
-        content: contentFn(schedule.concert.title),
-        targetId: String(schedule.concert.id),
-        userIds,
-      });
+      while (true) {
+        const users = await this.prisma.user.findMany({
+          where: {
+            interestConcertId: schedule.concertId,
+            deletedAt: null,
+          },
+          select: { id: true },
+          skip,
+          take: BATCH_SIZE,
+        });
+
+        if (users.length === 0) break;
+
+        const batchUserIds = users.map((u) => u.id);
+        await this.notificationService.sendPushNotification({
+          type,
+          title: '예매 일정',
+          content: contentFn(schedule.concert.title),
+          targetId: String(schedule.concert.id),
+          userIds: batchUserIds,
+        });
+
+        skip += BATCH_SIZE;
+      }
     }
   }
 
@@ -70,28 +88,34 @@ export class TicketingReminderScheduler {
     });
 
     for (const schedule of schedules) {
-      const userIds = await this.getInterestUserIds(schedule.concertId);
-      if (userIds.length === 0) continue;
+      const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+      let skip = 0;
 
-      const timeStr = formatKstHour(schedule.scheduledAt);
-      await this.notificationService.sendPushNotification({
-        type: 'TICKET_TODAY',
-        title: '예매 일정',
-        content: `${schedule.concert.title} 예매가 오늘 ${timeStr}에 시작해요!`,
-        targetId: String(schedule.concert.id),
-        userIds,
-      });
+      while (true) {
+        const users = await this.prisma.user.findMany({
+          where: {
+            interestConcertId: schedule.concertId,
+            deletedAt: null,
+          },
+          select: { id: true },
+          skip,
+          take: BATCH_SIZE,
+        });
+
+        if (users.length === 0) break;
+
+        const batchUserIds = users.map((u) => u.id);
+        const timeStr = formatKstHour(schedule.scheduledAt);
+        await this.notificationService.sendPushNotification({
+          type: NotificationType.TICKET_TODAY,
+          title: '예매 일정',
+          content: `${schedule.concert.title} 예매가 오늘 ${timeStr}에 시작해요!`,
+          targetId: String(schedule.concert.id),
+          userIds: batchUserIds,
+        });
+
+        skip += BATCH_SIZE;
+      }
     }
-  }
-
-  private async getInterestUserIds(concertId: number): Promise<number[]> {
-    const users = await this.prisma.user.findMany({
-      where: {
-        interestConcertId: concertId,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
-    return users.map((u) => u.id);
   }
 }
