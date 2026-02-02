@@ -432,6 +432,17 @@ model NotificationHistories{
   @@map("notificationhistories")
 }
 
+model ConcertNotificationQueue {
+  id        Int      @id @default(autoincrement())
+  concertId Int      @map("concert_id")
+  eventType String   @map("event_type") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  processed Boolean  @default(false) @map("processed")
+
+  @@index([processed, createdAt])
+  @@map("concert_notification_queue")
+}
+
 model NotificationConsent{
   id         Int        @id @default(autoincrement())
   userId     Int        @map("user_id")
