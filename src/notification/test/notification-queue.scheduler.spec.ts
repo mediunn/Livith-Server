@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationQueueScheduler } from '../scheduler/notification-queue.scheduler';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
+import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 
 describe('NotificationQueueScheduler', () => {
   let scheduler: NotificationQueueScheduler;
@@ -60,12 +61,12 @@ describe('NotificationQueueScheduler', () => {
     });
   });
 
-  it('CONCERT_INFO_UPDATE 큐 행이면 sendConcertInfoUpdateNotification 호출 후 processed=true', async () => {
+  it('CONCERT_INFO_UPDATE_CONCERT_DETAIL 큐 행이면 updateType=CONCERT_DETAIL로 호출', async () => {
     mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
       {
         id: 2,
         concertId: 20,
-        eventType: 'CONCERT_INFO_UPDATE',
+        eventType: 'CONCERT_INFO_UPDATE_CONCERT_DETAIL',
         processed: false,
       },
     ]);
@@ -74,9 +75,83 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(20);
+    ).toHaveBeenCalledWith(20, {
+      updateType: ConcertInfoUpdateType.CONCERT_DETAIL,
+    });
     expect(mockPrisma.concertNotificationQueue.update).toHaveBeenCalledWith({
       where: { id: 2 },
+      data: { processed: true },
+    });
+  });
+
+  it('CONCERT_INFO_UPDATE_SETLIST 큐 행이면 updateType=SETLIST로 호출', async () => {
+    mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
+      {
+        id: 3,
+        concertId: 30,
+        eventType: 'CONCERT_INFO_UPDATE_SETLIST',
+        processed: false,
+      },
+    ]);
+
+    await scheduler.processQueue();
+
+    expect(
+      notificationService.sendConcertInfoUpdateNotification,
+    ).toHaveBeenCalledWith(30, { updateType: ConcertInfoUpdateType.SETLIST });
+  });
+
+  it('CONCERT_INFO_UPDATE_MD_INFO 큐 행이면 updateType=MD_INFO로 호출', async () => {
+    mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
+      {
+        id: 4,
+        concertId: 40,
+        eventType: 'CONCERT_INFO_UPDATE_MD_INFO',
+        processed: false,
+      },
+    ]);
+
+    await scheduler.processQueue();
+
+    expect(
+      notificationService.sendConcertInfoUpdateNotification,
+    ).toHaveBeenCalledWith(40, { updateType: ConcertInfoUpdateType.MD_INFO });
+  });
+
+  it('CONCERT_INFO_UPDATE_SCHEDULE 큐 행이면 updateType=SCHEDULE로 호출', async () => {
+    mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
+      {
+        id: 5,
+        concertId: 50,
+        eventType: 'CONCERT_INFO_UPDATE_SCHEDULE',
+        processed: false,
+      },
+    ]);
+
+    await scheduler.processQueue();
+
+    expect(
+      notificationService.sendConcertInfoUpdateNotification,
+    ).toHaveBeenCalledWith(50, { updateType: ConcertInfoUpdateType.SCEDULE });
+  });
+
+  it('CONCERT_INFO_UPDATE_TICKET 큐 행이면 updateType=TICKET로 호출', async () => {
+    mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
+      {
+        id: 6,
+        concertId: 60,
+        eventType: 'CONCERT_INFO_UPDATE_TICKET',
+        processed: false,
+      },
+    ]);
+
+    await scheduler.processQueue();
+
+    expect(
+      notificationService.sendConcertInfoUpdateNotification,
+    ).toHaveBeenCalledWith(60, { updateType: ConcertInfoUpdateType.TICKET });
+    expect(mockPrisma.concertNotificationQueue.update).toHaveBeenCalledWith({
+      where: { id: 6 },
       data: { processed: true },
     });
   });
