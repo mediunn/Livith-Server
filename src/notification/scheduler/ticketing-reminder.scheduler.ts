@@ -1,9 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "prisma/prisma.service";
-import { NotificationService } from "../service/notification.service";
-import { Cron } from "@nestjs/schedule";
-import { NotificationType } from "@prisma/client";
-import { formatKstHour, getKstDayRange } from "src/common/utils/date.util";
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from 'prisma/prisma.service';
+import { NotificationService } from '../service/notification.service';
+import { Cron } from '@nestjs/schedule';
+import { NotificationType } from '@prisma/client';
+import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
 
 @Injectable()
 export class TicketingReminderScheduler {
@@ -14,9 +14,9 @@ export class TicketingReminderScheduler {
     private readonly notificationService: NotificationService,
   ) {}
 
-  @Cron("0 10 * * *", { timeZone: "Asia/Seoul" })
+  @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
   async dailyTicketingNotifications() {
-    this.logger.log("run daily ticketing notifications (10:00 KST)");
+    this.logger.log('run daily ticketing notifications (10:00 KST)');
 
     await this.sendTicketingReminders(
       7,
@@ -39,7 +39,7 @@ export class TicketingReminderScheduler {
     const { start, end } = getKstDayRange(daysfromToday);
     const schedules = await this.prisma.schedule.findMany({
       where: {
-        type: "TICKETING",
+        type: 'TICKETING',
         scheduledAt: { gte: start, lte: end },
       },
       include: { concert: { select: { id: true, title: true } } },
@@ -51,7 +51,7 @@ export class TicketingReminderScheduler {
 
       await this.notificationService.sendPushNotification({
         type,
-        title: "예매 일정",
+        title: '예매 일정',
         content: contentFn(schedule.concert.title),
         targetId: String(schedule.concert.id),
         userIds,
@@ -63,7 +63,7 @@ export class TicketingReminderScheduler {
     const { start, end } = getKstDayRange(0);
     const schedules = await this.prisma.schedule.findMany({
       where: {
-        type: "TICKETING",
+        type: 'TICKETING',
         scheduledAt: { gte: start, lte: end },
       },
       include: { concert: { select: { id: true, title: true } } },
@@ -75,8 +75,8 @@ export class TicketingReminderScheduler {
 
       const timeStr = formatKstHour(schedule.scheduledAt);
       await this.notificationService.sendPushNotification({
-        type: "TICKET_TODAY",
-        title: "예매 일정",
+        type: 'TICKET_TODAY',
+        title: '예매 일정',
         content: `${schedule.concert.title} 예매가 오늘 ${timeStr}에 시작해요!`,
         targetId: String(schedule.concert.id),
         userIds,

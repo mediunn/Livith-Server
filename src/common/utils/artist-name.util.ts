@@ -1,4 +1,3 @@
-
 /**
  * 아티스트명 비교용 정규화(공백, 괄호, 대소문자)
  * 1. 앞뒤 공백 제거
@@ -6,10 +5,10 @@
  * 3. 소문자로 통일
  */
 
-export function normalizeArtistName(name: string): string{
-    return name
+export function normalizeArtistName(name: string): string {
+  return name
     .trim()
-    .replace(/\s*\([^)]*\)\s*/g, '') 
+    .replace(/\s*\([^)]*\)\s*/g, '')
     .trim()
     .toLowerCase();
 }

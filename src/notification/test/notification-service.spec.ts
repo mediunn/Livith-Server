@@ -9,9 +9,9 @@ describe('NotificationService', () => {
 
   const mockPrisma = {
     user: { findUnique: jest.fn(), findMany: jest.fn() },
-    concert: {findUnique: jest.fn()},
-    representativeArtist: {findMany: jest.fn()},
-    userArtist: {findMany: jest.fn()},
+    concert: { findUnique: jest.fn() },
+    representativeArtist: { findMany: jest.fn() },
+    userArtist: { findMany: jest.fn() },
     notificationSet: { upsert: jest.fn() },
     notificationConsent: { create: jest.fn(), createMany: jest.fn() },
     $transaction: jest.fn((cb) => cb(mockPrisma)),
@@ -155,32 +155,42 @@ describe('NotificationService', () => {
     });
   });
 
-
   describe('sendConcertInfoUpdateNotification', () => {
     it('콘서트 존재, 관심 유저 잇으면 CONCERT_INFO_UPDATE로 sendPushNotification 호출', async () => {
-      mockPrisma.concert = {findUnique: jest.fn()};
-      mockPrisma.user = {...mockPrisma.user, findMany: jest.fn()};
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({title: '테스트 콘서트'});
-      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([{id: 10}, {id: 20}]);
+      mockPrisma.concert = { findUnique: jest.fn() };
+      mockPrisma.user = { ...mockPrisma.user, findMany: jest.fn() };
+      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
+        title: '테스트 콘서트',
+      });
+      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
+        { id: 10 },
+        { id: 20 },
+      ]);
 
-      const sendSpy = jest.spyOn(service, 'sendPushNotification').mockResolvedValue({sent: 2, failed: 0});
+      const sendSpy = jest
+        .spyOn(service, 'sendPushNotification')
+        .mockResolvedValue({ sent: 2, failed: 0 });
 
       await service.sendConcertInfoUpdateNotification(1);
 
-      expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({
-        type: NotificationType.CONCERT_INFO_UPDATE,
-        title: '콘서트 정보 업데이트',
-        content: '테스트 콘서트 정보가 업데이트되었어요!',
-        targetId: '1',
-        userIds: [10, 20],
-      }));
+      expect(sendSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: NotificationType.CONCERT_INFO_UPDATE,
+          title: '콘서트 정보 업데이트',
+          content: '테스트 콘서트 정보가 업데이트되었어요!',
+          targetId: '1',
+          userIds: [10, 20],
+        }),
+      );
     });
 
     it('콘서트 없으면 발송 없음', async () => {
-      mockPrisma.concert = {findUnique: jest.fn()};
+      mockPrisma.concert = { findUnique: jest.fn() };
       (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const sendSpy = jest.spyOn(service, 'sendPushNotification').mockResolvedValue({sent: 0, failed: 0});
+      const sendSpy = jest
+        .spyOn(service, 'sendPushNotification')
+        .mockResolvedValue({ sent: 0, failed: 0 });
 
       await service.sendConcertInfoUpdateNotification(999);
 
@@ -190,38 +200,56 @@ describe('NotificationService', () => {
 
   describe('sendArtistConcertOpenNotification', () => {
     it('콘서트 매칭, 아티스트, 유저 있으면 ARTIST_CONCERT_OPEN으로 sendPushNotification 호출', async () => {
-      mockPrisma.concert = {findUnique: jest.fn()};
-      mockPrisma.representativeArtist = {findMany: jest.fn()};
-      mockPrisma.userArtist = {findMany: jest.fn()};
-      mockPrisma.user = {...mockPrisma.user, findMany: jest.fn()};
+      mockPrisma.concert = { findUnique: jest.fn() };
+      mockPrisma.representativeArtist = { findMany: jest.fn() };
+      mockPrisma.userArtist = { findMany: jest.fn() };
+      mockPrisma.user = { ...mockPrisma.user, findMany: jest.fn() };
 
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({id: 1, title: '콘서트', artist: '아티스트'});
-      (mockPrisma.representativeArtist.findMany as jest.Mock).mockResolvedValue([{id: 5, artistName: '아티스트'}]);
-      (mockPrisma.userArtist.findMany as jest.Mock).mockResolvedValue([{userId: 10}, {userId: 20}]);
-      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([{id: 10}, {id: 20}]);
+      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
+        id: 1,
+        title: '콘서트',
+        artist: '아티스트',
+      });
+      (mockPrisma.representativeArtist.findMany as jest.Mock).mockResolvedValue(
+        [{ id: 5, artistName: '아티스트' }],
+      );
+      (mockPrisma.userArtist.findMany as jest.Mock).mockResolvedValue([
+        { userId: 10 },
+        { userId: 20 },
+      ]);
+      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
+        { id: 10 },
+        { id: 20 },
+      ]);
 
-      const sendSpy = jest.spyOn(service, 'sendPushNotification').mockResolvedValue({sent: 2, failed: 0});
+      const sendSpy = jest
+        .spyOn(service, 'sendPushNotification')
+        .mockResolvedValue({ sent: 2, failed: 0 });
 
       await service.sendArtistConcertOpenNotification(1);
 
-      expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({
-        type: NotificationType.ARTIST_CONCERT_OPEN,
-        title: '아티스트 콘서트 오픈',
-        content: '아티스트 콘서트가 등록되었어요!',
-        targetId: '1',
-        userIds: [10, 20],
-      }));
+      expect(sendSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: NotificationType.ARTIST_CONCERT_OPEN,
+          title: '아티스트 콘서트 오픈',
+          content: '아티스트 콘서트가 등록되었어요!',
+          targetId: '1',
+          userIds: [10, 20],
+        }),
+      );
     });
 
     it('콘서트 없으면 발송 없음', async () => {
       mockPrisma.concert = { findUnique: jest.fn() };
       (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const sendSpy = jest.spyOn(service, 'sendPushNotification').mockResolvedValue({ sent: 0, failed: 0 });
+      const sendSpy = jest
+        .spyOn(service, 'sendPushNotification')
+        .mockResolvedValue({ sent: 0, failed: 0 });
 
       await service.sendArtistConcertOpenNotification(999);
 
       expect(sendSpy).not.toHaveBeenCalled();
     });
-  })
+  });
 });

@@ -25,7 +25,9 @@ describe('Notification send integration (FCM mock)', () => {
     notificationConsent: { create: jest.fn(), createMany: jest.fn() },
     fcmToken: { findMany: jest.fn(), deleteMany: jest.fn() },
     notificationHistories: { createMany: jest.fn() },
-    $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
+    $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) =>
+      cb(mockPrisma),
+    ),
   };
 
   beforeEach(async () => {
@@ -51,7 +53,14 @@ describe('Notification send integration (FCM mock)', () => {
 
   it('sendPushNotification 호출 시 FCM sendEachForMulticast에 기대한 payload로 호출됨', async () => {
     mockPrisma.notificationSet.findMany.mockResolvedValue([
-      { userId: 1, ticketAlert: true, infoAlert: true, interestAlert: true, recommendAlert: false, nightAlert: false },
+      {
+        userId: 1,
+        ticketAlert: true,
+        infoAlert: true,
+        interestAlert: true,
+        recommendAlert: false,
+        nightAlert: false,
+      },
     ]);
     mockPrisma.fcmToken.findMany.mockResolvedValue([
       { token: 'test-fcm-token-1', userId: 1 },
@@ -76,7 +85,14 @@ describe('Notification send integration (FCM mock)', () => {
 
   it('발송 성공 시 notificationHistories.createMany 호출됨', async () => {
     mockPrisma.notificationSet.findMany.mockResolvedValue([
-      { userId: 1, infoAlert: true, nightAlert: false, ticketAlert: true, interestAlert: true, recommendAlert: false },
+      {
+        userId: 1,
+        infoAlert: true,
+        nightAlert: false,
+        ticketAlert: true,
+        interestAlert: true,
+        recommendAlert: false,
+      },
     ]);
     mockPrisma.fcmToken.findMany.mockResolvedValue([
       { token: 'token-a', userId: 1 },
@@ -107,7 +123,14 @@ describe('Notification send integration (FCM mock)', () => {
 
   it('FCM 실패 토큰 있으면 fcmToken.deleteMany 호출됨', async () => {
     mockPrisma.notificationSet.findMany.mockResolvedValue([
-      { userId: 1, infoAlert: true, nightAlert: false, ticketAlert: true, interestAlert: true, recommendAlert: false },
+      {
+        userId: 1,
+        infoAlert: true,
+        nightAlert: false,
+        ticketAlert: true,
+        interestAlert: true,
+        recommendAlert: false,
+      },
     ]);
     mockPrisma.fcmToken.findMany.mockResolvedValue([
       { token: 'invalid-token', userId: 1 },
@@ -116,7 +139,10 @@ describe('Notification send integration (FCM mock)', () => {
     mockSendEachForMulticast.mockResolvedValue({
       successCount: 0,
       responses: [
-        { success: false, error: { code: 'messaging/invalid-registration-token' } },
+        {
+          success: false,
+          error: { code: 'messaging/invalid-registration-token' },
+        },
       ],
     });
 
