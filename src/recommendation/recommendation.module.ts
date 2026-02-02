@@ -21,6 +21,6 @@ import { RecommendationService } from './services/recommendation.service';
     ArtistSyncService,
     RecommendationService,
   ],
-  exports: [MusicApiFactoryService, LastfmApiService],
+  exports: [MusicApiFactoryService, LastfmApiService, RecommendationService],
 })
 export class RecommendationModule {}
