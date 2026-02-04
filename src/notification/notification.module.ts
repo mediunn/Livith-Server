@@ -7,9 +7,10 @@ import { NotificationQueueScheduler } from './scheduler/notification-queue.sched
 import { TicketingReminderScheduler } from './scheduler/ticketing-reminder.scheduler';
 import { NotificationCleanupScheduler } from './scheduler/notification-cleanup.scheduler';
 import { RecommendationModule } from 'src/recommendation/recommendation.module';
+import { ArtistModule } from 'src/artist/artist.module';
 
 @Module({
-  imports: [RecommendationModule],
+  imports: [RecommendationModule, ArtistModule],
   controllers: [NotificationController],
   providers: [
     NotificationService,

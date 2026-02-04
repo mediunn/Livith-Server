@@ -14,6 +14,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { GenreModule } from './genre/genre.module';
 import { NotificationModule } from './notification/notification.module';
+import { ArtistModule } from './artist/artist.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { NotificationModule } from './notification/notification.module';
     RecommendationModule,
     GenreModule,
     NotificationModule,
+    ArtistModule,
   ],
   controllers: [],
   providers: [
