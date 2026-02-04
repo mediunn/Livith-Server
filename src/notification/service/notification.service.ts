@@ -28,10 +28,14 @@ import { isNightTimeKst } from 'src/common/utils/date.util';
 import { admin, getMessaging } from '../fcm/firebase-admin';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { normalizeArtistName } from 'src/common/utils/artist-name.util';
+import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly artistMatchingService: ArtistMatchingService,
+  ) {}
 
   /**
    * 알림 설정 조회
@@ -381,44 +385,16 @@ export class NotificationService {
     });
     if (!concert) return { sent: 0, failed: 0 };
 
-    const concertArtistNormalized = normalizeArtistName(concert.artist);
-
-    // 배치 처리(1000명 단위)
-    const BATCH_SIZE_ARTIST = NOTIFICATION_ARTIST_BATCH_SIZE;
-    const representativeArtistIds: number[] = [];
-    let skip = 0;
-
-    while (true) {
-      const candidates = await this.prisma.representativeArtist.findMany({
-        select: { id: true, artistName: true },
-        skip,
-        take: BATCH_SIZE_ARTIST,
-      });
-
-      if (candidates.length === 0) break;
-
-      const matchedIds = candidates
-        .filter(
-          (ra) =>
-            normalizeArtistName(ra.artistName) === concertArtistNormalized,
-        )
-        .map((ra) => ra.id);
-
-      representativeArtistIds.push(...matchedIds);
-      skip += BATCH_SIZE_ARTIST;
-    }
+    // Artist 도메인 로직을 서비스로 위임
+    const representativeArtistIds = await this.artistMatchingService.findMatchingRepresentativeArtistIds(
+      concert.artist
+    );
 
     if (representativeArtistIds.length === 0) return { sent: 0, failed: 0 };
 
-    const userIds = await this.prisma.userArtist
-      .findMany({
-        where: {
-          artistId: { in: representativeArtistIds },
-          user: { deletedAt: null },
-        },
-        select: { userId: true },
-      })
-      .then((list) => [...new Set(list.map((ua) => ua.userId))]);
+    const userIds = await this.artistMatchingService.findUserIdsByArtistIds(
+      representativeArtistIds,
+    );
 
     const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
     let totalSent = 0;
