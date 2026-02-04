@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
-import { NotificationService } from './notification.service';
+import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
-import { NotFoundException } from '../common/exceptions/business.exception';
-import { ErrorCode } from '../common/enums/error-code.enum';
+import { NotFoundException } from 'src/common/exceptions/business.exception';
+import { ErrorCode } from 'src/common/enums/error-code.enum';
 
 describe('NotificationService - 알림 목록', () => {
   let service: NotificationService;

@@ -7,22 +7,27 @@ import {
   ForbiddenException,
   NotFoundException,
 } from 'src/common/exceptions/business.exception';
-import { NotificationField } from './enums/notification-field.enum';
-import { NotificationConsentResponseDto } from './dto/response/notification-consent-response.dto';
-import { NotificationSettingResponseDto } from './dto/response/notification-set-response.dto';
+import { NotificationField } from '../enums/notification-field.enum';
+import { NotificationConsentResponseDto } from '../dto/response/notification-consent-response.dto';
+import { NotificationSettingResponseDto } from '../dto/response/notification-set-response.dto';
 import {
   AD_PREFIX,
   AD_SUFFIX,
+  CONCERT_INFO_UPDATE_MESSAGES,
   FCM_INVALID_TOKEN_ERROR_CODES,
   FIELD_TO_CONSENT_TYPE,
+  NOTIFICATION_ARTIST_BATCH_SIZE,
+  NOTIFICATION_BATCH_SIZE,
   NOTIFICATION_DEFAULTS,
   NOTIFICATION_TYPE_TO_SET_FIELD,
   PROMOTIONAL_FIELDS,
   PROMOTIONAL_NOTIFICATION_TYPES,
-} from './constants/notification.constants';
-import { NotificationResponseDto } from './dto/response/notification-response.dto';
+} from '../constants/notification.constants';
+import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { isNightTimeKst } from 'src/common/utils/date.util';
-import { admin, getMessaging } from './firebase-admin';
+import { admin, getMessaging } from '../fcm/firebase-admin';
+import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
+import { normalizeArtistName } from 'src/common/utils/artist-name.util';
 
 @Injectable()
 export class NotificationService {
@@ -296,6 +301,153 @@ export class NotificationService {
 
     const failedCount = tokens.length - successCount;
     return { sent: sentUserIdList.length, failed: failedCount };
+  }
+
+  /**
+   * 콘서트 정보 업데이트 알림
+   * 관심 콘서트로 설정한 콘서트의 정보 업데이트 시 해당 사용자에게 발송
+   */
+  async sendConcertInfoUpdateNotification(
+    concertId: number,
+    options?: {
+      updateType?: ConcertInfoUpdateType;
+      concertTitle?: string;
+      content?: string;
+    },
+  ): Promise<{ sent: number; failed: number }> {
+    let concertTitle: string | null = options?.concertTitle ?? null;
+    if (concertTitle === null) {
+      const concert = await this.prisma.concert.findUnique({
+        where: { id: concertId },
+        select: { title: true },
+      });
+      if (!concert) return { sent: 0, failed: 0 };
+      concertTitle = concert.title;
+    }
+
+    const defaultContent = `${concertTitle} 정보가 업데이트되었어요!`;
+    const content =
+      options?.content ??
+      (options?.updateType
+        ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle)
+        : defaultContent);
+
+    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+    let totalSent = 0;
+    let totalFailed = 0;
+    let skip = 0;
+
+    while (true) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          interestConcertId: concertId,
+          deletedAt: null,
+        },
+        select: { id: true },
+        skip,
+        take: BATCH_SIZE,
+      });
+
+      if (users.length === 0) break;
+
+      const batchUserIds = users.map((u) => u.id);
+      const result = await this.sendPushNotification({
+        type: NotificationType.CONCERT_INFO_UPDATE,
+        title: '콘서트 정보 업데이트',
+        content,
+        targetId: String(concertId),
+        userIds: batchUserIds,
+      });
+
+      totalSent += result.sent;
+      totalFailed += result.failed;
+      skip += BATCH_SIZE;
+    }
+
+    return { sent: totalSent, failed: totalFailed };
+  }
+
+  /**
+   * 아티스트 콘서트 오픈 알림
+   * - 새 콘서트 등록 시 호출
+   * - 해당 콘서트의 아티스트를 좋아하는 사용자에게 발송
+   */
+  async sendArtistConcertOpenNotification(
+    concertId: number,
+  ): Promise<{ sent: number; failed: number }> {
+    const concert = await this.prisma.concert.findUnique({
+      where: { id: concertId },
+      select: { id: true, title: true, artist: true },
+    });
+    if (!concert) return { sent: 0, failed: 0 };
+
+    const concertArtistNormalized = normalizeArtistName(concert.artist);
+
+    // 배치 처리(1000명 단위)
+    const BATCH_SIZE_ARTIST = NOTIFICATION_ARTIST_BATCH_SIZE;
+    const representativeArtistIds: number[] = [];
+    let skip = 0;
+
+    while (true) {
+      const candidates = await this.prisma.representativeArtist.findMany({
+        select: { id: true, artistName: true },
+        skip,
+        take: BATCH_SIZE_ARTIST,
+      });
+
+      if (candidates.length === 0) break;
+
+      const matchedIds = candidates
+        .filter(
+          (ra) =>
+            normalizeArtistName(ra.artistName) === concertArtistNormalized,
+        )
+        .map((ra) => ra.id);
+
+      representativeArtistIds.push(...matchedIds);
+      skip += BATCH_SIZE_ARTIST;
+    }
+
+    if (representativeArtistIds.length === 0) return { sent: 0, failed: 0 };
+
+    const userIds = await this.prisma.userArtist
+      .findMany({
+        where: {
+          artistId: { in: representativeArtistIds },
+          user: { deletedAt: null },
+        },
+        select: { userId: true },
+      })
+      .then((list) => [...new Set(list.map((ua) => ua.userId))]);
+
+    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
+    let totalSent = 0;
+    let totalFailed = 0;
+
+    for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+      const batchUserIds = userIds.slice(i, i + BATCH_SIZE);
+
+      const validateUsers = await this.prisma.user.findMany({
+        where: { id: { in: batchUserIds }, deletedAt: null },
+        select: { id: true },
+      });
+      const validUserIds = validateUsers.map((u) => u.id);
+
+      if (validUserIds.length > 0) {
+        const result = await this.sendPushNotification({
+          type: NotificationType.ARTIST_CONCERT_OPEN,
+          title: '아티스트 콘서트 오픈',
+          content: `${concert.artist} 콘서트가 등록되었어요!`,
+          targetId: String(concertId),
+          userIds: validUserIds,
+        });
+
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      }
+    }
+
+    return { sent: totalSent, failed: totalFailed };
   }
 
   // ======== Private 메서드(Helper) ===========

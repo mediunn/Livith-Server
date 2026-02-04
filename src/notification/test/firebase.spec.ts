@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
-import { NotificationService } from './notification.service';
+import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 
 jest.mock('./firebase-admin', () => ({
