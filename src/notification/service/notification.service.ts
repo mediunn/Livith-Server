@@ -29,6 +29,7 @@ import { admin, getMessaging } from '../fcm/firebase-admin';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { normalizeArtistName } from 'src/common/utils/artist-name.util';
 import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
+import { BatchProcessor } from '../utils/batch-processor.util';
 
 @Injectable()
 export class NotificationService {
@@ -336,37 +337,36 @@ export class NotificationService {
         ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle)
         : defaultContent);
 
-    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
     let totalSent = 0;
     let totalFailed = 0;
-    let skip = 0;
 
-    while (true) {
-      const users = await this.prisma.user.findMany({
-        where: {
-          interestConcertId: concertId,
-          deletedAt: null,
-        },
-        select: { id: true },
-        skip,
-        take: BATCH_SIZE,
-      });
+    await BatchProcessor.processPaginated({
+      batchSize: NOTIFICATION_BATCH_SIZE,
+      fetchBatch: async (skip, take) => {
+        return await this.prisma.user.findMany({
+          where: {
+            interestConcertId: concertId,
+            deletedAt: null,
+          },
+          select: {id: true},
+          skip,
+          take,
+        });
+      },
+      processBatch: async (users) => {
+        const batchUserIds = users.map((u) => u.id);
+        const result = await this.sendPushNotification({
+          type: NotificationType.CONCERT_INFO_UPDATE,
+          title: '콘서트 정보 업데이트',
+          content,
+          targetId: String(concertId),
+          userIds: batchUserIds,
+        });
 
-      if (users.length === 0) break;
-
-      const batchUserIds = users.map((u) => u.id);
-      const result = await this.sendPushNotification({
-        type: NotificationType.CONCERT_INFO_UPDATE,
-        title: '콘서트 정보 업데이트',
-        content,
-        targetId: String(concertId),
-        userIds: batchUserIds,
-      });
-
-      totalSent += result.sent;
-      totalFailed += result.failed;
-      skip += BATCH_SIZE;
-    }
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      },
+    });
 
     return { sent: totalSent, failed: totalFailed };
   }
@@ -396,33 +396,33 @@ export class NotificationService {
       representativeArtistIds,
     );
 
-    const BATCH_SIZE = NOTIFICATION_BATCH_SIZE;
     let totalSent = 0;
     let totalFailed = 0;
 
-    for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
-      const batchUserIds = userIds.slice(i, i + BATCH_SIZE);
-
-      const validateUsers = await this.prisma.user.findMany({
-        where: { id: { in: batchUserIds }, deletedAt: null },
-        select: { id: true },
-      });
-      const validUserIds = validateUsers.map((u) => u.id);
-
-      if (validUserIds.length > 0) {
-        const result = await this.sendPushNotification({
-          type: NotificationType.ARTIST_CONCERT_OPEN,
-          title: '아티스트 콘서트 오픈',
-          content: `${concert.artist} 콘서트가 등록되었어요!`,
-          targetId: String(concertId),
-          userIds: validUserIds,
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_BATCH_SIZE,
+      async (batchUserIds) => {
+        const validateUsers = await this.prisma.user.findMany({
+          where: {id: {in: batchUserIds}, deletedAt: null},
+          select: {id: true},
         });
+        const validUserIds = validateUsers.map((u) => u.id);
 
-        totalSent += result.sent;
-        totalFailed += result.failed;
+        if(validUserIds.length > 0){
+          const result = await this.sendPushNotification({
+            type: NotificationType.ARTIST_CONCERT_OPEN,
+            title: '아티스트 콘서트 오픈',
+            content: `${concert.artist} 콘서트가 등록되었어요!`,
+            targetId: String(concertId),
+            userIds: validUserIds,
+          });
+
+          totalSent += result.sent;
+          totalFailed += result.failed;
+        }
       }
-    }
-
+    );
     return { sent: totalSent, failed: totalFailed };
   }
 
