@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
+import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
+import { NotificationSettingsService } from '../service/notification-settings.service';
+import { FcmTokenService } from '../service/fcm-token.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
+import { PushSenderService } from '../service/push-sender.service';
 
 const mockSendEachForMulticast = jest.fn();
 
@@ -40,6 +45,17 @@ describe('Notification send integration (FCM mock)', () => {
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: ArtistMatchingService,
+          useValue: {
+            findMatchingRepresentativeArtistIds: jest.fn(),
+            findUserIdsByArtistIds: jest.fn(),
+          },
+        },
+        NotificationSettingsService,
+        { provide: FcmTokenService, useValue: {} },
+        NotificationHistoryService,
+        PushSenderService,
       ],
     }).compile();
 

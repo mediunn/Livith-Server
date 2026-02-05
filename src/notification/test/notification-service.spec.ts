@@ -3,6 +3,11 @@ import { ConsentType, NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationField } from '../enums/notification-field.enum';
+import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
+import { NotificationSettingsService } from '../service/notification-settings.service';
+import { FcmTokenService } from '../service/fcm-token.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
+import { PushSenderService } from '../service/push-sender.service';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -17,11 +22,24 @@ describe('NotificationService', () => {
     $transaction: jest.fn((cb) => cb(mockPrisma)),
   };
 
+  const mockArtistMatchingService = {
+    findMatchingRepresentativeArtistIds: jest.fn(),
+    findUserIdsByArtistIds: jest.fn(),
+  };
+
+  const mockFcmTokenService = {};
+  const mockPushSenderService = {};
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
+        NotificationSettingsService,
+        { provide: FcmTokenService, useValue: mockFcmTokenService },
+        NotificationHistoryService,
+        { provide: PushSenderService, useValue: mockPushSenderService },
       ],
     }).compile();
 
@@ -162,10 +180,9 @@ describe('NotificationService', () => {
       (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
         title: '테스트 콘서트',
       });
-      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
-        { id: 10 },
-        { id: 20 },
-      ]);
+      (mockPrisma.user.findMany as jest.Mock)
+        .mockResolvedValueOnce([{ id: 10 }, { id: 20 }])
+        .mockResolvedValueOnce([]);
 
       const sendSpy = jest
         .spyOn(service, 'sendPushNotification')
@@ -201,8 +218,6 @@ describe('NotificationService', () => {
   describe('sendArtistConcertOpenNotification', () => {
     it('콘서트 매칭, 아티스트, 유저 있으면 ARTIST_CONCERT_OPEN으로 sendPushNotification 호출', async () => {
       mockPrisma.concert = { findUnique: jest.fn() };
-      mockPrisma.representativeArtist = { findMany: jest.fn() };
-      mockPrisma.userArtist = { findMany: jest.fn() };
       mockPrisma.user = { ...mockPrisma.user, findMany: jest.fn() };
 
       (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
@@ -210,12 +225,11 @@ describe('NotificationService', () => {
         title: '콘서트',
         artist: '아티스트',
       });
-      (mockPrisma.representativeArtist.findMany as jest.Mock).mockResolvedValue(
-        [{ id: 5, artistName: '아티스트' }],
+      mockArtistMatchingService.findMatchingRepresentativeArtistIds.mockResolvedValue(
+        [5],
       );
-      (mockPrisma.userArtist.findMany as jest.Mock).mockResolvedValue([
-        { userId: 10 },
-        { userId: 20 },
+      mockArtistMatchingService.findUserIdsByArtistIds.mockResolvedValue([
+        10, 20,
       ]);
       (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
         { id: 10 },
