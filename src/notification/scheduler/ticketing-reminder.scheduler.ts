@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
@@ -9,8 +9,6 @@ import { BatchProcessor } from '../utils/batch-processor.util';
 
 @Injectable()
 export class TicketingReminderScheduler {
-  private readonly logger = new Logger(TicketingReminderScheduler.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
@@ -18,8 +16,6 @@ export class TicketingReminderScheduler {
 
   @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
   async dailyTicketingNotifications() {
-    this.logger.log('run daily ticketing notifications (10:00 KST)');
-
     await this.sendTicketingReminders(
       7,
       NotificationType.TICKET_7D,
@@ -56,7 +52,7 @@ export class TicketingReminderScheduler {
               interestConcertId: schedule.concertId,
               deletedAt: null,
             },
-            select: {id: true},
+            select: { id: true },
             skip,
             take,
           });
@@ -94,7 +90,7 @@ export class TicketingReminderScheduler {
               interestConcertId: schedule.concertId,
               deletedAt: null,
             },
-            select: {id: true},
+            select: { id: true },
             skip,
             take,
           });
@@ -108,9 +104,9 @@ export class TicketingReminderScheduler {
             content: `${schedule.concert.title} 예매가 오늘 ${timeStr}에 시작해요!`,
             targetId: String(schedule.concert.id),
             userIds: batchUserIds,
-          })
-        }
-      })
+          });
+        },
+      });
     }
   }
 }

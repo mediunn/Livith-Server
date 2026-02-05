@@ -8,12 +8,20 @@ import { TicketingReminderScheduler } from './scheduler/ticketing-reminder.sched
 import { NotificationCleanupScheduler } from './scheduler/notification-cleanup.scheduler';
 import { RecommendationModule } from 'src/recommendation/recommendation.module';
 import { ArtistModule } from 'src/artist/artist.module';
+import { NotificationSettingsService } from './service/notification-settings.service';
+import { FcmTokenService } from './service/fcm-token.service';
+import { NotificationHistoryService } from './service/notification-history.service';
+import { PushSenderService } from './service/push-sender.service';
 
 @Module({
   imports: [RecommendationModule, ArtistModule],
   controllers: [NotificationController],
   providers: [
     NotificationService,
+    NotificationSettingsService,
+    FcmTokenService,
+    NotificationHistoryService,
+    PushSenderService,
     PrismaService,
     FirebaseInitService,
     NotificationQueueScheduler,
