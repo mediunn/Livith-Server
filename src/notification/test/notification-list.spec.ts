@@ -4,6 +4,11 @@ import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotFoundException } from 'src/common/exceptions/business.exception';
 import { ErrorCode } from 'src/common/enums/error-code.enum';
+import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
+import { NotificationSettingsService } from '../service/notification-settings.service';
+import { FcmTokenService } from '../service/fcm-token.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
+import { PushSenderService } from '../service/push-sender.service';
 
 describe('NotificationService - 알림 목록', () => {
   let service: NotificationService;
@@ -19,11 +24,24 @@ describe('NotificationService - 알림 목록', () => {
     },
   };
 
+  const mockArtistMatchingService = {
+    findMatchingRepresentativeArtistIds: jest.fn(),
+    findUserIdsByArtistIds: jest.fn(),
+  };
+
+  const mockFcmTokenService = {};
+  const mockPushSenderService = {};
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
+        NotificationSettingsService,
+        { provide: FcmTokenService, useValue: mockFcmTokenService },
+        NotificationHistoryService,
+        { provide: PushSenderService, useValue: mockPushSenderService },
       ],
     }).compile();
 
