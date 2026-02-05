@@ -2,15 +2,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ErrorCode } from 'src/common/enums/error-code.enum';
-import {
-  ForbiddenException,
-  NotFoundException,
-} from 'src/common/exceptions/business.exception';
+import { NotFoundException } from 'src/common/exceptions/business.exception';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
+import { NotificationType } from '@prisma/client';
+import { UserService } from 'src/user/user.service';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class NotificationHistoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService,
+  ) {}
 
   /**
    * 알림 목록 조회(cursor 기반)
@@ -20,7 +23,7 @@ export class NotificationHistoryService {
     cursor?: number,
     size: number = 20,
   ): Promise<NotificationResponseDto[]> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     const notifications = await this.prisma.notificationHistories.findMany({
       where: {
@@ -46,7 +49,7 @@ export class NotificationHistoryService {
    * 읽지 않은 알림 개수
    */
   async getUnreadCount(userId: number): Promise<number> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
     return this.prisma.notificationHistories.count({
       where: { userId, isRead: false },
     });
@@ -56,7 +59,7 @@ export class NotificationHistoryService {
    * 알림 읽음 처리
    */
   async markAsRead(userId: number, notificationId: number): Promise<void> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     const notification = await this.prisma.notificationHistories.findUnique({
       where: { id: notificationId },
@@ -79,7 +82,7 @@ export class NotificationHistoryService {
     userId: number,
     notificationId: number,
   ): Promise<void> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     const notification = await this.prisma.notificationHistories.findUnique({
       where: { id: notificationId },
@@ -99,7 +102,7 @@ export class NotificationHistoryService {
    */
   async createNotificationHistories(
     userIds: number[],
-    type: any,
+    type: NotificationType,
     title: string,
     content: string,
     targetId: string | null,
@@ -121,30 +124,9 @@ export class NotificationHistoryService {
   // ======== Private 메서드 ===========
 
   /**
-   * 유저 검증
-   */
-  private async validateUser(userId: number): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
-  }
-
-  /**
    * 날짜 형식 변환 (날짜 + 시간)
    */
   private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}.${month}.${day} ${hours}:${minutes}`;
+    return dayjs(date).format('YYYY.MM.DD HH:mm');
   }
 }

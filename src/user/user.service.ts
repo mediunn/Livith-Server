@@ -9,7 +9,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { UserResponseDto } from './dto/user-response.dto';
-import { Provider } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
 import { UserGenreResponseDto } from './dto/user-genre-response.dto';
 import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 
@@ -17,7 +17,14 @@ import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 export class UserService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  private async validateUser(userId: number) {
+  /**
+   * 유저 검증 (public 메서드 - 다른 모듈에서 사용 가능)
+   * @param userId 검증할 유저 ID
+   * @returns 검증된 User 객체 (필요 없으면 반환값 무시 가능)
+   * @throws NotFoundException 유저가 존재하지 않는 경우
+   * @throws ForbiddenException 유저가 삭제된 경우
+   */
+  async validateUser(userId: number): Promise<User> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
     });
@@ -28,6 +35,8 @@ export class UserService {
     if (user.deletedAt) {
       throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
+
+    return user;
   }
 
   //관심 콘서트 설정

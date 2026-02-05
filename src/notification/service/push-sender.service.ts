@@ -103,7 +103,7 @@ export class PushSenderService {
       sentUserIds: sentUserIdList,
       finalTitle,
       finalContent,
-    } as any;
+    };
   }
 
   // ======== Private 메서드 ===========

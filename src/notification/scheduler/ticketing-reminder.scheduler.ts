@@ -5,7 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
 import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
-import { BatchProcessor } from '../utils/batch-processor.util';
+import { BatchProcessor } from '../../common/utils/batch-processor.util';
 
 @Injectable()
 export class TicketingReminderScheduler {

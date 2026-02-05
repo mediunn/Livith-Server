@@ -2,11 +2,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConsentType, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { ErrorCode } from 'src/common/enums/error-code.enum';
-import {
-  ForbiddenException,
-  NotFoundException,
-} from 'src/common/exceptions/business.exception';
 import { NotificationField } from '../enums/notification-field.enum';
 import { NotificationConsentResponseDto } from '../dto/response/notification-consent-response.dto';
 import { NotificationSettingResponseDto } from '../dto/response/notification-set-response.dto';
@@ -15,10 +10,14 @@ import {
   NOTIFICATION_DEFAULTS,
   PROMOTIONAL_FIELDS,
 } from '../constants/notification.constants';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class NotificationSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService,
+  ) {}
 
   /**
    * 알림 설정 조회
@@ -26,7 +25,7 @@ export class NotificationSettingsService {
   async getNotificationSettings(
     userId: number,
   ): Promise<NotificationSettingResponseDto> {
-    const user = await this.validateUser(userId);
+    const user = await this.userService.validateUser(userId);
     const defaults = this.buildDefaults(user.marketingConsent);
 
     const notificationSet = await this.prisma.notificationSet.upsert({
@@ -43,7 +42,7 @@ export class NotificationSettingsService {
   async agreeMarketingConsent(
     userId: number,
   ): Promise<NotificationConsentResponseDto> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     const now = new Date();
 
@@ -81,7 +80,7 @@ export class NotificationSettingsService {
     field: NotificationField,
     isAgreed: boolean,
   ): Promise<NotificationConsentResponseDto> {
-    const user = await this.validateUser(userId);
+    const user = await this.userService.validateUser(userId);
 
     const isPromotional = this.isPromotionalField(field);
 
@@ -102,24 +101,6 @@ export class NotificationSettingsService {
   }
 
   // ======== Private 메서드 ===========
-
-  /**
-   * 유저 검증
-   */
-  private async validateUser(userId: number): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
-
-    return user;
-  }
 
   /**
    * 기본값 세팅(홍보성 알림)

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import dayjs from 'dayjs';
 
 // 알림 동의 처리 응답 DTO
 export class NotificationConsentResponseDto {
@@ -18,7 +19,6 @@ export class NotificationConsentResponseDto {
   }
 
   private formatDate(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return dayjs(date).format('YYYY.MM.DD HH:mm');
   }
 }

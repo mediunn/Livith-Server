@@ -8,7 +8,7 @@ import { NotificationSettingResponseDto } from '../dto/response/notification-set
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
-import { BatchProcessor } from '../utils/batch-processor.util';
+import { BatchProcessor } from '../../common/utils/batch-processor.util';
 import {
   CONCERT_INFO_UPDATE_MESSAGES,
   NOTIFICATION_BATCH_SIZE,
