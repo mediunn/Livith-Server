@@ -1,21 +1,20 @@
 // src/notification/service/fcm-token.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { ErrorCode } from 'src/common/enums/error-code.enum';
-import {
-  ForbiddenException,
-  NotFoundException,
-} from 'src/common/exceptions/business.exception';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class FcmTokenService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService,
+  ) {}
 
   /**
    * FCM 토큰 등록/업데이트(upsert)
    */
   async registerFcmToken(userId: number, token: string): Promise<void> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     await this.prisma.fcmToken.upsert({
       where: {
@@ -39,7 +38,7 @@ export class FcmTokenService {
    * token이 있으면 해당 토큰만 삭제하고, 없으면 해당 사용자의 모든 토큰을 삭제
    */
   async deleteFcmToken(userId: number, token?: string): Promise<void> {
-    await this.validateUser(userId);
+    await this.userService.validateUser(userId);
 
     if (token) {
       // 특정 토큰만 삭제
@@ -56,22 +55,6 @@ export class FcmTokenService {
           userId,
         },
       });
-    }
-  }
-
-  /**
-   * 유저 검증
-   */
-  private async validateUser(userId: number): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
     }
   }
 }

@@ -8,13 +8,14 @@ import { TicketingReminderScheduler } from './scheduler/ticketing-reminder.sched
 import { NotificationCleanupScheduler } from './scheduler/notification-cleanup.scheduler';
 import { RecommendationModule } from 'src/recommendation/recommendation.module';
 import { ArtistModule } from 'src/artist/artist.module';
+import { UserModule } from 'src/user/user.module';
 import { NotificationSettingsService } from './service/notification-settings.service';
 import { FcmTokenService } from './service/fcm-token.service';
 import { NotificationHistoryService } from './service/notification-history.service';
 import { PushSenderService } from './service/push-sender.service';
 
 @Module({
-  imports: [RecommendationModule, ArtistModule],
+  imports: [RecommendationModule, ArtistModule, UserModule],
   controllers: [NotificationController],
   providers: [
     NotificationService,

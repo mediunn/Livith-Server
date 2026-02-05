@@ -5,7 +5,7 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants';
-import { BatchProcessor } from '../utils/batch-processor.util';
+import { BatchProcessor } from '../../common/utils/batch-processor.util';
 
 @Injectable()
 export class RecommendationNotificationScheduler {

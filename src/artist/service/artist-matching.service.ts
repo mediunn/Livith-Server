@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { normalizeArtistName } from 'src/common/utils/artist-name.util';
 import { NOTIFICATION_ARTIST_BATCH_SIZE } from 'src/notification/constants/notification.constants';
+import { BatchProcessor } from 'src/common/utils/batch-processor.util';
 
 @Injectable()
 export class ArtistMatchingService {
@@ -14,26 +15,23 @@ export class ArtistMatchingService {
     concertArtistName: string,
   ): Promise<number[]> {
     const normalized = normalizeArtistName(concertArtistName);
-    const BATCH_SIZE = NOTIFICATION_ARTIST_BATCH_SIZE;
     const matchedIds: number[] = [];
-    let skip = 0;
 
-    while (true) {
-      const candidates = await this.prisma.representativeArtist.findMany({
-        select: { id: true, artistName: true },
-        skip,
-        take: BATCH_SIZE,
-      });
-
-      if (candidates.length === 0) break;
-
-      const matched = candidates
-        .filter((ra) => normalizeArtistName(ra.artistName) === normalized)
-        .map((ra) => ra.id);
-
-      matchedIds.push(...matched);
-      skip += BATCH_SIZE;
-    }
+    await BatchProcessor.processPaginated({
+      batchSize: NOTIFICATION_ARTIST_BATCH_SIZE,
+      fetchBatch: (skip, take) =>
+        this.prisma.representativeArtist.findMany({
+          select: { id: true, artistName: true },
+          skip,
+          take,
+        }),
+      processBatch: async (candidates) => {
+        const matched = candidates
+          .filter((ra) => normalizeArtistName(ra.artistName) === normalized)
+          .map((ra) => ra.id);
+        matchedIds.push(...matched);
+      },
+    });
 
     return matchedIds;
   }
