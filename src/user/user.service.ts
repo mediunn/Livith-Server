@@ -18,11 +18,7 @@ export class UserService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
-   * 유저 검증 (public 메서드 - 다른 모듈에서 사용 가능)
-   * @param userId 검증할 유저 ID
-   * @returns 검증된 User 객체 (필요 없으면 반환값 무시 가능)
-   * @throws NotFoundException 유저가 존재하지 않는 경우
-   * @throws ForbiddenException 유저가 삭제된 경우
+   * 유저 검증 (public 메서드)
    */
   async validateUser(userId: number): Promise<User> {
     const user = await this.prismaService.user.findUnique({
