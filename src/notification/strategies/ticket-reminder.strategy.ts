@@ -54,7 +54,9 @@ export class TicketReminderStrategy implements NotificationStrategy {
     return allUserIds;
   }
 
-  async buildMessage(params: NotificationTargetParams): Promise<NotificationMessage> {
+  async buildMessage(
+    params: NotificationTargetParams,
+  ): Promise<NotificationMessage> {
     const { concertTitle, timeStr, daysUntil } = params;
 
     let content = '';

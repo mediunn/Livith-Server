@@ -36,10 +36,9 @@ export class ArtistConcertOpenStrategy implements NotificationStrategy {
 
     if (representativeArtistIds.length === 0) return [];
 
-    const userIds =
-      await this.artistMatchingService.findUserIdsByArtistIds(
-        representativeArtistIds,
-      );
+    const userIds = await this.artistMatchingService.findUserIdsByArtistIds(
+      representativeArtistIds,
+    );
 
     // 유효한 유저만 필터링
     const validUserIds: number[] = [];
@@ -58,7 +57,9 @@ export class ArtistConcertOpenStrategy implements NotificationStrategy {
     return validUserIds;
   }
 
-  async buildMessage(params: NotificationTargetParams): Promise<NotificationMessage> {
+  async buildMessage(
+    params: NotificationTargetParams,
+  ): Promise<NotificationMessage> {
     const { concertId } = params;
     const concert = await this.prisma.concert.findUnique({
       where: { id: concertId },
