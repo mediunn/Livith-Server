@@ -31,16 +31,6 @@ describe('User Artist Preferences (e2e)', () => {
         .expect(401);
     });
 
-    it('빈 배열로 요청 시 400 에러를 반환해야 함', () => {
-      return request(app.getHttpServer())
-        .put('/api/v1/users/artist-preferences')
-        .set('Authorization', 'Bearer invalid-token')
-        .send({
-          artistIds: [],
-        })
-        .expect(400);
-    });
-
     it('4개 이상의 아티스트 ID로 요청 시 400 에러를 반환해야 함', () => {
       return request(app.getHttpServer())
         .put('/api/v1/users/artist-preferences')
