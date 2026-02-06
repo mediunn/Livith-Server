@@ -1,11 +1,16 @@
 import { NotificationType } from "@prisma/client";
 
-
 export interface NotificationTargetParams{
     concertId?: number;
+    scheduleId?: number;
     updateType?: string;
+    concertTitle?: string;
+    content?: string;
+    timeStr?: string;
+    daysUntil?: number;
     [key: string]: any;
 }
+
 
 export interface NotificationMessage{
     title: string;
