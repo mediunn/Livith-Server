@@ -139,8 +139,7 @@ export class NotificationController {
   @Post('test/send')
   @ApiOperation({
     summary: '테스트 알림 발송 ',
-    description:
-      'type 선택 -> strategy에 맞춰 발송',
+    description: 'type 선택 -> strategy에 맞춰 발송',
   })
   async sendTestNotification(
     @CurrentUser() user: JwtPayload,
