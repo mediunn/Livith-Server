@@ -35,14 +35,18 @@ describe('TicketingReminderScheduler', () => {
   });
 
   it('7일 후 TICKETING 스케줄 있으면 TICKET_7D로 sendPushNotification 호출', async () => {
-    mockPrisma.schedule.findMany.mockResolvedValue([
-      {
-        concertId: 1,
-        concert: { id: 1, title: '테스트콘서트' },
-        scheduledAt: new Date(),
-      },
-    ]);
-    mockPrisma.user.findMany.mockResolvedValue([{ id: 10 }]);
+    mockPrisma.schedule.findMany
+      .mockResolvedValueOnce([
+        {
+          concertId: 1,
+          concert: { id: 1, title: '테스트콘서트' },
+          scheduledAt: new Date(),
+        },
+      ])
+      .mockResolvedValue([]); // 1일, 오늘 스케줄은 없음
+    mockPrisma.user.findMany
+      .mockResolvedValueOnce([{ id: 10 }])
+      .mockResolvedValue([]); // 페이지네이션 종료
 
     await scheduler.dailyTicketingNotifications();
 
@@ -69,7 +73,9 @@ describe('TicketingReminderScheduler', () => {
           scheduledAt: todayScheduleTime,
         },
       ]);
-    mockPrisma.user.findMany.mockResolvedValue([{ id: 20 }]);
+    mockPrisma.user.findMany
+      .mockResolvedValueOnce([{ id: 20 }])
+      .mockResolvedValue([]); // 페이지네이션 종료
 
     await scheduler.dailyTicketingNotifications();
 

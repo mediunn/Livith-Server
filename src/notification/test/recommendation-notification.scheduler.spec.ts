@@ -35,7 +35,9 @@ describe('RecommendationNotificationScheduler', () => {
   });
 
   it('관심 콘서트 없는 유저에게 추천 콘서트 1개 있으면 RECOMMEND 푸시 발송', async () => {
-    mockPrisma.user.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    mockPrisma.user.findMany
+      .mockResolvedValueOnce([{ id: 1 }, { id: 2 }])
+      .mockResolvedValue([]); // 페이지네이션 종료
     mockRecommendationService.getRecommendConcerts
       .mockResolvedValueOnce([{ id: 100, title: 'A' }])
       .mockResolvedValueOnce([]);
