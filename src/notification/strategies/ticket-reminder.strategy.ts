@@ -11,14 +11,9 @@ import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 
 @Injectable()
 export class TicketReminderStrategy implements NotificationStrategy {
-  readonly type: NotificationType;
+  readonly type = NotificationType.TICKET_7D; // 대표 타입 
 
-  constructor(
-    private readonly prisma: PrismaService,
-    type: NotificationType,
-  ) {
-    this.type = type;
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getTargetUserIds(params: NotificationTargetParams): Promise<number[]> {
     const { scheduleId } = params;
