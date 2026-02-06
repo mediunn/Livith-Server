@@ -24,7 +24,7 @@ import {
   PROMOTIONAL_NOTIFICATION_TYPES,
 } from '../constants/notification.constants';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
-import { isNightTimeKst } from 'src/common/utils/date.util';
+import { formatKstDateTime, isNightTimeKst } from 'src/common/utils/date.util';
 import { admin, getMessaging } from '../fcm/firebase-admin';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { normalizeArtistName } from 'src/common/utils/artist-name.util';
@@ -636,14 +636,9 @@ export class NotificationService {
   }
 
   /**
-   * 날짜 형식 변환 (날짜 + 시간)
+   * 날짜 형식 변환 (날짜 + 시간, KST 기준)
    */
   private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}.${month}.${day} ${hours}:${minutes}`;
+    return formatKstDateTime(date);
   }
 }

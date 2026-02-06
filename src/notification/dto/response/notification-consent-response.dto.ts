@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { formatKstDateTime } from 'src/common/utils/date.util';
 
 // 알림 동의 처리 응답 DTO
 export class NotificationConsentResponseDto {
@@ -13,12 +14,7 @@ export class NotificationConsentResponseDto {
 
   constructor(agreedAt: Date, isAgreed: boolean) {
     this.sender = '라이빗';
-    this.agreedAt = this.formatDate(agreedAt);
+    this.agreedAt = formatKstDateTime(agreedAt);
     this.message = isAgreed ? '알림 동의 처리 완료' : '알림 거부 처리 완료';
-  }
-
-  private formatDate(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 }
