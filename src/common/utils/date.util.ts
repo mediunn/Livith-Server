@@ -79,3 +79,12 @@ export function formatKstHour(date: Date): string {
   const kst = new Date(date.getTime() + KST_OFFSET_MS);
   return `${kst.getUTCHours()}시`;
 }
+
+/**
+ * Date를 KST 기준 "YYYY.MM.DD HH:mm" 형식으로
+ */
+export function formatKstDateTime(date: Date): string {
+  const kst = new Date(date.getTime() + KST_OFFSET_MS);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
+}
