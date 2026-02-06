@@ -5,6 +5,7 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants';
+import { BatchProcessor } from '../../common/utils/batch-processor.util';
 
 @Injectable()
 export class RecommendationNotificationScheduler {
@@ -21,59 +22,51 @@ export class RecommendationNotificationScheduler {
   // 주 1회: 관심 콘서트가 없는 유저에게 추천 콘서트 1개 푸시
   @Cron('0 10 * * 1', { timeZone: 'Asia/Seoul' })
   async sendWeeklyRecommendNotifications() {
-    this.logger.log(
-      'Running weekly recommend concert notifications (Mon 10:00 KST)',
-    );
-
-    // 배치 처리
-    const BATCH_SIZE = NOTIFICATION_RECOMMEND_BATCH_SIZE;
     const title = '추천 콘서트';
     const content =
       '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!';
 
     let totalSent = 0;
-    let skip = 0;
 
-    while (true) {
-      const users = await this.prisma.user.findMany({
-        where: {
-          interestConcertId: null,
-          deletedAt: null,
-        },
-        select: { id: true },
-        skip,
-        take: BATCH_SIZE,
-      });
+    await BatchProcessor.processPaginated({
+      batchSize: NOTIFICATION_RECOMMEND_BATCH_SIZE,
+      fetchBatch: async (skip, take) => {
+        return await this.prisma.user.findMany({
+          where: {
+            interestConcertId: null,
+            deletedAt: null,
+          },
+          select: { id: true },
+          skip,
+          take,
+        });
+      },
+      processBatch: async (users) => {
+        const batchUserIds = users.map((u) => u.id);
 
-      if (users.length === 0) break;
+        for (const userId of batchUserIds) {
+          try {
+            const concerts =
+              await this.recommendationService.getRecommendConcerts(userId);
+            const concert = concerts[0];
+            if (!concert) continue;
 
-      const batchUserIds = users.map((u) => u.id);
-
-      // 각 사용자마다 개별 추천 콘서트가 필요하므로 순차 처리
-      for (const userId of batchUserIds) {
-        try {
-          const concerts =
-            await this.recommendationService.getRecommendConcerts(userId);
-          const concert = concerts[0];
-          if (!concert) continue;
-
-          const result = await this.notificationService.sendPushNotification({
-            type: NotificationType.RECOMMEND,
-            title,
-            content,
-            targetId: String(concert.id),
-            userIds: [userId],
-          });
-          totalSent += result.sent;
-        } catch (err) {
-          this.logger.warn(
-            `Recommend notification failed for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
-          );
+            const result = await this.notificationService.sendPushNotification({
+              type: NotificationType.RECOMMEND,
+              title,
+              content,
+              targetId: String(concert.id),
+              userIds: [userId],
+            });
+            totalSent += result.sent;
+          } catch (err) {
+            this.logger.warn(
+              `Recommend notification failed for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
         }
-      }
-
-      skip += BATCH_SIZE;
-    }
+      },
+    });
 
     this.logger.log(`Weekly recommend notifications sent: ${totalSent}`);
   }

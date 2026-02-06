@@ -2,8 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
+import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
+import { NotificationSettingsService } from '../service/notification-settings.service';
+import { FcmTokenService } from '../service/fcm-token.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
+import { PushSenderService } from '../service/push-sender.service';
 
-jest.mock('./firebase-admin', () => ({
+jest.mock('../fcm/firebase-admin', () => ({
   getMessaging: jest.fn(),
   admin: {},
 }));
@@ -27,18 +32,28 @@ describe('NotificationService (푸시 발송)', () => {
     $transaction: jest.fn((cb) => cb(mockPrisma)),
   };
 
+  const mockArtistMatchingService = {
+    findMatchingRepresentativeArtistIds: jest.fn(),
+    findUserIdsByArtistIds: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
+        NotificationSettingsService,
+        { provide: FcmTokenService, useValue: {} },
+        NotificationHistoryService,
+        PushSenderService,
       ],
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);
     jest.clearAllMocks();
 
-    require('./firebase-admin').getMessaging.mockReturnValue({
+    require('../fcm/firebase-admin').getMessaging.mockReturnValue({
       sendEachForMulticast: jest.fn().mockResolvedValue({
         successCount: 2,
         responses: [{ success: true }, { success: true }],
@@ -129,7 +144,7 @@ describe('NotificationService (푸시 발송)', () => {
       });
     });
 
-    it('RECOMMEND 타입이면 title/content에 홍보 문구 가공되어 저장', async () => {
+    it('RECOMMEND 타입이면 title/content가 그대로 히스토리에 저장', async () => {
       mockPrisma.notificationSet.findMany.mockResolvedValue([
         { userId: 1, recommendAlert: true, nightAlert: false },
       ]);
@@ -148,8 +163,8 @@ describe('NotificationService (푸시 발송)', () => {
       expect(mockPrisma.notificationHistories.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
-            title: '(광고) 추천',
-            content: expect.stringContaining('수신 거부'),
+            title: '추천',
+            content: '내용',
           }),
         ],
       });
