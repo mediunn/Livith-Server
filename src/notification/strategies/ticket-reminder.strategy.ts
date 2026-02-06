@@ -52,7 +52,17 @@ export class TicketReminderStrategy implements NotificationStrategy {
   async buildMessage(
     params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
-    const { concertTitle, timeStr, daysUntil } = params;
+    let { concertTitle, timeStr, daysUntil } = params;
+
+    // concertId만 전달된 경우 조회 (테스트용)
+    if (!concertTitle && params.concertId) {
+      const concert = await this.prisma.concert.findUnique({
+        where: { id: params.concertId },
+        select: { title: true },
+      });
+      concertTitle = concert?.title ?? '콘서트';
+      daysUntil = daysUntil ?? 7;
+    }
 
     let content = '';
     if (daysUntil === 7) {
