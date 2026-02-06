@@ -15,6 +15,7 @@ import { RecommendationModule } from './recommendation/recommendation.module';
 import { GenreModule } from './genre/genre.module';
 import { NotificationModule } from './notification/notification.module';
 import { ArtistModule } from './artist/artist.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ArtistModule } from './artist/artist.module';
     GenreModule,
     NotificationModule,
     ArtistModule,
+    MetricsModule,
   ],
   controllers: [],
   providers: [

@@ -54,7 +54,9 @@ async function bootstrap() {
     .addBearerAuth() // JWT 인증 추가
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    ignoreGlobalPrefix: false,
+  });
   SwaggerModule.setup('api-docs', app, document);
 
   //cors 설정
