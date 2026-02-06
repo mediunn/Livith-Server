@@ -21,6 +21,8 @@ import { GetNotificationDto } from './dto/request/get-notification.dto';
 import { NotificationResponseDto } from './dto/response/notification-response.dto';
 import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
+import { TestNotificationDto } from './dto/request/test-notification.dto';
+import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
@@ -98,19 +100,6 @@ export class NotificationController {
     return { success: true, message: '알림을 읽음 처리했습니다.' };
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: '알림 삭제' })
-  async deleteNotification(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseIntPipe) notificationId: number,
-  ): Promise<{ success: boolean; message: string }> {
-    await this.notificationService.deleteNotification(
-      user.userId,
-      notificationId,
-    );
-    return { success: true, message: '알림을 삭제했습니다.' };
-  }
-
   @Post('fcm-token')
   @ApiOperation({
     summary: 'FCM 토큰 등록',
@@ -141,6 +130,35 @@ export class NotificationController {
       message: dto.token
         ? 'FCM 토큰이 삭제되었습니다.'
         : '모든 FCM 토큰이 삭제되었습니다.',
+    };
+  }
+
+  @Post('test/send')
+  @ApiOperation({
+    summary: '테스트 알림 발송',
+    description:
+      '개발 환경에서만 사용 가능합니다. 현재 로그인한 유저에게 테스트 알림을 발송합니다.',
+  })
+  async sendTestNotification(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: TestNotificationDto,
+  ): Promise<{ success: boolean; sent: number; failed: number }> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Not available in production');
+    }
+
+    const result = await this.notificationService.sendPushNotification({
+      type: dto.type,
+      title: dto.title,
+      content: dto.content,
+      targetId: dto.targetId,
+      userIds: [user.userId],
+    });
+
+    return {
+      success: result.sent > 0,
+      sent: result.sent,
+      failed: result.failed,
     };
   }
 }
