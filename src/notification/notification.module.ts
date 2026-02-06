@@ -17,6 +17,7 @@ import { ArtistConcertOpenStrategy } from './strategies/artist-concert-open.stra
 import { ConcertInfoUpdateStrategy } from './strategies/concert-info-update.strategy';
 import { InterestConcertStrategy } from './strategies/interest-concert.strategy';
 import { RecommendationStrategy } from './strategies/recommendation.strategy';
+import { TicketReminderStrategy } from './strategies/ticket-reminder.strategy';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 import { InterestConcertNotificationScheduler } from './scheduler/interest-concert-notification.scheduler';
 
@@ -33,6 +34,7 @@ import { InterestConcertNotificationScheduler } from './scheduler/interest-conce
     ConcertInfoUpdateStrategy,
     InterestConcertStrategy,
     RecommendationStrategy,
+    TicketReminderStrategy,
     NotificationStrategyService,
     PrismaService,
     FirebaseInitService,
