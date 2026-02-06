@@ -234,7 +234,7 @@ describe('RecommendationService Integration Test', () => {
     // Given: 장르 1개 + 아티스트 2개 선택
     const genres = await prismaService.genre.findMany({ take: 1 });
     const artistNames = ['21 Savage', 'Kanye West'];
-    let representativeArtists =
+    const representativeArtists =
       await prismaService.representativeArtist.findMany({
         where: {
           artistName: { in: artistNames },
