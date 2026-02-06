@@ -13,6 +13,10 @@ import { NotificationSettingsService } from './service/notification-settings.ser
 import { FcmTokenService } from './service/fcm-token.service';
 import { NotificationHistoryService } from './service/notification-history.service';
 import { PushSenderService } from './service/push-sender.service';
+import { ArtistConcertOpenStrategy } from './strategies/artist-concert-open.strategy';
+import { ConcertInfoUpdateStrategy } from './strategies/concert-info-update.strategy';
+import { RecommendationStrategy } from './strategies/recommendation.strategy';
+import { NotificationStrategyService } from './strategies/notification-strategy.service';
 
 @Module({
   imports: [RecommendationModule, ArtistModule, UserModule],
@@ -23,6 +27,10 @@ import { PushSenderService } from './service/push-sender.service';
     FcmTokenService,
     NotificationHistoryService,
     PushSenderService,
+    ArtistConcertOpenStrategy,
+    ConcertInfoUpdateStrategy,
+    RecommendationStrategy,
+    NotificationStrategyService,
     PrismaService,
     FirebaseInitService,
     NotificationQueueScheduler,

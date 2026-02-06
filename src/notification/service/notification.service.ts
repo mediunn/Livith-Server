@@ -17,6 +17,8 @@ import { NotificationSettingsService } from './notification-settings.service';
 import { FcmTokenService } from './fcm-token.service';
 import { NotificationHistoryService } from './notification-history.service';
 import { PushSenderService } from './push-sender.service';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { NotificationTargetParams } from '../strategies/notification-strategy.interface';
 
 @Injectable()
 export class NotificationService {
@@ -27,6 +29,7 @@ export class NotificationService {
     private readonly fcmTokenService: FcmTokenService,
     private readonly historyService: NotificationHistoryService,
     private readonly pushSenderService: PushSenderService,
+    private readonly strategyService: NotificationStrategyService,
   ) {}
 
   // 알림 설정 관련
@@ -88,6 +91,50 @@ export class NotificationService {
   }
 
   //푸시 전송 (비즈니스 로직 + 히스토리 저장)
+
+  /**
+   * Straegy 패턴을 사용한 통합 알림 전송
+   * - Strategy가 대상 유저와 메시지를 결정
+   */
+  async sendNotificationByStrategy(
+    type: NotificationType,
+    params: NotificationTargetParams,
+    targetId?: string,
+  ): Promise<{sent: number; failed: number}>{
+    // 1. Strategy 조회
+    const strategy = this.strategyService.getStrategy(type);
+
+    // 2. 대상 유저 조회
+    const userIds = await strategy.getTargetUserIds(params);
+    if(userIds.length == 0){
+      return {sent: 0, failed: 0};
+    }
+
+    // 3. 메시지 생성
+    const message = await strategy.buildMessage(params);
+
+    // 4. 배치 처리로 푸시 전송
+    let totalSent = 0;
+    let totalFailed = 0;
+
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_BATCH_SIZE,
+      async (batchUserIds) => {
+        const result = await this.sendPushNotification({
+          type,
+          title: message.title,
+          content: message.content,
+          targetId,
+          userIds: batchUserIds,
+        });
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      },
+    );
+
+    return {sent: totalSent, failed: totalFailed};
+  }
 
   /**
    * 푸시 알림 일괄 전송
