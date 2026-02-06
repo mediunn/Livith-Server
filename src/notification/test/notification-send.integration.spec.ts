@@ -2,11 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
-import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 import { NotificationSettingsService } from '../service/notification-settings.service';
 import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 
 const mockSendEachForMulticast = jest.fn();
 
@@ -35,6 +35,17 @@ describe('Notification send integration (FCM mock)', () => {
     ),
   };
 
+  const mockStrategyService = {
+    getStrategy: jest.fn(),
+    createTicketReminderStrategy: jest.fn(),
+  };
+
+  const mockSettingsService = {};
+  const mockFcmTokenService = {};
+  const mockHistoryService = {
+    createNotificationHistories: jest.fn(),
+  };
+
   beforeEach(async () => {
     mockSendEachForMulticast.mockResolvedValue({
       successCount: 1,
@@ -45,17 +56,11 @@ describe('Notification send integration (FCM mock)', () => {
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
-        {
-          provide: ArtistMatchingService,
-          useValue: {
-            findMatchingRepresentativeArtistIds: jest.fn(),
-            findUserIdsByArtistIds: jest.fn(),
-          },
-        },
-        NotificationSettingsService,
-        { provide: FcmTokenService, useValue: {} },
-        NotificationHistoryService,
+        { provide: NotificationSettingsService, useValue: mockSettingsService },
+        { provide: FcmTokenService, useValue: mockFcmTokenService },
+        { provide: NotificationHistoryService, useValue: mockHistoryService },
         PushSenderService,
+        { provide: NotificationStrategyService, useValue: mockStrategyService },
       ],
     }).compile();
 
@@ -81,7 +86,7 @@ describe('Notification send integration (FCM mock)', () => {
     mockPrisma.fcmToken.findMany.mockResolvedValue([
       { token: 'test-fcm-token-1', userId: 1 },
     ]);
-    mockPrisma.notificationHistories.createMany.mockResolvedValue({});
+    mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
       type: NotificationType.TICKET_7D,
@@ -99,7 +104,7 @@ describe('Notification send integration (FCM mock)', () => {
     expect(message.tokens).toEqual(['test-fcm-token-1']);
   });
 
-  it('발송 성공 시 notificationHistories.createMany 호출됨', async () => {
+  it('발송 성공 시 historyService.createNotificationHistories 호출됨', async () => {
     mockPrisma.notificationSet.findMany.mockResolvedValue([
       {
         userId: 1,
@@ -113,7 +118,7 @@ describe('Notification send integration (FCM mock)', () => {
     mockPrisma.fcmToken.findMany.mockResolvedValue([
       { token: 'token-a', userId: 1 },
     ]);
-    mockPrisma.notificationHistories.createMany.mockResolvedValue({});
+    mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
       type: NotificationType.CONCERT_INFO_UPDATE,
@@ -123,18 +128,13 @@ describe('Notification send integration (FCM mock)', () => {
       userIds: [1],
     });
 
-    expect(mockPrisma.notificationHistories.createMany).toHaveBeenCalledWith({
-      data: [
-        {
-          userId: 1,
-          type: NotificationType.CONCERT_INFO_UPDATE,
-          title: '콘서트 정보 업데이트',
-          content: 'OOO 정보가 업데이트되었어요!',
-          targetId: '50',
-          isRead: false,
-        },
-      ],
-    });
+    expect(mockHistoryService.createNotificationHistories).toHaveBeenCalledWith(
+      [1],
+      NotificationType.CONCERT_INFO_UPDATE,
+      '콘서트 정보 업데이트',
+      'OOO 정보가 업데이트되었어요!',
+      '50',
+    );
   });
 
   it('FCM 실패 토큰 있으면 fcmToken.deleteMany 호출됨', async () => {
