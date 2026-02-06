@@ -1,4 +1,3 @@
-// src/notification/service/notification.service.ts (전체 교체)
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
