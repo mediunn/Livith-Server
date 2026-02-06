@@ -23,13 +23,17 @@ import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
 import { ForbiddenException } from '@nestjs/common';
+import { NotificationStrategyService } from './strategies/notification-strategy.service';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly strategyService: NotificationStrategyService,
+  ) {}
 
   @Get('settings')
   @ApiOperation({
@@ -135,23 +139,32 @@ export class NotificationController {
 
   @Post('test/send')
   @ApiOperation({
-    summary: '테스트 알림 발송',
+    summary: '테스트 알림 발송 ',
     description:
-      '개발 환경에서만 사용 가능합니다. 현재 로그인한 유저에게 테스트 알림을 발송합니다.',
+      'type 선택 -> strategy에 맞춰 발송',
   })
   async sendTestNotification(
     @CurrentUser() user: JwtPayload,
     @Body() dto: TestNotificationDto,
-  ): Promise<{ success: boolean; sent: number; failed: number }> {
+  ): Promise<{
+    success: boolean;
+    sent: number;
+    failed: number;
+    title: string;
+    content: string;
+  }> {
     if (process.env.NODE_ENV === 'production') {
       throw new ForbiddenException('Not available in production');
     }
 
+    const strategy = this.strategyService.getStrategy(dto.type);
+    const message = await strategy.buildMessage({ concertId: dto.concertId });
+
     const result = await this.notificationService.sendPushNotification({
       type: dto.type,
-      title: dto.title,
-      content: dto.content,
-      targetId: dto.targetId,
+      title: message.title,
+      content: message.content,
+      targetId: dto.concertId ? String(dto.concertId) : undefined,
       userIds: [user.userId],
     });
 
@@ -159,6 +172,8 @@ export class NotificationController {
       success: result.sent > 0,
       sent: result.sent,
       failed: result.failed,
+      title: message.title,
+      content: message.content,
     };
   }
 }
