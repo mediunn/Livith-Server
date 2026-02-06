@@ -22,7 +22,6 @@ import { NotificationResponseDto } from './dto/response/notification-response.dt
 import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
-import { ForbiddenException } from '@nestjs/common';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 
 @ApiTags('알림')
@@ -153,10 +152,6 @@ export class NotificationController {
     title: string;
     content: string;
   }> {
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Not available in production');
-    }
-
     const strategy = this.strategyService.getStrategy(dto.type);
     const message = await strategy.buildMessage({ concertId: dto.concertId });
 
