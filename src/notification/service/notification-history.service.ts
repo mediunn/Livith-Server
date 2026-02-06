@@ -1,4 +1,3 @@
-// src/notification/service/notification-history.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ErrorCode } from 'src/common/enums/error-code.enum';
@@ -120,5 +119,4 @@ export class NotificationHistoryService {
       })),
     });
   }
-
 }
