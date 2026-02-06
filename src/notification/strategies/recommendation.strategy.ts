@@ -39,10 +39,13 @@ export class RecommendationStrategy implements NotificationStrategy {
     return allUserIds;
   }
 
-  async buildMessage(params: NotificationTargetParams): Promise<NotificationMessage> {
+  async buildMessage(
+    params: NotificationTargetParams,
+  ): Promise<NotificationMessage> {
     return {
       title: '추천 콘서트',
-      content: '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
+      content:
+        '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
     };
   }
 }

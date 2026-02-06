@@ -46,10 +46,12 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
     return allUserIds;
   }
 
-  async buildMessage(params: NotificationTargetParams): Promise<NotificationMessage> {
+  async buildMessage(
+    params: NotificationTargetParams,
+  ): Promise<NotificationMessage> {
     const { concertId, updateType, concertTitle, content } = params;
 
-    let title = '콘서트 정보 업데이트';
+    const title = '콘서트 정보 업데이트';
     let finalContent = content as string;
 
     if (!finalContent) {
@@ -64,7 +66,10 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
 
       if (fetchedTitle) {
         if (updateType) {
-          finalContent = CONCERT_INFO_UPDATE_MESSAGES[updateType as ConcertInfoUpdateType](fetchedTitle);
+          finalContent =
+            CONCERT_INFO_UPDATE_MESSAGES[updateType as ConcertInfoUpdateType](
+              fetchedTitle,
+            );
         } else {
           finalContent = `${fetchedTitle} 정보가 업데이트되었어요!`;
         }
