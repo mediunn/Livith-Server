@@ -6,7 +6,7 @@ import { NotFoundException } from 'src/common/exceptions/business.exception';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { NotificationType } from '@prisma/client';
 import { UserService } from 'src/user/user.service';
-import dayjs from 'dayjs';
+import { formatKstDateTime } from 'src/common/utils/date.util';
 
 @Injectable()
 export class NotificationHistoryService {
@@ -41,7 +41,7 @@ export class NotificationHistoryService {
       content: notification.content,
       targetId: notification.targetId,
       isRead: notification.isRead,
-      createdAt: this.formatDate(notification.createdAt),
+      createdAt: formatKstDateTime(notification.createdAt),
     }));
   }
 
@@ -121,12 +121,4 @@ export class NotificationHistoryService {
     });
   }
 
-  // ======== Private 메서드 ===========
-
-  /**
-   * 날짜 형식 변환 (날짜 + 시간)
-   */
-  private formatDate(date: Date): string {
-    return dayjs(date).format('YYYY.MM.DD HH:mm');
-  }
 }
