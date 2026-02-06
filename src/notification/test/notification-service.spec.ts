@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConsentType, NotificationType } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationField } from '../enums/notification-field.enum';
-import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 import { NotificationSettingsService } from '../service/notification-settings.service';
 import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -22,24 +22,43 @@ describe('NotificationService', () => {
     $transaction: jest.fn((cb) => cb(mockPrisma)),
   };
 
-  const mockArtistMatchingService = {
-    findMatchingRepresentativeArtistIds: jest.fn(),
-    findUserIdsByArtistIds: jest.fn(),
-  };
-
   const mockFcmTokenService = {};
   const mockPushSenderService = {};
+
+  const mockSettingsService = {
+    getNotificationSettings: jest.fn(),
+    agreeMarketingConsent: jest.fn(),
+    createNotificationConsent: jest.fn(),
+  };
+
+  const mockHistoryService = {
+    getNotifications: jest.fn(),
+    getUnreadCount: jest.fn(),
+    markAsRead: jest.fn(),
+    deleteNotification: jest.fn(),
+    createNotificationHistories: jest.fn(),
+  };
+
+  const mockStrategy = {
+    getTargetUserIds: jest.fn(),
+    buildMessage: jest.fn(),
+  };
+
+  const mockStrategyService = {
+    getStrategy: jest.fn().mockReturnValue(mockStrategy),
+    createTicketReminderStrategy: jest.fn().mockReturnValue(mockStrategy),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
-        NotificationSettingsService,
+        { provide: NotificationSettingsService, useValue: mockSettingsService },
         { provide: FcmTokenService, useValue: mockFcmTokenService },
-        NotificationHistoryService,
+        { provide: NotificationHistoryService, useValue: mockHistoryService },
         { provide: PushSenderService, useValue: mockPushSenderService },
+        { provide: NotificationStrategyService, useValue: mockStrategyService },
       ],
     }).compile();
 
@@ -48,14 +67,9 @@ describe('NotificationService', () => {
   });
 
   describe('getNotificationSettings', () => {
-    it('알림 설정을 조회', async () => {
+    it('settingsService에 위임하여 알림 설정을 조회', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 1,
-        marketingConsent: false,
-        deletedAt: null,
-      });
-      mockPrisma.notificationSet.upsert.mockResolvedValue({
+      mockSettingsService.getNotificationSettings.mockResolvedValue({
         benefitAlert: false,
         nightAlert: false,
         ticketAlert: true,
@@ -68,121 +82,59 @@ describe('NotificationService', () => {
       const result = await service.getNotificationSettings(1);
 
       // Then
+      expect(mockSettingsService.getNotificationSettings).toHaveBeenCalledWith(
+        1,
+      );
       expect(result.ticketAlert).toBe(true);
       expect(result.benefitAlert).toBe(false);
     });
   });
 
   describe('agreeMarketingConsent', () => {
-    it('마케팅 동의 시 홍보성 알림이 자동으로 켜짐', async () => {
+    it('settingsService에 위임하여 마케팅 동의 처리', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 1,
-        marketingConsent: false,
-        deletedAt: null,
+      mockSettingsService.agreeMarketingConsent.mockResolvedValue({
+        message: '알림 동의 처리 완료',
       });
-      mockPrisma.user.update = jest.fn();
-      mockPrisma.notificationSet.upsert.mockResolvedValue({});
-      mockPrisma.notificationConsent.createMany.mockResolvedValue({});
 
       // When
       const result = await service.agreeMarketingConsent(1);
 
       // Then
+      expect(mockSettingsService.agreeMarketingConsent).toHaveBeenCalledWith(1);
       expect(result.message).toBe('알림 동의 처리 완료');
-      expect(mockPrisma.notificationSet.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: { benefitAlert: true },
-        }),
-      );
     });
   });
 
   describe('createNotificationConsent', () => {
-    it('정보성 알림은 이력 저장 없이 변경', async () => {
+    it('settingsService에 위임하여 알림 동의 생성', async () => {
       // Given
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 1,
-        marketingConsent: true,
-        deletedAt: null,
+      mockSettingsService.createNotificationConsent.mockResolvedValue({
+        message: '알림 설정이 변경되었습니다.',
       });
-      mockPrisma.notificationSet.upsert.mockResolvedValue({});
 
       // When
-      await service.createNotificationConsent(
+      const result = await service.createNotificationConsent(
         1,
         NotificationField.TICKET_ALERT,
         false,
       );
 
       // Then
-      expect(mockPrisma.notificationConsent.create).not.toHaveBeenCalled();
-    });
-
-    it('홍보성 알림 끄기는 이력이 저장', async () => {
-      // Given
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 1,
-        marketingConsent: true,
-        deletedAt: null,
-      });
-      mockPrisma.notificationSet.upsert.mockResolvedValue({});
-      mockPrisma.notificationConsent.create.mockResolvedValue({});
-
-      // When
-      await service.createNotificationConsent(
-        1,
-        NotificationField.BENEFIT_ALERT,
-        false,
-      );
-
-      // Then
-      expect(mockPrisma.notificationConsent.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          type: ConsentType.BENEFIT_PUSH,
-          isAgreed: false,
-        }),
-      });
-    });
-
-    it('마케팅 동의 없이 홍보성 알림 켜면 마케팅 동의로 넘어감', async () => {
-      // Given
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 1,
-        marketingConsent: false,
-        deletedAt: null,
-      });
-      mockPrisma.user.update = jest.fn();
-      mockPrisma.notificationSet.upsert.mockResolvedValue({});
-      mockPrisma.notificationConsent.createMany.mockResolvedValue({});
-
-      // When
-      const result = await service.createNotificationConsent(
-        1,
-        NotificationField.BENEFIT_ALERT,
-        true,
-      );
-
-      // Then
-      expect(result.message).toBe('알림 동의 처리 완료');
-      expect(mockPrisma.notificationSet.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: { benefitAlert: true },
-        }),
-      );
+      expect(
+        mockSettingsService.createNotificationConsent,
+      ).toHaveBeenCalledWith(1, NotificationField.TICKET_ALERT, false);
+      expect(result.message).toBe('알림 설정이 변경되었습니다.');
     });
   });
 
   describe('sendConcertInfoUpdateNotification', () => {
-    it('콘서트 존재, 관심 유저 잇으면 CONCERT_INFO_UPDATE로 sendPushNotification 호출', async () => {
-      mockPrisma.concert = { findUnique: jest.fn() };
-      mockPrisma.user = { ...mockPrisma.user, findMany: jest.fn() };
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
-        title: '테스트 콘서트',
+    it('Strategy가 유저와 메시지를 반환하면 sendPushNotification 호출', async () => {
+      mockStrategy.getTargetUserIds.mockResolvedValue([10, 20]);
+      mockStrategy.buildMessage.mockResolvedValue({
+        title: '콘서트 정보 업데이트',
+        content: '테스트 콘서트 정보가 업데이트되었어요!',
       });
-      (mockPrisma.user.findMany as jest.Mock)
-        .mockResolvedValueOnce([{ id: 10 }, { id: 20 }])
-        .mockResolvedValueOnce([]);
 
       const sendSpy = jest
         .spyOn(service, 'sendPushNotification')
@@ -190,20 +142,21 @@ describe('NotificationService', () => {
 
       await service.sendConcertInfoUpdateNotification(1);
 
+      expect(mockStrategyService.getStrategy).toHaveBeenCalledWith(
+        NotificationType.CONCERT_INFO_UPDATE,
+      );
       expect(sendSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           type: NotificationType.CONCERT_INFO_UPDATE,
           title: '콘서트 정보 업데이트',
           content: '테스트 콘서트 정보가 업데이트되었어요!',
           targetId: '1',
-          userIds: [10, 20],
         }),
       );
     });
 
-    it('콘서트 없으면 발송 없음', async () => {
-      mockPrisma.concert = { findUnique: jest.fn() };
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue(null);
+    it('Strategy가 빈 유저 목록 반환하면 발송 없음', async () => {
+      mockStrategy.getTargetUserIds.mockResolvedValue([]);
 
       const sendSpy = jest
         .spyOn(service, 'sendPushNotification')
@@ -216,25 +169,12 @@ describe('NotificationService', () => {
   });
 
   describe('sendArtistConcertOpenNotification', () => {
-    it('콘서트 매칭, 아티스트, 유저 있으면 ARTIST_CONCERT_OPEN으로 sendPushNotification 호출', async () => {
-      mockPrisma.concert = { findUnique: jest.fn() };
-      mockPrisma.user = { ...mockPrisma.user, findMany: jest.fn() };
-
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue({
-        id: 1,
-        title: '콘서트',
-        artist: '아티스트',
+    it('Strategy가 유저와 메시지를 반환하면 sendPushNotification 호출', async () => {
+      mockStrategy.getTargetUserIds.mockResolvedValue([10, 20]);
+      mockStrategy.buildMessage.mockResolvedValue({
+        title: '아티스트 콘서트 오픈',
+        content: '아티스트 콘서트가 등록되었어요!',
       });
-      mockArtistMatchingService.findMatchingRepresentativeArtistIds.mockResolvedValue(
-        [5],
-      );
-      mockArtistMatchingService.findUserIdsByArtistIds.mockResolvedValue([
-        10, 20,
-      ]);
-      (mockPrisma.user.findMany as jest.Mock).mockResolvedValue([
-        { id: 10 },
-        { id: 20 },
-      ]);
 
       const sendSpy = jest
         .spyOn(service, 'sendPushNotification')
@@ -242,20 +182,21 @@ describe('NotificationService', () => {
 
       await service.sendArtistConcertOpenNotification(1);
 
+      expect(mockStrategyService.getStrategy).toHaveBeenCalledWith(
+        NotificationType.ARTIST_CONCERT_OPEN,
+      );
       expect(sendSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           type: NotificationType.ARTIST_CONCERT_OPEN,
           title: '아티스트 콘서트 오픈',
           content: '아티스트 콘서트가 등록되었어요!',
           targetId: '1',
-          userIds: [10, 20],
         }),
       );
     });
 
-    it('콘서트 없으면 발송 없음', async () => {
-      mockPrisma.concert = { findUnique: jest.fn() };
-      (mockPrisma.concert.findUnique as jest.Mock).mockResolvedValue(null);
+    it('Strategy가 빈 유저 목록 반환하면 발송 없음', async () => {
+      mockStrategy.getTargetUserIds.mockResolvedValue([]);
 
       const sendSpy = jest
         .spyOn(service, 'sendPushNotification')

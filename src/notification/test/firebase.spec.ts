@@ -1,126 +1,88 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
-import { PrismaService } from 'prisma/prisma.service';
-import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 import { NotificationSettingsService } from '../service/notification-settings.service';
 import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
-
-jest.mock('../fcm/firebase-admin', () => ({
-  getMessaging: jest.fn(),
-  admin: {},
-}));
-
-jest.mock('src/common/utils/date.util', () => ({
-  isNightTimeKst: jest.fn(() => false),
-}));
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 
 describe('NotificationService (푸시 발송)', () => {
   let service: NotificationService;
 
-  const mockPrisma = {
-    user: { findUnique: jest.fn() },
-    notificationSet: {
-      upsert: jest.fn(),
-      findMany: jest.fn(),
-    },
-    notificationConsent: { create: jest.fn(), createMany: jest.fn() },
-    fcmToken: { findMany: jest.fn(), deleteMany: jest.fn() },
-    notificationHistories: { createMany: jest.fn() },
-    $transaction: jest.fn((cb) => cb(mockPrisma)),
+  const mockPushSenderService = {
+    sendPushNotification: jest.fn(),
   };
 
-  const mockArtistMatchingService = {
-    findMatchingRepresentativeArtistIds: jest.fn(),
-    findUserIdsByArtistIds: jest.fn(),
+  const mockHistoryService = {
+    createNotificationHistories: jest.fn(),
+  };
+
+  const mockSettingsService = {};
+  const mockFcmTokenService = {};
+  const mockStrategyService = {
+    getStrategy: jest.fn(),
+    createTicketReminderStrategy: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
-        NotificationSettingsService,
-        { provide: FcmTokenService, useValue: {} },
-        NotificationHistoryService,
-        PushSenderService,
+        { provide: NotificationSettingsService, useValue: mockSettingsService },
+        { provide: FcmTokenService, useValue: mockFcmTokenService },
+        { provide: NotificationHistoryService, useValue: mockHistoryService },
+        { provide: PushSenderService, useValue: mockPushSenderService },
+        { provide: NotificationStrategyService, useValue: mockStrategyService },
       ],
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);
     jest.clearAllMocks();
-
-    require('../fcm/firebase-admin').getMessaging.mockReturnValue({
-      sendEachForMulticast: jest.fn().mockResolvedValue({
-        successCount: 2,
-        responses: [{ success: true }, { success: true }],
-      }),
-    });
   });
 
   describe('sendPushNotification', () => {
-    it('userIds가 비어 있으면 { sent: 0, failed: 0 } 반환', async () => {
-      const result = await service.sendPushNotification({
-        type: NotificationType.CONCERT_INFO_UPDATE,
-        title: '제목',
-        content: '내용',
-        userIds: [],
+    it('PushSenderService에 위임하여 푸시 발송', async () => {
+      mockPushSenderService.sendPushNotification.mockResolvedValue({
+        sent: 2,
+        failed: 0,
+        sentUserIds: [1, 2],
+        finalTitle: '제목',
+        finalContent: '내용',
       });
-
-      expect(result).toEqual({ sent: 0, failed: 0 });
-      expect(mockPrisma.notificationSet.findMany).not.toHaveBeenCalled();
-      expect(mockPrisma.fcmToken.findMany).not.toHaveBeenCalled();
-    });
-
-    it('타입별 설정이 꺼진 유저만 있으면 발송 대상 없어 { sent: 0, failed: 0 }', async () => {
-      mockPrisma.notificationSet.findMany.mockResolvedValue([
-        { userId: 1, infoAlert: false, nightAlert: false },
-      ]);
 
       const result = await service.sendPushNotification({
         type: NotificationType.CONCERT_INFO_UPDATE,
         title: '제목',
         content: '내용',
-        userIds: [1],
+        targetId: '123',
+        userIds: [1, 2],
       });
 
-      expect(result).toEqual({ sent: 0, failed: 0 });
-      expect(mockPrisma.fcmToken.findMany).not.toHaveBeenCalled();
-    });
-
-    it('FCM 토큰이 없으면 { sent: 0, failed: 0 }', async () => {
-      mockPrisma.notificationSet.findMany.mockResolvedValue([
-        { userId: 1, infoAlert: true, nightAlert: false },
-      ]);
-      mockPrisma.fcmToken.findMany.mockResolvedValue([]);
-
-      const result = await service.sendPushNotification({
+      expect(mockPushSenderService.sendPushNotification).toHaveBeenCalledWith({
         type: NotificationType.CONCERT_INFO_UPDATE,
         title: '제목',
         content: '내용',
-        userIds: [1],
+        targetId: '123',
+        userIds: [1, 2],
       });
-
-      expect(result).toEqual({ sent: 0, failed: 0 });
-      expect(
-        mockPrisma.notificationHistories.createMany,
-      ).not.toHaveBeenCalled();
+      expect(result.sent).toBe(2);
+      expect(result.failed).toBe(0);
     });
 
-    it('대상 유저·토큰 있으면 FCM 발송 후 createMany 호출하고 sent 반환', async () => {
-      mockPrisma.notificationSet.findMany.mockResolvedValue([
-        { userId: 1, infoAlert: true, nightAlert: false },
-      ]);
-      mockPrisma.fcmToken.findMany.mockResolvedValue([
-        { token: 'token-a', userId: 1 },
-        { token: 'token-b', userId: 1 },
-      ]);
-      mockPrisma.notificationHistories.createMany.mockResolvedValue({});
+    it('발송 성공 시 히스토리 생성 호출', async () => {
+      mockPushSenderService.sendPushNotification.mockResolvedValue({
+        sent: 1,
+        failed: 0,
+        sentUserIds: [1],
+        finalTitle: '제목',
+        finalContent: '내용',
+      });
+      mockHistoryService.createNotificationHistories.mockResolvedValue(
+        undefined,
+      );
 
-      const result = await service.sendPushNotification({
+      await service.sendPushNotification({
         type: NotificationType.CONCERT_INFO_UPDATE,
         title: '제목',
         content: '내용',
@@ -128,46 +90,36 @@ describe('NotificationService (푸시 발송)', () => {
         userIds: [1],
       });
 
-      expect(result.sent).toBe(1);
-      expect(result.failed).toBe(0);
-      expect(mockPrisma.notificationHistories.createMany).toHaveBeenCalledWith({
-        data: [
-          {
-            userId: 1,
-            type: NotificationType.CONCERT_INFO_UPDATE,
-            title: '제목',
-            content: '내용',
-            targetId: '123',
-            isRead: false,
-          },
-        ],
-      });
+      expect(
+        mockHistoryService.createNotificationHistories,
+      ).toHaveBeenCalledWith(
+        [1],
+        NotificationType.CONCERT_INFO_UPDATE,
+        '제목',
+        '내용',
+        '123',
+      );
     });
 
-    it('RECOMMEND 타입이면 title/content가 그대로 히스토리에 저장', async () => {
-      mockPrisma.notificationSet.findMany.mockResolvedValue([
-        { userId: 1, recommendAlert: true, nightAlert: false },
-      ]);
-      mockPrisma.fcmToken.findMany.mockResolvedValue([
-        { token: 'token-a', userId: 1 },
-      ]);
-      mockPrisma.notificationHistories.createMany.mockResolvedValue({});
+    it('발송 대상 없으면 히스토리 생성 안 함', async () => {
+      mockPushSenderService.sendPushNotification.mockResolvedValue({
+        sent: 0,
+        failed: 0,
+        sentUserIds: [],
+        finalTitle: '제목',
+        finalContent: '내용',
+      });
 
       await service.sendPushNotification({
-        type: NotificationType.RECOMMEND,
-        title: '추천',
+        type: NotificationType.CONCERT_INFO_UPDATE,
+        title: '제목',
         content: '내용',
-        userIds: [1],
+        userIds: [],
       });
 
-      expect(mockPrisma.notificationHistories.createMany).toHaveBeenCalledWith({
-        data: [
-          expect.objectContaining({
-            title: '추천',
-            content: '내용',
-          }),
-        ],
-      });
+      expect(
+        mockHistoryService.createNotificationHistories,
+      ).not.toHaveBeenCalled();
     });
   });
 });

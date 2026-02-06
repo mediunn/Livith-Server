@@ -10,7 +10,12 @@ describe('TicketingReminderScheduler', () => {
 
   const mockPrisma = {
     schedule: { findMany: jest.fn() },
-    user: { findMany: jest.fn() },
+  };
+
+  const mockNotificationService = {
+    sendTicketReminderNotification: jest
+      .fn()
+      .mockResolvedValue({ sent: 1, failed: 0 }),
   };
 
   beforeEach(async () => {
@@ -18,14 +23,7 @@ describe('TicketingReminderScheduler', () => {
       providers: [
         TicketingReminderScheduler,
         { provide: PrismaService, useValue: mockPrisma },
-        {
-          provide: NotificationService,
-          useValue: {
-            sendPushNotification: jest
-              .fn()
-              .mockResolvedValue({ sent: 1, failed: 0 }),
-          },
-        },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -34,63 +32,59 @@ describe('TicketingReminderScheduler', () => {
     jest.clearAllMocks();
   });
 
-  it('7일 후 TICKETING 스케줄 있으면 TICKET_7D로 sendPushNotification 호출', async () => {
+  it('7일 후 TICKETING 스케줄 있으면 sendTicketReminderNotification 호출', async () => {
     mockPrisma.schedule.findMany
       .mockResolvedValueOnce([
         {
+          id: 1,
           concertId: 1,
           concert: { id: 1, title: '테스트콘서트' },
           scheduledAt: new Date(),
         },
       ])
       .mockResolvedValue([]); // 1일, 오늘 스케줄은 없음
-    mockPrisma.user.findMany
-      .mockResolvedValueOnce([{ id: 10 }])
-      .mockResolvedValue([]); // 페이지네이션 종료
 
     await scheduler.dailyTicketingNotifications();
 
-    expect(notificationService.sendPushNotification).toHaveBeenCalledWith(
+    expect(
+      notificationService.sendTicketReminderNotification,
+    ).toHaveBeenCalledWith(
+      NotificationType.TICKET_7D,
       expect.objectContaining({
-        type: NotificationType.TICKET_7D,
-        title: '예매 일정',
-        content: '테스트콘서트 예매가 7일 뒤에 시작해요!',
-        targetId: '1',
-        userIds: [10],
+        scheduleId: 1,
+        concertTitle: '테스트콘서트',
+        daysUntil: 7,
       }),
+      '1',
     );
   });
 
-  it('당일 TICKETING 스케줄 있으면 TICKET_TODAY로 sendPushNotification 호출 (오늘 N시 문구)', async () => {
+  it('당일 TICKETING 스케줄 있으면 sendTicketReminderNotification 호출 (TICKET_TODAY)', async () => {
     const todayScheduleTime = new Date('2025-01-23T11:00:00Z');
     mockPrisma.schedule.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
+          id: 2,
           concertId: 2,
           concert: { id: 2, title: '당일콘서트' },
           scheduledAt: todayScheduleTime,
         },
       ]);
-    mockPrisma.user.findMany
-      .mockResolvedValueOnce([{ id: 20 }])
-      .mockResolvedValue([]); // 페이지네이션 종료
 
     await scheduler.dailyTicketingNotifications();
 
-    const sendCalls = (notificationService.sendPushNotification as jest.Mock)
-      .mock.calls;
-    const todayCall = sendCalls.find((c) => c[0].type === 'TICKET_TODAY');
-    expect(todayCall).toBeDefined();
-    expect(todayCall[0]).toMatchObject({
-      type: 'TICKET_TODAY',
-      title: '예매 일정',
-      targetId: '2',
-      userIds: [20],
-    });
-    expect(todayCall[0].content).toMatch(
-      /당일콘서트 예매가 오늘 \d+시에 시작해요!/,
+    expect(
+      notificationService.sendTicketReminderNotification,
+    ).toHaveBeenCalledWith(
+      NotificationType.TICKET_TODAY,
+      expect.objectContaining({
+        scheduleId: 2,
+        concertTitle: '당일콘서트',
+        daysUntil: 0,
+      }),
+      '2',
     );
   });
 });
