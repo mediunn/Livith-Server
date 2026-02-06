@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
 import { RecommendationService } from 'src/recommendation/services/recommendation.service';
 import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants';
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 
 @Injectable()
 export class RecommendationNotificationScheduler {
@@ -14,36 +14,32 @@ export class RecommendationNotificationScheduler {
   );
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly recommendationService: RecommendationService,
     private readonly notificationService: NotificationService,
+    private readonly strategyService: NotificationStrategyService,
   ) {}
 
   // 주 1회: 관심 콘서트가 없는 유저에게 추천 콘서트 1개 푸시
   @Cron('0 10 * * 1', { timeZone: 'Asia/Seoul' })
   async sendWeeklyRecommendNotifications() {
-    const title = '추천 콘서트';
-    const content =
-      '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!';
+    const strategy = this.strategyService.getStrategy(
+      NotificationType.RECOMMEND,
+    );
+
+    // Strategy에서 대상 유저 조회
+    const userIds = await strategy.getTargetUserIds({});
+    if (userIds.length === 0) return;
+
+    // Strategy에서 메시지 조회
+    const message = await strategy.buildMessage({});
 
     let totalSent = 0;
 
-    await BatchProcessor.processPaginated({
-      batchSize: NOTIFICATION_RECOMMEND_BATCH_SIZE,
-      fetchBatch: async (skip, take) => {
-        return await this.prisma.user.findMany({
-          where: {
-            interestConcertId: null,
-            deletedAt: null,
-          },
-          select: { id: true },
-          skip,
-          take,
-        });
-      },
-      processBatch: async (users) => {
-        const batchUserIds = users.map((u) => u.id);
-
+    // 유저별로 추천 콘서트 조회 후 발송 (targetId가 유저마다 다름)
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_RECOMMEND_BATCH_SIZE,
+      async (batchUserIds) => {
         for (const userId of batchUserIds) {
           try {
             const concerts =
@@ -53,8 +49,8 @@ export class RecommendationNotificationScheduler {
 
             const result = await this.notificationService.sendPushNotification({
               type: NotificationType.RECOMMEND,
-              title,
-              content,
+              title: message.title,
+              content: message.content,
               targetId: String(concert.id),
               userIds: [userId],
             });
@@ -66,7 +62,7 @@ export class RecommendationNotificationScheduler {
           }
         }
       },
-    });
+    );
 
     this.logger.log(`Weekly recommend notifications sent: ${totalSent}`);
   }
