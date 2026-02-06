@@ -155,14 +155,14 @@ export class NotificationService {
   }
 
   /**
-   * Ticket Reminder 알림 (동적 타입)
+   * Ticket Reminder 알림
    */
   async sendTicketReminderNotification(
     type: NotificationType,
     params: NotificationTargetParams,
     targetId?: string,
   ): Promise<{ sent: number; failed: number }> {
-    const strategy = this.strategyService.createTicketReminderStrategy(type);
+    const strategy = this.strategyService.getStrategy(type);
 
     const userIds = await strategy.getTargetUserIds(params);
     if (userIds.length === 0) {
@@ -177,7 +177,7 @@ export class NotificationService {
     await BatchProcessor.processInChunks(
       userIds,
       NOTIFICATION_BATCH_SIZE,
-      async (batchUserIds) => {
+      async (batchUserIds: number[]) => {
         const result = await this.sendPushNotification({
           type,
           title: message.title,

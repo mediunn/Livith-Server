@@ -15,8 +15,11 @@ import { NotificationHistoryService } from './service/notification-history.servi
 import { PushSenderService } from './service/push-sender.service';
 import { ArtistConcertOpenStrategy } from './strategies/artist-concert-open.strategy';
 import { ConcertInfoUpdateStrategy } from './strategies/concert-info-update.strategy';
+import { InterestConcertStrategy } from './strategies/interest-concert.strategy';
 import { RecommendationStrategy } from './strategies/recommendation.strategy';
+import { TicketReminderStrategy } from './strategies/ticket-reminder.strategy';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
+import { InterestConcertNotificationScheduler } from './scheduler/interest-concert-notification.scheduler';
 
 @Module({
   imports: [RecommendationModule, ArtistModule, UserModule],
@@ -29,13 +32,16 @@ import { NotificationStrategyService } from './strategies/notification-strategy.
     PushSenderService,
     ArtistConcertOpenStrategy,
     ConcertInfoUpdateStrategy,
+    InterestConcertStrategy,
     RecommendationStrategy,
+    TicketReminderStrategy,
     NotificationStrategyService,
     PrismaService,
     FirebaseInitService,
     NotificationQueueScheduler,
     TicketingReminderScheduler,
     NotificationCleanupScheduler,
+    InterestConcertNotificationScheduler,
   ],
   exports: [NotificationService],
 })

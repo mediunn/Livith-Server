@@ -10,22 +10,12 @@ import { BatchProcessor } from 'src/common/utils/batch-processor.util';
 import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 
 @Injectable()
-export class TicketReminderStrategy implements NotificationStrategy {
-  readonly type = NotificationType.TICKET_7D; // 대표 타입
+export class InterestConcertStrategy implements NotificationStrategy {
+  readonly type = NotificationType.INTEREST_CONCERT;
 
   constructor(private readonly prisma: PrismaService) {}
 
   async getTargetUserIds(params: NotificationTargetParams): Promise<number[]> {
-    const { scheduleId } = params;
-    if (!scheduleId) return [];
-
-    const schedule = await this.prisma.schedule.findUnique({
-      where: { id: scheduleId },
-      select: { concertId: true },
-    });
-
-    if (!schedule) return [];
-
     const allUserIds: number[] = [];
 
     await BatchProcessor.processPaginated({
@@ -33,7 +23,7 @@ export class TicketReminderStrategy implements NotificationStrategy {
       fetchBatch: async (skip, take) => {
         return await this.prisma.user.findMany({
           where: {
-            interestConcertId: schedule.concertId,
+            interestConcertId: null,
             deletedAt: null,
           },
           select: { id: true },
@@ -52,20 +42,10 @@ export class TicketReminderStrategy implements NotificationStrategy {
   async buildMessage(
     params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
-    const { concertTitle, timeStr, daysUntil } = params;
-
-    let content = '';
-    if (daysUntil === 7) {
-      content = `${concertTitle} 예매가 7일 뒤에 시작해요!`;
-    } else if (daysUntil === 1) {
-      content = `${concertTitle} 예매가 내일 시작해요!`;
-    } else if (daysUntil === 0) {
-      content = `${concertTitle} 예매가 오늘 ${timeStr}에 시작해요!`;
-    }
-
     return {
-      title: '예매 일정',
-      content,
+      title: '관심 콘서트',
+      content:
+        '관심 콘서트를 설정해두면 예매 시작과 셋리스트 업데이트 소식을 바로 알려드려요!',
     };
   }
 }
