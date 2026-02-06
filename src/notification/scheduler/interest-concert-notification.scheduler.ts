@@ -3,8 +3,6 @@ import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
-import { BatchProcessor } from '../../common/utils/batch-processor.util';
-import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 
 @Injectable()
 export class InterestConcertNotificationScheduler {
@@ -14,7 +12,6 @@ export class InterestConcertNotificationScheduler {
 
   constructor(
     private readonly notificationService: NotificationService,
-    private readonly strategyService: NotificationStrategyService,
   ) {}
 
   // 주 1회 화요일 오전 10시: 관심 콘서트가 없는 유저에게 설정 푸시
