@@ -1,47 +1,64 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
-import { PrismaService } from 'prisma/prisma.service';
 import { NotFoundException } from 'src/common/exceptions/business.exception';
 import { ErrorCode } from 'src/common/enums/error-code.enum';
-import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 import { NotificationSettingsService } from '../service/notification-settings.service';
 import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 
 describe('NotificationService - 알림 목록', () => {
   let service: NotificationService;
 
-  const mockPrisma = {
-    user: { findUnique: jest.fn() },
-    notificationHistories: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      count: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+  const mockNotifications = [
+    {
+      id: 3,
+      userId: 1,
+      type: NotificationType.TICKET_7D,
+      title: '예매 일정',
+      content: '7일 뒤 예매 시작',
+      targetId: '123',
+      isRead: false,
+      createdAt: '2026.01.20 10:00',
     },
+    {
+      id: 2,
+      userId: 1,
+      type: NotificationType.ARTIST_CONCERT_OPEN,
+      title: '아티스트 콘서트 오픈',
+      content: '콘서트 오픈',
+      targetId: null,
+      isRead: true,
+      createdAt: '2026.01.19 10:00',
+    },
+  ];
+
+  const mockHistoryService = {
+    getNotifications: jest.fn(),
+    getUnreadCount: jest.fn(),
+    markAsRead: jest.fn(),
+    deleteNotification: jest.fn(),
   };
 
-  const mockArtistMatchingService = {
-    findMatchingRepresentativeArtistIds: jest.fn(),
-    findUserIdsByArtistIds: jest.fn(),
-  };
-
+  const mockSettingsService = {};
   const mockFcmTokenService = {};
   const mockPushSenderService = {};
+  const mockStrategyService = {
+    getStrategy: jest.fn(),
+    createTicketReminderStrategy: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: ArtistMatchingService, useValue: mockArtistMatchingService },
-        NotificationSettingsService,
+        { provide: NotificationSettingsService, useValue: mockSettingsService },
         { provide: FcmTokenService, useValue: mockFcmTokenService },
-        NotificationHistoryService,
+        { provide: NotificationHistoryService, useValue: mockHistoryService },
         { provide: PushSenderService, useValue: mockPushSenderService },
+        { provide: NotificationStrategyService, useValue: mockStrategyService },
       ],
     }).compile();
 
@@ -50,261 +67,81 @@ describe('NotificationService - 알림 목록', () => {
   });
 
   describe('getNotifications', () => {
-    const mockNotifications = [
-      {
-        id: 3,
-        userId: 1,
-        type: NotificationType.TICKET_7D,
-        title: '예매 일정',
-        content: '7일 뒤 예매 시작',
-        targetId: '123',
-        isRead: false,
-        createdAt: new Date('2026.01.20'),
-      },
-      {
-        id: 2,
-        userId: 1,
-        type: NotificationType.ARTIST_CONCERT_OPEN,
-        title: '아티스트 콘서트 오픈',
-        content: '콘서트 오픈',
-        targetId: null,
-        isRead: true,
-        createdAt: new Date('2026.01.19'),
-      },
-      {
-        id: 1,
-        userId: 1,
-        type: NotificationType.RECOMMEND,
-        title: '(광고) 추천 콘서트',
-        content: '추천 콘서트',
-        targetId: '456',
-        isRead: false,
-        createdAt: new Date('2026.01.18'),
-      },
-    ];
+    it('historyService에 위임하여 알림 목록 조회', async () => {
+      mockHistoryService.getNotifications.mockResolvedValue(mockNotifications);
 
-    it('알림 목록 조회 - 성공 (cursor 없음)', async () => {
-      // Given
-      const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue(
-        mockNotifications,
+      const result = await service.getNotifications(1);
+
+      expect(mockHistoryService.getNotifications).toHaveBeenCalledWith(
+        1,
+        undefined,
+        20,
       );
-
-      // When
-      const result = await service.getNotifications(userId);
-
-      // Then
-      expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
-        where: { userId },
-        orderBy: { id: 'desc' },
-        take: 20,
-      });
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(2);
       expect(result[0].id).toBe(3);
-      expect(result[0].createdAt).toMatch(/^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/);
     });
 
-    it('알림 목록 조회 - 성공(cursor 사용)', async () => {
-      // Given
-      const userId = 1;
-      const cursor = 3;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue([
-        mockNotifications[1],
-        mockNotifications[2],
-      ]);
-
-      // When
-      const result = await service.getNotifications(userId, cursor);
-
-      // Then
-      expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
-        where: { userId, id: { lt: cursor } },
-        orderBy: { id: 'desc' },
-        take: 20,
-      });
-      expect(result).toHaveLength(2);
-    });
-
-    it('알림 목록 조회 - 성공(size 지정)', async () => {
-      // Given
-      const userId = 1;
-      const size = 2;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findMany.mockResolvedValue([
-        mockNotifications[0],
+    it('cursor와 size 전달', async () => {
+      mockHistoryService.getNotifications.mockResolvedValue([
         mockNotifications[1],
       ]);
 
-      // When
-      const result = await service.getNotifications(userId, undefined, size);
+      await service.getNotifications(1, 3, 10);
 
-      // Then
-      expect(mockPrisma.notificationHistories.findMany).toHaveBeenCalledWith({
-        where: { userId },
-        orderBy: { id: 'desc' },
-        take: size,
-      });
-      expect(result).toHaveLength(2);
-    });
-
-    it('존재하지 않는 유저 - 실패', async () => {
-      // Given
-      const userId = 999;
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-
-      // When & Then
-      await expect(service.getNotifications(userId)).rejects.toThrow(
-        new NotFoundException(ErrorCode.USER_NOT_FOUND),
+      expect(mockHistoryService.getNotifications).toHaveBeenCalledWith(
+        1,
+        3,
+        10,
       );
     });
   });
 
   describe('getUnreadCount', () => {
-    it('읽지 않은 알림 개수 조회 - 성공', async () => {
-      // Given
-      const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.count.mockResolvedValue(3);
+    it('historyService에 위임하여 읽지 않은 알림 개수 조회', async () => {
+      mockHistoryService.getUnreadCount.mockResolvedValue(5);
 
-      // When
-      const result = await service.getUnreadCount(userId);
+      const result = await service.getUnreadCount(1);
 
-      // Then
-      expect(mockPrisma.notificationHistories.count).toHaveBeenCalledWith({
-        where: { userId, isRead: false },
-      });
-      expect(result).toBe(3);
-    });
-
-    it('읽지 않은 알림 없음 - 성공', async () => {
-      // Given
-      const userId = 1;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.count.mockResolvedValue(0);
-
-      // When
-      const result = await service.getUnreadCount(userId);
-
-      // Then
-      expect(result).toBe(0);
+      expect(mockHistoryService.getUnreadCount).toHaveBeenCalledWith(1);
+      expect(result).toBe(5);
     });
   });
 
   describe('markAsRead', () => {
-    it('알림 읽음 처리 - 성공', async () => {
-      // Given
-      const userId = 1;
-      const notificationId = 1;
-      const mockNotification = {
-        id: notificationId,
-        userId,
-        isRead: false,
-      };
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(
-        mockNotification,
-      );
-      mockPrisma.notificationHistories.update.mockResolvedValue({
-        ...mockNotification,
-        isRead: true,
-      });
+    it('historyService에 위임하여 알림 읽음 처리', async () => {
+      mockHistoryService.markAsRead.mockResolvedValue(undefined);
 
-      // When
-      await service.markAsRead(userId, notificationId);
+      await service.markAsRead(1, 10);
 
-      // Then
-      expect(mockPrisma.notificationHistories.findUnique).toHaveBeenCalledWith({
-        where: { id: notificationId },
-      });
-      expect(mockPrisma.notificationHistories.update).toHaveBeenCalledWith({
-        where: { id: notificationId },
-        data: { isRead: true },
-      });
+      expect(mockHistoryService.markAsRead).toHaveBeenCalledWith(1, 10);
     });
 
-    it('존재하지 않는 알림 - 실패', async () => {
-      // Given
-      const userId = 1;
-      const notificationId = 999;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(null);
+    it('존재하지 않는 알림이면 예외 전파', async () => {
+      mockHistoryService.markAsRead.mockRejectedValue(
+        new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND),
+      );
 
-      // When & Then
-      await expect(service.markAsRead(userId, notificationId)).rejects.toThrow(
+      await expect(service.markAsRead(1, 999)).rejects.toThrow(
         new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND),
       );
     });
   });
 
   describe('deleteNotification', () => {
-    it('알림 삭제 - 성공', async () => {
-      // Given
-      const userId = 1;
-      const notificationId = 1;
-      const mockNotification = {
-        id: notificationId,
-        userId,
-      };
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(
-        mockNotification,
-      );
-      mockPrisma.notificationHistories.delete.mockResolvedValue(
-        mockNotification,
-      );
+    it('historyService에 위임하여 알림 삭제', async () => {
+      mockHistoryService.deleteNotification.mockResolvedValue(undefined);
 
-      // When
-      await service.deleteNotification(userId, notificationId);
+      await service.deleteNotification(1, 10);
 
-      // Then
-      expect(mockPrisma.notificationHistories.findUnique).toHaveBeenCalledWith({
-        where: { id: notificationId },
-      });
-      expect(mockPrisma.notificationHistories.delete).toHaveBeenCalledWith({
-        where: { id: notificationId },
-      });
+      expect(mockHistoryService.deleteNotification).toHaveBeenCalledWith(1, 10);
     });
 
-    it('존재하지 않는 알림 - 실패', async () => {
-      // Given
-      const userId = 1;
-      const notificationId = 999;
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: userId,
-        deletedAt: null,
-      });
-      mockPrisma.notificationHistories.findUnique.mockResolvedValue(null);
+    it('존재하지 않는 알림이면 예외 전파', async () => {
+      mockHistoryService.deleteNotification.mockRejectedValue(
+        new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND),
+      );
 
-      // When & Then
-      await expect(
-        service.deleteNotification(userId, notificationId),
-      ).rejects.toThrow(
+      await expect(service.deleteNotification(1, 999)).rejects.toThrow(
         new NotFoundException(ErrorCode.NOTIFICATION_NOT_FOUND),
       );
     });
