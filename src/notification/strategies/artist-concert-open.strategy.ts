@@ -40,21 +40,7 @@ export class ArtistConcertOpenStrategy implements NotificationStrategy {
       representativeArtistIds,
     );
 
-    // 유효한 유저만 필터링
-    const validUserIds: number[] = [];
-    await BatchProcessor.processInChunks(
-      userIds,
-      NOTIFICATION_BATCH_SIZE,
-      async (chunk) => {
-        const users = await this.prisma.user.findMany({
-          where: { id: { in: chunk }, deletedAt: null },
-          select: { id: true },
-        });
-        validUserIds.push(...users.map((u) => u.id));
-      },
-    );
-
-    return validUserIds;
+    return userIds;
   }
 
   async buildMessage(
