@@ -17,41 +17,20 @@ export class InterestConcertNotificationScheduler {
     private readonly strategyService: NotificationStrategyService,
   ) {}
 
-  // 주 1회 화요일 오전 10시: 관심 콘서트가 없는 유저에게 설정 유도 푸시
+  // 주 1회 화요일 오전 10시: 관심 콘서트가 없는 유저에게 설정 푸시
   @Cron('0 10 * * 2', { timeZone: 'Asia/Seoul' })
-  async sendWeeklyInterestConcertNotifications() {
-    const strategy = this.strategyService.getStrategy(
+  async sendInterestConcertNotifications() {
+    const {sent, failed} = await this.notificationService.sendNotificationByStrategy(
       NotificationType.INTEREST_CONCERT,
+      {},
     );
 
-    const userIds = await strategy.getTargetUserIds({});
-    if (userIds.length === 0) {
+    if(sent > 0 || failed > 0){
+      this.logger.log(
+        `interest concert notifications sent: ${sent}, failed: ${failed}`,
+      );
+    }else{
       this.logger.log('No users without interest concert found');
-      return;
     }
-
-    const message = await strategy.buildMessage({});
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    await BatchProcessor.processInChunks(
-      userIds,
-      NOTIFICATION_BATCH_SIZE,
-      async (batchUserIds) => {
-        const result = await this.notificationService.sendPushNotification({
-          type: NotificationType.INTEREST_CONCERT,
-          title: message.title,
-          content: message.content,
-          userIds: batchUserIds,
-        });
-        totalSent += result.sent;
-        totalFailed += result.failed;
-      },
-    );
-
-    this.logger.log(
-      `Weekly interest concert notifications sent: ${totalSent}, failed: ${totalFailed}`,
-    );
   }
 }
