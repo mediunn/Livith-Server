@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
 import { NotificationField } from '../enums/notification-field.enum';
 import { NotificationConsentResponseDto } from '../dto/response/notification-consent-response.dto';
 import { NotificationSettingResponseDto } from '../dto/response/notification-set-response.dto';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
-import { ArtistMatchingService } from 'src/artist/service/artist-matching.service';
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
-import {
-  CONCERT_INFO_UPDATE_MESSAGES,
-  NOTIFICATION_BATCH_SIZE,
-} from '../constants/notification.constants';
+import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 import { NotificationSettingsService } from './notification-settings.service';
 import { FcmTokenService } from './fcm-token.service';
 import { NotificationHistoryService } from './notification-history.service';
@@ -22,8 +17,6 @@ import { NotificationTargetParams } from '../strategies/notification-strategy.in
 @Injectable()
 export class NotificationService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly artistMatchingService: ArtistMatchingService,
     private readonly settingsService: NotificationSettingsService,
     private readonly fcmTokenService: FcmTokenService,
     private readonly historyService: NotificationHistoryService,
@@ -92,50 +85,6 @@ export class NotificationService {
   //푸시 전송 (비즈니스 로직 + 히스토리 저장)
 
   /**
-   * Straegy 패턴을 사용한 통합 알림 전송
-   * - Strategy가 대상 유저와 메시지를 결정
-   */
-  async sendNotificationByStrategy(
-    type: NotificationType,
-    params: NotificationTargetParams,
-    targetId?: string,
-  ): Promise<{sent: number; failed: number}>{
-    // 1. Strategy 조회
-    const strategy = this.strategyService.getStrategy(type);
-
-    // 2. 대상 유저 조회
-    const userIds = await strategy.getTargetUserIds(params);
-    if(userIds.length == 0){
-      return {sent: 0, failed: 0};
-    }
-
-    // 3. 메시지 생성
-    const message = await strategy.buildMessage(params);
-
-    // 4. 배치 처리로 푸시 전송
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    await BatchProcessor.processInChunks(
-      userIds,
-      NOTIFICATION_BATCH_SIZE,
-      async (batchUserIds) => {
-        const result = await this.sendPushNotification({
-          type,
-          title: message.title,
-          content: message.content,
-          targetId,
-          userIds: batchUserIds,
-        });
-        totalSent += result.sent;
-        totalFailed += result.failed;
-      },
-    );
-
-    return {sent: totalSent, failed: totalFailed};
-  }
-
-  /**
    * 푸시 알림 일괄 전송
    */
   async sendPushNotification(params: {
@@ -162,6 +111,89 @@ export class NotificationService {
   }
 
   /**
+   * Straegy 패턴을 사용한 통합 알림 전송
+   * - Strategy가 대상 유저와 메시지를 결정
+   */
+  async sendNotificationByStrategy(
+    type: NotificationType,
+    params: NotificationTargetParams,
+    targetId?: string,
+  ): Promise<{ sent: number; failed: number }> {
+    // 1. Strategy 조회
+    const strategy = this.strategyService.getStrategy(type);
+
+    // 2. 대상 유저 조회
+    const userIds = await strategy.getTargetUserIds(params);
+    if (userIds.length == 0) {
+      return { sent: 0, failed: 0 };
+    }
+
+    // 3. 메시지 생성
+    const message = await strategy.buildMessage(params);
+
+    // 4. 배치 처리로 푸시 전송
+    let totalSent = 0;
+    let totalFailed = 0;
+
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_BATCH_SIZE,
+      async (batchUserIds) => {
+        const result = await this.sendPushNotification({
+          type,
+          title: message.title,
+          content: message.content,
+          targetId,
+          userIds: batchUserIds,
+        });
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      },
+    );
+
+    return { sent: totalSent, failed: totalFailed };
+  }
+
+  /**
+   * Ticket Reminder 알림 (동적 타입)
+   */
+  async sendTicketReminderNotification(
+    type: NotificationType,
+    params: NotificationTargetParams,
+    targetId?: string,
+  ): Promise<{ sent: number; failed: number }> {
+    const strategy = this.strategyService.createTicketReminderStrategy(type);
+
+    const userIds = await strategy.getTargetUserIds(params);
+    if (userIds.length === 0) {
+      return { sent: 0, failed: 0 };
+    }
+
+    const message = await strategy.buildMessage(params);
+
+    let totalSent = 0;
+    let totalFailed = 0;
+
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_BATCH_SIZE,
+      async (batchUserIds) => {
+        const result = await this.sendPushNotification({
+          type,
+          title: message.title,
+          content: message.content,
+          targetId,
+          userIds: batchUserIds,
+        });
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      },
+    );
+
+    return { sent: totalSent, failed: totalFailed };
+  }
+
+  /**
    * 콘서트 정보 업데이트 알림
    * 관심 콘서트로 설정한 콘서트의 정보 업데이트 시 해당 사용자에게 발송
    */
@@ -173,55 +205,16 @@ export class NotificationService {
       content?: string;
     },
   ): Promise<{ sent: number; failed: number }> {
-    let concertTitle: string | null = options?.concertTitle ?? null;
-    if (concertTitle === null) {
-      const concert = await this.prisma.concert.findUnique({
-        where: { id: concertId },
-        select: { title: true },
-      });
-      if (!concert) return { sent: 0, failed: 0 };
-      concertTitle = concert.title;
-    }
-
-    const defaultContent = `${concertTitle} 정보가 업데이트되었어요!`;
-    const content =
-      options?.content ??
-      (options?.updateType
-        ? CONCERT_INFO_UPDATE_MESSAGES[options.updateType](concertTitle)
-        : defaultContent);
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    await BatchProcessor.processPaginated({
-      batchSize: NOTIFICATION_BATCH_SIZE,
-      fetchBatch: async (skip, take) => {
-        return await this.prisma.user.findMany({
-          where: {
-            interestConcertId: concertId,
-            deletedAt: null,
-          },
-          select: { id: true },
-          skip,
-          take,
-        });
+    return this.sendNotificationByStrategy(
+      NotificationType.CONCERT_INFO_UPDATE,
+      {
+        concertId,
+        updateType: options?.updateType,
+        concertTitle: options?.concertTitle,
+        content: options?.content,
       },
-      processBatch: async (users) => {
-        const batchUserIds = users.map((u) => u.id);
-        const result = await this.sendPushNotification({
-          type: NotificationType.CONCERT_INFO_UPDATE,
-          title: '콘서트 정보 업데이트',
-          content,
-          targetId: String(concertId),
-          userIds: batchUserIds,
-        });
-
-        totalSent += result.sent;
-        totalFailed += result.failed;
-      },
-    });
-
-    return { sent: totalSent, failed: totalFailed };
+      String(concertId),
+    );
   }
 
   /**
@@ -232,51 +225,10 @@ export class NotificationService {
   async sendArtistConcertOpenNotification(
     concertId: number,
   ): Promise<{ sent: number; failed: number }> {
-    const concert = await this.prisma.concert.findUnique({
-      where: { id: concertId },
-      select: { id: true, title: true, artist: true },
-    });
-    if (!concert) return { sent: 0, failed: 0 };
-
-    // Artist 도메인 로직을 서비스로 위임
-    const representativeArtistIds =
-      await this.artistMatchingService.findMatchingRepresentativeArtistIds(
-        concert.artist,
-      );
-
-    if (representativeArtistIds.length === 0) return { sent: 0, failed: 0 };
-
-    const userIds = await this.artistMatchingService.findUserIdsByArtistIds(
-      representativeArtistIds,
+    return this.sendNotificationByStrategy(
+      NotificationType.ARTIST_CONCERT_OPEN,
+      { concertId },
+      String(concertId),
     );
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    await BatchProcessor.processInChunks(
-      userIds,
-      NOTIFICATION_BATCH_SIZE,
-      async (batchUserIds) => {
-        const validateUsers = await this.prisma.user.findMany({
-          where: { id: { in: batchUserIds }, deletedAt: null },
-          select: { id: true },
-        });
-        const validUserIds = validateUsers.map((u) => u.id);
-
-        if (validUserIds.length > 0) {
-          const result = await this.sendPushNotification({
-            type: NotificationType.ARTIST_CONCERT_OPEN,
-            title: '아티스트 콘서트 오픈',
-            content: `${concert.artist} 콘서트가 등록되었어요!`,
-            targetId: String(concertId),
-            userIds: validUserIds,
-          });
-
-          totalSent += result.sent;
-          totalFailed += result.failed;
-        }
-      },
-    );
-    return { sent: totalSent, failed: totalFailed };
   }
 }
