@@ -60,7 +60,7 @@ export class RecommendationController {
   })
   @Get('/concerts')
   async getRecommendConcerts(@Request() req) {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const concerts =
       await this.recommendationService.getRecommendConcerts(userId);
