@@ -52,7 +52,7 @@ describe('NotificationService (푸시 발송)', () => {
       });
 
       const result = await service.sendPushNotification({
-        type: NotificationType.CONCERT_INFO_UPDATE,
+        type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
         title: '제목',
         content: '내용',
         targetId: '123',
@@ -60,7 +60,7 @@ describe('NotificationService (푸시 발송)', () => {
       });
 
       expect(mockPushSenderService.sendPushNotification).toHaveBeenCalledWith({
-        type: NotificationType.CONCERT_INFO_UPDATE,
+        type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
         title: '제목',
         content: '내용',
         targetId: '123',
@@ -83,7 +83,7 @@ describe('NotificationService (푸시 발송)', () => {
       );
 
       await service.sendPushNotification({
-        type: NotificationType.CONCERT_INFO_UPDATE,
+        type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
         title: '제목',
         content: '내용',
         targetId: '123',
@@ -94,7 +94,7 @@ describe('NotificationService (푸시 발송)', () => {
         mockHistoryService.createNotificationHistories,
       ).toHaveBeenCalledWith(
         [1],
-        NotificationType.CONCERT_INFO_UPDATE,
+        NotificationType.CONCERT_INFO_UPDATE_SETLIST,
         '제목',
         '내용',
         '123',
@@ -111,7 +111,7 @@ describe('NotificationService (푸시 발송)', () => {
       });
 
       await service.sendPushNotification({
-        type: NotificationType.CONCERT_INFO_UPDATE,
+        type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
         title: '제목',
         content: '내용',
         userIds: [],

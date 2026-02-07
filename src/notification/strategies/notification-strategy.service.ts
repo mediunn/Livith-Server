@@ -20,7 +20,11 @@ export class NotificationStrategyService {
   ) {
     this.strategies = new Map<NotificationType, NotificationStrategy>([
       [NotificationType.ARTIST_CONCERT_OPEN, artistConcertOpenStrategy],
-      [NotificationType.CONCERT_INFO_UPDATE, concertInfoUpdateStrategy],
+      [NotificationType.CONCERT_INFO_UPDATE_SETLIST, concertInfoUpdateStrategy],
+      [NotificationType.CONCERT_INFO_UPDATE_MD, concertInfoUpdateStrategy],
+      [NotificationType.CONCERT_INFO_UPDATE_DETAIL, concertInfoUpdateStrategy],
+      [NotificationType.CONCERT_INFO_UPDATE_SCHEDULE, concertInfoUpdateStrategy],
+      [NotificationType.CONCERT_INFO_UPDATE_TICKET, concertInfoUpdateStrategy],
       [NotificationType.INTEREST_CONCERT, interestConcertStrategy],
       [NotificationType.RECOMMEND, recommendationStrategy],
       [NotificationType.TICKET_7D, ticketReminderStrategy],
