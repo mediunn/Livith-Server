@@ -6,6 +6,7 @@ import { NotificationType } from '@prisma/client';
 import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants';
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
 
 @Injectable()
 export class RecommendationNotificationScheduler {
@@ -17,6 +18,7 @@ export class RecommendationNotificationScheduler {
     private readonly recommendationService: RecommendationService,
     private readonly notificationService: NotificationService,
     private readonly strategyService: NotificationStrategyService,
+    private readonly notificationHistoryService: NotificationHistoryService,
   ) {}
 
   // 주 1회: 관심 콘서트가 없는 유저에게 추천 콘서트 1개 푸시
@@ -44,7 +46,12 @@ export class RecommendationNotificationScheduler {
           try {
             const concerts =
               await this.recommendationService.getRecommendConcerts(userId);
-            const concert = concerts[0];
+            const sentConcertIds = new Set(
+              await this.notificationHistoryService.getSentRecommendConcertIds(
+                userId,
+              ),
+            );
+            const concert = concerts.find((c) => !sentConcertIds.has(c.id));
             if (!concert) continue;
 
             const result = await this.notificationService.sendPushNotification({

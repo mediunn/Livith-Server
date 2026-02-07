@@ -20,6 +20,7 @@ import { RecommendationStrategy } from './strategies/recommendation.strategy';
 import { TicketReminderStrategy } from './strategies/ticket-reminder.strategy';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 import { InterestConcertNotificationScheduler } from './scheduler/interest-concert-notification.scheduler';
+import { RecommendationNotificationScheduler } from './scheduler/recommendation-notification.scheduler';
 
 @Module({
   imports: [RecommendationModule, ArtistModule, UserModule],
@@ -42,6 +43,7 @@ import { InterestConcertNotificationScheduler } from './scheduler/interest-conce
     TicketingReminderScheduler,
     NotificationCleanupScheduler,
     InterestConcertNotificationScheduler,
+    RecommendationNotificationScheduler,
   ],
   exports: [NotificationService],
 })
