@@ -62,10 +62,10 @@ export class TicketReminderStrategy implements NotificationStrategy {
       });
       concertTitle = concert?.title ?? '콘서트';
 
-      // notificationType에 따라 daysUntil 설정
       if (daysUntil === undefined && params.notificationType) {
         if (params.notificationType === NotificationType.TICKET_TODAY) {
           daysUntil = 0;
+          timeStr = timeStr ?? '오후 8시';
         } else if (params.notificationType === NotificationType.TICKET_1D) {
           daysUntil = 1;
         } else {
