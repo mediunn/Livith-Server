@@ -121,7 +121,7 @@ export class NotificationHistoryService {
   }
 
   /**
-   * 특정 유저에게 이미 보낸 RECOMMEnD 알림의 concertId 목록 조회
+   * 특정 유저에게 이미 보낸 RECOMMEND 알림의 concertId 목록 조회
    */
   async getSentRecommendConcertIds(userId: number): Promise<number[]> {
     const histories = await this.prisma.notificationHistories.findMany({
