@@ -61,7 +61,19 @@ export class TicketReminderStrategy implements NotificationStrategy {
         select: { title: true },
       });
       concertTitle = concert?.title ?? '콘서트';
-      daysUntil = daysUntil ?? 7;
+
+      // notificationType에 따라 daysUntil 설정
+      if (daysUntil === undefined && params.notificationType) {
+        if (params.notificationType === NotificationType.TICKET_TODAY) {
+          daysUntil = 0;
+        } else if (params.notificationType === NotificationType.TICKET_1D) {
+          daysUntil = 1;
+        } else {
+          daysUntil = 7;
+        }
+      } else {
+        daysUntil = daysUntil ?? 7;
+      }
     }
 
     let content = '';
