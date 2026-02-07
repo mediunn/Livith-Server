@@ -133,6 +133,8 @@ export class NotificationHistoryService {
       select: { targetId: true },
     });
 
-    return histories.map((h) => Number(h.targetId)).filter((id) => !isNaN(id));
+    return histories
+      .map((h) => parseInt(h.targetId, 10))
+      .filter((id) => !isNaN(id));
   }
 }
