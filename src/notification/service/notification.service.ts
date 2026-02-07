@@ -5,6 +5,7 @@ import { NotificationConsentResponseDto } from '../dto/response/notification-con
 import { NotificationSettingResponseDto } from '../dto/response/notification-set-response.dto';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
+import { UPDATE_TYPE_TO_NOTIFICATION_TYPE } from '../constants/notification.constants';
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
 import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 import { NotificationSettingsService } from './notification-settings.service';
@@ -129,7 +130,10 @@ export class NotificationService {
     }
 
     // 3. 메시지 생성
-    const message = await strategy.buildMessage(params);
+    const message = await strategy.buildMessage({
+      ...params,
+      notificationType: type,
+    });
 
     // 4. 배치 처리로 푸시 전송
     let totalSent = 0;
@@ -199,17 +203,19 @@ export class NotificationService {
    */
   async sendConcertInfoUpdateNotification(
     concertId: number,
+    updateType: ConcertInfoUpdateType,
     options?: {
-      updateType?: ConcertInfoUpdateType;
       concertTitle?: string;
       content?: string;
     },
   ): Promise<{ sent: number; failed: number }> {
+    const notificationType = UPDATE_TYPE_TO_NOTIFICATION_TYPE[updateType];
+
     return this.sendNotificationByStrategy(
-      NotificationType.CONCERT_INFO_UPDATE,
+      notificationType,
       {
         concertId,
-        updateType: options?.updateType,
+        updateType,
         concertTitle: options?.concertTitle,
         content: options?.content,
       },
