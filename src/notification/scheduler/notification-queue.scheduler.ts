@@ -36,10 +36,12 @@ export class NotificationQueueScheduler {
         } else if (row.eventType.startsWith('CONCERT_INFO_UPDATE')) {
           const updateType =
             CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE[row.eventType];
-          await this.notificationService.sendConcertInfoUpdateNotification(
-            row.concertId,
-            updateType ? { updateType } : undefined,
-          );
+          if (updateType) {
+            await this.notificationService.sendConcertInfoUpdateNotification(
+              row.concertId,
+              updateType,
+            );
+          }
         }
         await this.prisma.concertNotificationQueue.update({
           where: { id: row.id },
