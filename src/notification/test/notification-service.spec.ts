@@ -3,6 +3,7 @@ import { NotificationType } from '@prisma/client';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationField } from '../enums/notification-field.enum';
+import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { NotificationSettingsService } from '../service/notification-settings.service';
 import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
@@ -140,14 +141,17 @@ describe('NotificationService', () => {
         .spyOn(service, 'sendPushNotification')
         .mockResolvedValue({ sent: 2, failed: 0 });
 
-      await service.sendConcertInfoUpdateNotification(1);
+      await service.sendConcertInfoUpdateNotification(
+        1,
+        ConcertInfoUpdateType.SETLIST,
+      );
 
       expect(mockStrategyService.getStrategy).toHaveBeenCalledWith(
-        NotificationType.CONCERT_INFO_UPDATE,
+        NotificationType.CONCERT_INFO_UPDATE_SETLIST,
       );
       expect(sendSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: NotificationType.CONCERT_INFO_UPDATE,
+          type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
           title: '콘서트 정보 업데이트',
           content: '테스트 콘서트 정보가 업데이트되었어요!',
           targetId: '1',
@@ -162,7 +166,10 @@ describe('NotificationService', () => {
         .spyOn(service, 'sendPushNotification')
         .mockResolvedValue({ sent: 0, failed: 0 });
 
-      await service.sendConcertInfoUpdateNotification(999);
+      await service.sendConcertInfoUpdateNotification(
+        999,
+        ConcertInfoUpdateType.SETLIST,
+      );
 
       expect(sendSpy).not.toHaveBeenCalled();
     });

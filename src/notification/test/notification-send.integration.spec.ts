@@ -121,7 +121,7 @@ describe('Notification send integration (FCM mock)', () => {
     mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
-      type: NotificationType.CONCERT_INFO_UPDATE,
+      type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
       title: '콘서트 정보 업데이트',
       content: 'OOO 정보가 업데이트되었어요!',
       targetId: '50',
@@ -130,7 +130,7 @@ describe('Notification send integration (FCM mock)', () => {
 
     expect(mockHistoryService.createNotificationHistories).toHaveBeenCalledWith(
       [1],
-      NotificationType.CONCERT_INFO_UPDATE,
+      NotificationType.CONCERT_INFO_UPDATE_SETLIST,
       '콘서트 정보 업데이트',
       'OOO 정보가 업데이트되었어요!',
       '50',
@@ -163,7 +163,7 @@ describe('Notification send integration (FCM mock)', () => {
     });
 
     const result = await service.sendPushNotification({
-      type: NotificationType.CONCERT_INFO_UPDATE,
+      type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
       title: '제목',
       content: '내용',
       userIds: [1],

@@ -75,9 +75,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(20, {
-      updateType: ConcertInfoUpdateType.CONCERT_DETAIL,
-    });
+    ).toHaveBeenCalledWith(20, ConcertInfoUpdateType.CONCERT_DETAIL);
     expect(mockPrisma.concertNotificationQueue.update).toHaveBeenCalledWith({
       where: { id: 2 },
       data: { processed: true },
@@ -98,7 +96,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(30, { updateType: ConcertInfoUpdateType.SETLIST });
+    ).toHaveBeenCalledWith(30, ConcertInfoUpdateType.SETLIST);
   });
 
   it('CONCERT_INFO_UPDATE_MD_INFO 큐 행이면 updateType=MD_INFO로 호출', async () => {
@@ -115,7 +113,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(40, { updateType: ConcertInfoUpdateType.MD_INFO });
+    ).toHaveBeenCalledWith(40, ConcertInfoUpdateType.MD_INFO);
   });
 
   it('CONCERT_INFO_UPDATE_SCHEDULE 큐 행이면 updateType=SCHEDULE로 호출', async () => {
@@ -132,7 +130,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(50, { updateType: ConcertInfoUpdateType.SCHEDULE });
+    ).toHaveBeenCalledWith(50, ConcertInfoUpdateType.SCHEDULE);
   });
 
   it('CONCERT_INFO_UPDATE_TICKET 큐 행이면 updateType=TICKET로 호출', async () => {
@@ -149,7 +147,7 @@ describe('NotificationQueueScheduler', () => {
 
     expect(
       notificationService.sendConcertInfoUpdateNotification,
-    ).toHaveBeenCalledWith(60, { updateType: ConcertInfoUpdateType.TICKET });
+    ).toHaveBeenCalledWith(60, ConcertInfoUpdateType.TICKET);
     expect(mockPrisma.concertNotificationQueue.update).toHaveBeenCalledWith({
       where: { id: 6 },
       data: { processed: true },
