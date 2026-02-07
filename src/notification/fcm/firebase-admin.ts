@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 let messaging: admin.messaging.Messaging | null = null;
 
 export function initializeFirebaseAdmin(configService: ConfigService): void {
-  if (admin.app.length > 0) return;
+  if (admin.apps.length > 0) return;
 
   const keyJson = configService.get<string>('FIREBASE_SERVICE_ACCOUNT_KEY');
   const keyPath = configService.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
@@ -22,7 +22,7 @@ export function initializeFirebaseAdmin(configService: ConfigService): void {
     admin.initializeApp({ credential: admin.credential.cert(keyPath) });
   } else {
     throw new Error(
-      'Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_ACCOUNT_PATH in env.',
+      'Set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_PATH in env.',
     );
   }
 
