@@ -152,7 +152,10 @@ export class NotificationController {
     content: string;
   }> {
     const strategy = this.strategyService.getStrategy(dto.type);
-    const message = await strategy.buildMessage({ concertId: dto.concertId });
+    const message = await strategy.buildMessage({
+      concertId: dto.concertId,
+      notificationType: dto.type,
+    });
 
     const result = await this.notificationService.sendPushNotification({
       type: dto.type,
