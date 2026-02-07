@@ -10,12 +10,11 @@ import {
   CONCERT_INFO_UPDATE_MESSAGES,
   NOTIFICATION_BATCH_SIZE,
 } from '../constants/notification.constants';
-import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
 import { BatchProcessor } from 'src/common/utils/batch-processor.util';
 
 @Injectable()
 export class ConcertInfoUpdateStrategy implements NotificationStrategy {
-  readonly type = NotificationType.CONCERT_INFO_UPDATE;
+  readonly type = NotificationType.CONCERT_INFO_UPDATE_SETLIST; // 대표 타입
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -49,7 +48,7 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
   async buildMessage(
     params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
-    const { concertId, updateType, concertTitle, content } = params;
+    const { concertId, notificationType, concertTitle, content } = params;
 
     const title = '콘서트 정보 업데이트';
     let finalContent = content as string;
@@ -65,14 +64,12 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
           .then((c) => c?.title));
 
       if (fetchedTitle) {
-        if (updateType) {
-          finalContent =
-            CONCERT_INFO_UPDATE_MESSAGES[updateType as ConcertInfoUpdateType](
-              fetchedTitle,
-            );
-        } else {
-          finalContent = `${fetchedTitle} 정보가 업데이트되었어요!`;
-        }
+        const messageFn = notificationType
+          ? CONCERT_INFO_UPDATE_MESSAGES[notificationType]
+          : undefined;
+        finalContent = messageFn
+          ? messageFn(fetchedTitle)
+          : `${fetchedTitle} 정보가 업데이트되었어요!`;
       } else {
         finalContent = '콘서트 정보가 업데이트되었어요!';
       }
