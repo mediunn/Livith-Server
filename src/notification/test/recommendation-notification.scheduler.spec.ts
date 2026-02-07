@@ -4,6 +4,7 @@ import { RecommendationNotificationScheduler } from '../scheduler/recommendation
 import { RecommendationService } from 'src/recommendation/services/recommendation.service';
 import { NotificationService } from '../service/notification.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
 
 describe('RecommendationNotificationScheduler', () => {
   let scheduler: RecommendationNotificationScheduler;
@@ -24,6 +25,10 @@ describe('RecommendationNotificationScheduler', () => {
     sendPushNotification: jest.fn().mockResolvedValue({ sent: 1, failed: 0 }),
   };
 
+  const mockHistoryService = {
+    getSentRecommendConcertIds: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,6 +36,7 @@ describe('RecommendationNotificationScheduler', () => {
         { provide: RecommendationService, useValue: mockRecommendationService },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: NotificationStrategyService, useValue: mockStrategyService },
+        { provide: NotificationHistoryService, useValue: mockHistoryService },
       ],
     }).compile();
 
