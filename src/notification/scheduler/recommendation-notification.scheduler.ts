@@ -46,9 +46,14 @@ export class RecommendationNotificationScheduler {
           try {
             const concerts =
               await this.recommendationService.getRecommendConcerts(userId);
-            const sentConcertIds = await this.notificationHistoryService.getSentRecommendConcertIds(userId);
-            const concert = concerts.find((c) => !sentConcertIds.includes(c.id));
-            if(!concert) continue;
+            const sentConcertIds =
+              await this.notificationHistoryService.getSentRecommendConcertIds(
+                userId,
+              );
+            const concert = concerts.find(
+              (c) => !sentConcertIds.includes(c.id),
+            );
+            if (!concert) continue;
 
             const result = await this.notificationService.sendPushNotification({
               type: NotificationType.RECOMMEND,

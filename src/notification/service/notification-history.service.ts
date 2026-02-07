@@ -123,18 +123,16 @@ export class NotificationHistoryService {
   /**
    * 특정 유저에게 이미 보낸 RECOMMEnD 알림의 concertId 목록 조회
    */
-  async getSentRecommendConcertIds(userId: number): Promise<number[]>{
+  async getSentRecommendConcertIds(userId: number): Promise<number[]> {
     const histories = await this.prisma.notificationHistories.findMany({
       where: {
         userId,
         type: NotificationType.RECOMMEND,
-        targetId: {not: null},
+        targetId: { not: null },
       },
-      select: {targetId: true},
+      select: { targetId: true },
     });
 
-    return histories
-      .map((h) => Number(h.targetId))
-      .filter((id) => !isNaN(id));
+    return histories.map((h) => Number(h.targetId)).filter((id) => !isNaN(id));
   }
 }
