@@ -79,4 +79,53 @@ describe('RecommendationNotificationScheduler', () => {
 
     expect(notificationService.sendPushNotification).not.toHaveBeenCalled();
   });
+
+  it('이미 추천된 콘서트는 건너뛰고 다음 순위 콘서트로 발송', async () => {
+    mockStrategy.getTargetUserIds.mockResolvedValue([1]);
+    mockStrategy.buildMessage.mockResolvedValue({
+      title: '추천 콘서트',
+      content:
+        '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
+    });
+    mockRecommendationService.getRecommendConcerts.mockResolvedValueOnce([
+      { id: 100, title: 'A' },
+      { id: 200, title: 'B' },
+      { id: 300, title: 'C' },
+    ]);
+    mockHistoryService.getSentRecommendConcertIds.mockResolvedValueOnce([
+      100, 200,
+    ]);
+
+    await scheduler.sendWeeklyRecommendNotifications();
+
+    expect(notificationService.sendPushNotification).toHaveBeenCalledWith({
+      type: NotificationType.RECOMMEND,
+      title: '추천 콘서트',
+      content:
+        '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
+      targetId: '300',
+      userIds: [1],
+    });
+    expect(notificationService.sendPushNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('모든 추천 콘서트가 이미 발송된 경우 푸시 발송 없음', async () => {
+    mockStrategy.getTargetUserIds.mockResolvedValue([1]);
+    mockStrategy.buildMessage.mockResolvedValue({
+      title: '추천 콘서트',
+      content:
+        '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
+    });
+    mockRecommendationService.getRecommendConcerts.mockResolvedValueOnce([
+      { id: 100, title: 'A' },
+      { id: 200, title: 'B' },
+    ]);
+    mockHistoryService.getSentRecommendConcertIds.mockResolvedValueOnce([
+      100, 200,
+    ]);
+
+    await scheduler.sendWeeklyRecommendNotifications();
+
+    expect(notificationService.sendPushNotification).not.toHaveBeenCalled();
+  });
 });
