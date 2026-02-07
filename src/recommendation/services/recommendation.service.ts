@@ -53,13 +53,19 @@ export class RecommendationService {
       return this.getConcertByUserGenres(userId);
     }
 
-    // 유저가 선택한 아티스트의 장르로 fallback 하기 위한 genreId 목록
-    const inferredGenreIds = Array.from(
-      new Set(
-        userArtists
-          .map((ua) => ua.artist?.genreId)
-          .filter((id): id is number => typeof id === 'number'),
-      ),
+    // 유저가 선택한 아티스트의 장르 + 유저가 직접 설정한 장르를 합산
+    const inferredGenreIds = userArtists
+      .map((ua) => ua.artist?.genreId)
+      .filter((id): id is number => typeof id === 'number');
+
+    const userGenres = await this.prismaService.userGenre.findMany({
+      where: { userId },
+      select: { genreId: true },
+    });
+    const userGenreIds = userGenres.map((ug) => ug.genreId);
+
+    const combinedGenreIds = Array.from(
+      new Set([...inferredGenreIds, ...userGenreIds]),
     );
 
     // 병렬로 유사 아티스트 조회
@@ -93,39 +99,34 @@ export class RecommendationService {
       .map((a) => a.id);
 
     if (matchedArtistIds.length === 0) {
-      // 1) 선택 아티스트 장르 기반 fallback
-      const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
-      if (genreFallback.length > 0) {
-        return genreFallback;
-      }
-      // 2) 기존 userGenre 기반 fallback
-      return this.getConcertByUserGenres(userId);
+      return this.getConcertByGenreIds(combinedGenreIds);
     }
 
-    // artistId로 콘서트 조회
-    const concerts = await this.prismaService.concert.findMany({
-      where: {
-        artistId: { in: matchedArtistIds },
-        status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
-      },
-      orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
-      take: 20,
-    });
+    // 아티스트 매칭 콘서트 + 장르 기반 콘서트를 합산
+    const [artistConcerts, genreConcerts] = await Promise.all([
+      this.prismaService.concert.findMany({
+        where: {
+          artistId: { in: matchedArtistIds },
+          status: { in: [ConcertStatus.UPCOMING, ConcertStatus.ONGOING] },
+        },
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        take: 20,
+      }),
+      this.getConcertByGenreIds(combinedGenreIds),
+    ]);
 
-    if (concerts.length === 0) {
-      // 1) 선택 아티스트 장르 기반 fallback
-      const genreFallback = await this.getConcertByGenreIds(inferredGenreIds);
-      if (genreFallback.length > 0) {
-        return genreFallback;
-      }
-      // 2) 기존 userGenre 기반 fallback
-      return this.getConcertByUserGenres(userId);
-    }
-
-    return concerts.map(
+    // 아티스트 매칭 콘서트를 우선 배치하고, 나머지 슬롯을 장르 기반으로 채움
+    const artistConcertDtos = artistConcerts.map(
       (concert) =>
         new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
     );
+
+    const artistConcertIds = new Set(artistConcerts.map((c) => c.id));
+    const uniqueGenreConcerts = genreConcerts.filter(
+      (gc) => !artistConcertIds.has(gc.id),
+    );
+
+    return [...artistConcertDtos, ...uniqueGenreConcerts].slice(0, 20);
   }
 
   // 장르 기반 추천
