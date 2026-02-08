@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { NotificationType } from '@prisma/client';
-import { IsEnum, IsOptional, IsNumber } from 'class-validator';
+import { IsEnum, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class TestNotificationDto {
   @ApiProperty({
@@ -19,4 +19,13 @@ export class TestNotificationDto {
   @IsOptional()
   @IsNumber()
   concertId?: number;
+
+  @ApiProperty({
+    description: 'true면 FCM 토큰이 등록된 모든 유저에게 발송',
+    example: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  sendToAll?: boolean;
 }

@@ -59,6 +59,10 @@ export class NotificationService {
     return this.fcmTokenService.deleteFcmToken(userId, token);
   }
 
+  async getAllUserIdsWithFcmToken(): Promise<number[]> {
+    return this.fcmTokenService.getAllUserIdsWithFcmToken();
+  }
+
   // 알림 히스토리 관련
   async getNotifications(
     userId: number,
