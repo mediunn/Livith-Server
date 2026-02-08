@@ -157,12 +157,16 @@ export class NotificationController {
       notificationType: dto.type,
     });
 
+    const userIds = dto.sendToAll
+      ? await this.notificationService.getAllUserIdsWithFcmToken()
+      : [user.userId];
+
     const result = await this.notificationService.sendPushNotification({
       type: dto.type,
       title: message.title,
       content: message.content,
       targetId: dto.concertId ? String(dto.concertId) : undefined,
-      userIds: [user.userId],
+      userIds,
     });
 
     return {

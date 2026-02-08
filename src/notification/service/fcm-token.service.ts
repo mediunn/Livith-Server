@@ -34,6 +34,17 @@ export class FcmTokenService {
   }
 
   /**
+   * FCM 토큰이 등록된 모든 유저 ID 조회
+   */
+  async getAllUserIdsWithFcmToken(): Promise<number[]> {
+    const tokens = await this.prisma.fcmToken.findMany({
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    return tokens.map((t) => t.userId);
+  }
+
+  /**
    * FCM 토큰 삭제
    * token이 있으면 해당 토큰만 삭제하고, 없으면 해당 사용자의 모든 토큰을 삭제
    */
