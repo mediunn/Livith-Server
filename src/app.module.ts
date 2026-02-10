@@ -16,6 +16,7 @@ import { GenreModule } from './genre/genre.module';
 import { NotificationModule } from './notification/notification.module';
 import { ArtistModule } from './artist/artist.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 
 @Module({
   imports: [
@@ -42,6 +43,10 @@ import { MetricsModule } from './metrics/metrics.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: GlobalResponseInterceptor, // 인터셉터 등록
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
     },
   ],
 })
