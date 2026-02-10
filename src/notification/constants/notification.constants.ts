@@ -99,8 +99,10 @@ export const UPDATE_TYPE_TO_NOTIFICATION_TYPE: Record<
 > = {
   [ConcertInfoUpdateType.SETLIST]: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
   [ConcertInfoUpdateType.MD_INFO]: NotificationType.CONCERT_INFO_UPDATE_MD,
-  [ConcertInfoUpdateType.CONCERT_DETAIL]: NotificationType.CONCERT_INFO_UPDATE_DETAIL,
-  [ConcertInfoUpdateType.SCHEDULE]: NotificationType.CONCERT_INFO_UPDATE_SCHEDULE,
+  [ConcertInfoUpdateType.CONCERT_DETAIL]:
+    NotificationType.CONCERT_INFO_UPDATE_DETAIL,
+  [ConcertInfoUpdateType.SCHEDULE]:
+    NotificationType.CONCERT_INFO_UPDATE_SCHEDULE,
   [ConcertInfoUpdateType.TICKET]: NotificationType.CONCERT_INFO_UPDATE_TICKET,
 };
 
