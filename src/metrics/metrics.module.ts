@@ -34,6 +34,22 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor';
       help: '현재 처리 중인 요청 수',
       labelNames: ['method', 'path'],
     }),
+    makeHistogramProvider({
+      name: 'db_query_duration_seconds',
+      help: '쿼리 실행 시간 (초)',
+      labelNames: ['operation', 'model', 'success'],
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    }),
+    makeCounterProvider({
+      name: 'db_query_total',
+      help: '총 쿼리 수',
+      labelNames: ['operation', 'model', 'success'],
+    }),
+    makeCounterProvider({
+      name: 'db_slow_query_total',
+      help: '슬로우 쿼리 수 (1초 이상)',
+      labelNames: ['operation', 'model'],
+    }),
   ],
   exports: [PrometheusModule, HttpMetricsInterceptor],
 })
