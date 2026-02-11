@@ -39,7 +39,7 @@ export class PrismaService
       }catch (error) {
         const duration = (Date.now() - start) / 1000;
         this.queryDuration.observe({operation, model, success: 'false'}, duration);
-        this.queryCounter.inc({operation, model, success: 'true'});
+        this.queryCounter.inc({operation, model, success: 'false'});
         throw error;
       }
     });
