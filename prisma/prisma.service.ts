@@ -8,6 +8,8 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private static readonly SLOW_QUERY_THRESHOLD_SECONDS = 1;
+
   constructor(
     @InjectMetric('db_query_duration_seconds')
     private readonly queryDuration: Histogram<string>,
@@ -31,7 +33,7 @@ export class PrismaService
         this.queryDuration.observe({operation, model, success: 'true'}, duration);
         this.queryCounter.inc({operation, model, success: 'true'});
 
-        if(duration > 1){
+        if(duration > PrismaService.SLOW_QUERY_THRESHOLD_SECONDS){
           this.slowQueryCounter.inc({operation, model});
         }
 
