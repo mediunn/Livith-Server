@@ -50,6 +50,33 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor';
       help: '슬로우 쿼리 수 (1초 이상)',
       labelNames: ['operation', 'model'],
     }),
+    makeCounterProvider({
+      name: 'fcm_notification_sent_total',
+      help: '발송된 알림 수',
+      labelNames: ['notification_type'],
+    }),
+    makeCounterProvider({
+      name: 'fcm_notification_success_total',
+      help: '발송 성공 수',
+      labelNames: ['notification_type'],
+    }),
+    makeCounterProvider({
+      name: 'fcm_notification_failure_total',
+      help: '발송 실패 수',
+      labelNames: ['notification_type'],
+    }),
+    makeHistogramProvider({
+      name: 'fcm_send_duration_seconds',
+      help: 'FCM 발송 소요 시간',
+      labelNames: ['notification_type'],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+    }),
+    makeHistogramProvider({
+      name: 'fcm_batch_size',
+      help: '배치당 발송 수',
+      labelNames: ['notification_type'],
+      buckets: [1, 10, 50, 100, 200, 500],
+    }),
   ],
   exports: [PrometheusModule, HttpMetricsInterceptor],
 })

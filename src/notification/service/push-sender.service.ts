@@ -13,10 +13,24 @@ import {
   PROMOTIONAL_NOTIFICATION_TYPES,
 } from '../constants/notification.constants';
 import { NotificationField } from '../enums/notification-field.enum';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter, Histogram } from 'prom-client';
 
 @Injectable()
 export class PushSenderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectMetric('fcm_notification_sent_total')
+    private readonly sentCounter: Counter<string>,
+    @InjectMetric('fcm_notification_success_total')
+    private readonly successCounter: Counter<string>,
+    @InjectMetric('fcm_notification_failure_total')
+    private readonly failureCounter: Counter<string>,
+    @InjectMetric('fcm_send_duration_seconds')
+    private readonly sendDuration: Histogram<string>,
+    @InjectMetric('fcm_batch_size')
+    private readonly batchSizeHistogram: Histogram<string>,
+  ) {}
 
   /**
    * 푸시 알림 일괄 전송
@@ -76,11 +90,26 @@ export class PushSenderService {
     const tokens = tokensWithUserId.map((t) => t.token);
     const userIdsByIndex = tokensWithUserId.map((t) => t.userId);
 
+    // 메트릭: 발송 수, 배치 크기
+    this.sentCounter.inc({ notification_type: type }, tokens.length);
+    this.batchSizeHistogram.observe({ notification_type: type }, tokens.length);
+
+    const endTimer = this.sendDuration.startTimer({ notification_type: type });
+
     const { successCount, failedTokens } = await this.sendFcmMulticast(
       tokens,
       finalTitle,
       finalContent,
       targetId,
+    );
+
+    endTimer();
+
+    // 메트릭: 성공/실패
+    this.successCounter.inc({ notification_type: type }, successCount);
+    this.failureCounter.inc(
+      { notification_type: type },
+      tokens.length - successCount,
     );
 
     if (failedTokens.length > 0) {
