@@ -21,9 +21,10 @@ import { TicketReminderStrategy } from './strategies/ticket-reminder.strategy';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 import { InterestConcertNotificationScheduler } from './scheduler/interest-concert-notification.scheduler';
 import { RecommendationNotificationScheduler } from './scheduler/recommendation-notification.scheduler';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
-  imports: [RecommendationModule, ArtistModule, UserModule],
+  imports: [RecommendationModule, ArtistModule, UserModule, MetricsModule],
   controllers: [NotificationController],
   providers: [
     NotificationService,
