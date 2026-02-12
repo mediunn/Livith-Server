@@ -77,6 +77,37 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor';
       labelNames: ['notification_type'],
       buckets: [1, 10, 50, 100, 200, 500],
     }),
+    makeCounterProvider({
+      name: 'scheduler_job_execution_total',
+      help: '스케줄러 실행 횟수',
+      labelNames: ['job_name'],
+    }),
+    makeHistogramProvider({
+      name: 'scheduler_job_duration_seconds',
+      help: '스케줄러 실행 시간',
+      labelNames: ['job_name'],
+      buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 120],
+    }),
+    makeCounterProvider({
+      name: 'scheduler_job_success_total',
+      help: '스케줄러 성공 횟수',
+      labelNames: ['job_name'],
+    }),
+    makeCounterProvider({
+      name: 'scheduler_job_failure_total',
+      help: '스케줄러 실패 횟수',
+      labelNames: ['job_name'],
+    }),
+    makeCounterProvider({
+      name: 'scheduler_job_items_processed',
+      help: '처리된 항목 수',
+      labelNames: ['job_name'],
+    }),
+    makeGaugeProvider({
+      name: 'scheduler_job_last_success_timestamp',
+      help: '마지막 성공 시간',
+      labelNames: ['job_name'],
+    }),
   ],
   exports: [PrometheusModule, HttpMetricsInterceptor],
 })

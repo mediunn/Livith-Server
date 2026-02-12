@@ -4,25 +4,56 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter, Histogram, Gauge } from 'prom-client';
 
 @Injectable()
 export class TicketingReminderScheduler {
+  private static readonly JOB_NAME = 'ticketing_reminder';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    @InjectMetric('scheduler_job_execution_total')
+    private readonly executionCounter: Counter<string>,
+    @InjectMetric('scheduler_job_duration_seconds')
+    private readonly durationHistogram: Histogram<string>,
+    @InjectMetric('scheduler_job_success_total')
+    private readonly successCounter: Counter<string>,
+    @InjectMetric('scheduler_job_failure_total')
+    private readonly failureCounter: Counter<string>,
+    @InjectMetric('scheduler_job_items_processed')
+    private readonly itemsProcessed: Counter<string>,
+    @InjectMetric('scheduler_job_last_success_timestamp')
+    private readonly lastSuccessTimestamp: Gauge<string>,
   ) {}
 
   @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
   async dailyTicketingNotifications() {
-    await this.sendTicketingReminders(7, NotificationType.TICKET_7D);
-    await this.sendTicketingReminders(1, NotificationType.TICKET_1D);
-    await this.sendTicketingRemindersForToday();
+    const jobName = TicketingReminderScheduler.JOB_NAME;
+    this.executionCounter.inc({ job_name: jobName });
+    const endTimer = this.durationHistogram.startTimer({ job_name: jobName });
+
+    try {
+      const count7d = await this.sendTicketingReminders(7, NotificationType.TICKET_7D);
+      const count1d = await this.sendTicketingReminders(1, NotificationType.TICKET_1D);
+      const countToday = await this.sendTicketingRemindersForToday();
+
+      this.itemsProcessed.inc({ job_name: jobName }, count7d + count1d + countToday);
+      this.successCounter.inc({ job_name: jobName });
+      this.lastSuccessTimestamp.set({ job_name: jobName }, Date.now() / 1000);
+    } catch (error) {
+      this.failureCounter.inc({ job_name: jobName });
+      throw error;
+    } finally {
+      endTimer();
+    }
   }
 
   private async sendTicketingReminders(
     daysFromToday: number,
     type: NotificationType,
-  ) {
+  ): Promise<number> {
     const { start, end } = getKstDayRange(daysFromToday);
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -43,9 +74,11 @@ export class TicketingReminderScheduler {
         String(schedule.concert.id),
       );
     }
+
+    return schedules.length;
   }
 
-  private async sendTicketingRemindersForToday() {
+  private async sendTicketingRemindersForToday(): Promise<number> {
     const { start, end } = getKstDayRange(0);
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -68,5 +101,7 @@ export class TicketingReminderScheduler {
         String(schedule.concert.id),
       );
     }
+
+    return schedules.length;
   }
 }

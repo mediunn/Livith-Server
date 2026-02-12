@@ -9,9 +9,10 @@ import { ArtistSyncService } from './services/artist-sync.service';
 import { PrismaModule } from 'prisma/prisma.module';
 import { RecommendationController } from './recommendation.controller';
 import { RecommendationService } from './services/recommendation.service';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, PrismaModule],
+  imports: [HttpModule, ConfigModule, PrismaModule, MetricsModule],
   controllers: [RecommendationController],
   providers: [
     LastfmApiService,
