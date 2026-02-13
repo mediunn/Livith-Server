@@ -22,9 +22,7 @@ export class NotificationCleanupScheduler {
       where: { createdAt: { lt: cutoff } },
     });
 
-    this.logger.log(
-      `Deleted ${result.count} notifications older than 90 days`,
-    );
+    this.logger.log(`Deleted ${result.count} notifications older than 90 days`);
     return result.count;
   }
 }

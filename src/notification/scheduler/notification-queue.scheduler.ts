@@ -35,8 +35,7 @@ export class NotificationQueueScheduler {
     for (const row of rows) {
       try {
         if (
-          row.eventType ===
-          CONCERT_NOTIFICATION_EVENT_TYPE.ARTIST_CONCERT_OPEN
+          row.eventType === CONCERT_NOTIFICATION_EVENT_TYPE.ARTIST_CONCERT_OPEN
         ) {
           await this.notificationService.sendArtistConcertOpenNotification(
             row.concertId,

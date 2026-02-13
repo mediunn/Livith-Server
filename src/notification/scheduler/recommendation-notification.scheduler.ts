@@ -60,14 +60,13 @@ export class RecommendationNotificationScheduler {
             const concert = concerts.find((c) => !sentConcertIds.has(c.id));
             if (!concert) continue;
 
-            const result =
-              await this.notificationService.sendPushNotification({
-                type: NotificationType.RECOMMEND,
-                title: message.title,
-                content: message.content,
-                targetId: String(concert.id),
-                userIds: [userId],
-              });
+            const result = await this.notificationService.sendPushNotification({
+              type: NotificationType.RECOMMEND,
+              title: message.title,
+              content: message.content,
+              targetId: String(concert.id),
+              userIds: [userId],
+            });
             totalSent += result.sent;
           } catch (err) {
             this.logger.warn(
