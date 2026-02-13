@@ -5,6 +5,7 @@ import { RecommendationService } from 'src/recommendation/services/recommendatio
 import { NotificationService } from '../service/notification.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
+import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
 
 describe('RecommendationNotificationScheduler', () => {
   let scheduler: RecommendationNotificationScheduler;
@@ -37,6 +38,19 @@ describe('RecommendationNotificationScheduler', () => {
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: NotificationStrategyService, useValue: mockStrategyService },
         { provide: NotificationHistoryService, useValue: mockHistoryService },
+        {
+          provide: SchedulerMetricsService,
+          useValue: {
+            executionCounter: { inc: jest.fn() },
+            durationHistogram: {
+              startTimer: jest.fn().mockReturnValue(() => {}),
+            },
+            successCounter: { inc: jest.fn() },
+            failureCounter: { inc: jest.fn() },
+            itemsProcessed: { inc: jest.fn() },
+            lastSuccessTimestamp: { set: jest.fn() },
+          },
+        },
       ],
     }).compile();
 
