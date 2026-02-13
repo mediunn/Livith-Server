@@ -3,6 +3,7 @@ import { NotificationQueueScheduler } from '../scheduler/notification-queue.sche
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
+import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
 
 describe('NotificationQueueScheduler', () => {
   let scheduler: NotificationQueueScheduler;
@@ -20,6 +21,19 @@ describe('NotificationQueueScheduler', () => {
       providers: [
         NotificationQueueScheduler,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: SchedulerMetricsService,
+          useValue: {
+            executionCounter: { inc: jest.fn() },
+            durationHistogram: {
+              startTimer: jest.fn().mockReturnValue(() => {}),
+            },
+            successCounter: { inc: jest.fn() },
+            failureCounter: { inc: jest.fn() },
+            itemsProcessed: { inc: jest.fn() },
+            lastSuccessTimestamp: { set: jest.fn() },
+          },
+        },
         {
           provide: NotificationService,
           useValue: {

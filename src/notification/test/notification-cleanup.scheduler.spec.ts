@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationCleanupScheduler } from '../scheduler/notification-cleanup.scheduler';
 import { PrismaService } from 'prisma/prisma.service';
+import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
 
 describe('NotificationCleanupScheduler', () => {
   let scheduler: NotificationCleanupScheduler;
@@ -16,6 +17,19 @@ describe('NotificationCleanupScheduler', () => {
       providers: [
         NotificationCleanupScheduler,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: SchedulerMetricsService,
+          useValue: {
+            executionCounter: { inc: jest.fn() },
+            durationHistogram: {
+              startTimer: jest.fn().mockReturnValue(() => {}),
+            },
+            successCounter: { inc: jest.fn() },
+            failureCounter: { inc: jest.fn() },
+            itemsProcessed: { inc: jest.fn() },
+            lastSuccessTimestamp: { set: jest.fn() },
+          },
+        },
       ],
     }).compile();
 

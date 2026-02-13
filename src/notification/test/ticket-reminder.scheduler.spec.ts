@@ -3,6 +3,7 @@ import { TicketingReminderScheduler } from '../scheduler/ticketing-reminder.sche
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationType } from '@prisma/client';
+import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
 
 describe('TicketingReminderScheduler', () => {
   let scheduler: TicketingReminderScheduler;
@@ -24,6 +25,19 @@ describe('TicketingReminderScheduler', () => {
         TicketingReminderScheduler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: NotificationService, useValue: mockNotificationService },
+        {
+          provide: SchedulerMetricsService,
+          useValue: {
+            executionCounter: { inc: jest.fn() },
+            durationHistogram: {
+              startTimer: jest.fn().mockReturnValue(() => {}),
+            },
+            successCounter: { inc: jest.fn() },
+            failureCounter: { inc: jest.fn() },
+            itemsProcessed: { inc: jest.fn() },
+            lastSuccessTimestamp: { set: jest.fn() },
+          },
+        },
       ],
     }).compile();
 
