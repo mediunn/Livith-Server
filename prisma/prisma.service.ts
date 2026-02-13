@@ -25,24 +25,23 @@ export class PrismaService
       const start = Date.now();
       const operation = params.action;
       const model = params.model ?? 'unknown';
+      let success = true;
 
       try{
-        const result = await next(params);
-        const duration = (Date.now() - start) / 1000;
-
-        this.queryDuration.observe({operation, model, success: 'true'}, duration);
-        this.queryCounter.inc({operation, model, success: 'true'});
-
-        if(duration > PrismaService.SLOW_QUERY_THRESHOLD_SECONDS){
-          this.slowQueryCounter.inc({operation, model});
-        }
-
-        return result;
+        return await next(params);
       }catch (error) {
-        const duration = (Date.now() - start) / 1000;
-        this.queryDuration.observe({operation, model, success: 'false'}, duration);
-        this.queryCounter.inc({operation, model, success: 'false'});
+        success = false;
         throw error;
+      }finally {
+        const duration = (Date.now() - start) / 1000;
+        const successLabel = String(success);
+
+        this.queryDuration.observe({ operation, model, success: successLabel }, duration);
+        this.queryCounter.inc({ operation, model, success: successLabel });
+
+        if (success && duration > PrismaService.SLOW_QUERY_THRESHOLD_SECONDS) {
+          this.slowQueryCounter.inc({ operation, model });
+        }
       }
     });
   }
