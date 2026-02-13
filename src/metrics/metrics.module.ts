@@ -6,6 +6,7 @@ import {
   PrometheusModule,
 } from '@willsoto/nestjs-prometheus';
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
+import { SchedulerMetricsService } from './scheduler-metrics.service';
 
 @Module({
   imports: [
@@ -18,21 +19,22 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor';
   ],
   providers: [
     HttpMetricsInterceptor,
+    SchedulerMetricsService,
     makeCounterProvider({
       name: 'http_request_total',
       help: '총 HTTP 요청 수',
-      labelNames: ['method', 'path', 'status_code'],
+      labelNames: ['method', 'route', 'status_code'],
     }),
     makeHistogramProvider({
       name: 'http_request_duration_seconds',
       help: '요청 처리 시간 (초)',
-      labelNames: ['method', 'path', 'status_code'],
+      labelNames: ['method', 'route', 'status_code'],
       buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
     }),
     makeGaugeProvider({
       name: 'http_requests_in_flight',
       help: '현재 처리 중인 요청 수',
-      labelNames: ['method', 'path'],
+      labelNames: ['method', 'route'],
     }),
     makeHistogramProvider({
       name: 'db_query_duration_seconds',
@@ -109,6 +111,6 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor';
       labelNames: ['job_name'],
     }),
   ],
-  exports: [PrometheusModule, HttpMetricsInterceptor],
+  exports: [PrometheusModule, HttpMetricsInterceptor, SchedulerMetricsService],
 })
 export class MetricsModule {}
