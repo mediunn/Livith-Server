@@ -16,7 +16,7 @@ export class GlobalResponseInterceptor implements NestInterceptor {
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
-    if (request.url === '/metrics') {
+    if (request.path === '/metrics') {
       return next.handle();
     }
 
