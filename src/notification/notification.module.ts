@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './service/notification.service';
-import { PrismaService } from 'prisma/prisma.service';
 import { FirebaseInitService } from './fcm/firebase-init.service';
 import { NotificationQueueScheduler } from './scheduler/notification-queue.scheduler';
 import { TicketingReminderScheduler } from './scheduler/ticketing-reminder.scheduler';
@@ -22,9 +21,10 @@ import { NotificationStrategyService } from './strategies/notification-strategy.
 import { InterestConcertNotificationScheduler } from './scheduler/interest-concert-notification.scheduler';
 import { RecommendationNotificationScheduler } from './scheduler/recommendation-notification.scheduler';
 import { MetricsModule } from '../metrics/metrics.module';
+import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
-  imports: [RecommendationModule, ArtistModule, UserModule, MetricsModule],
+  imports: [RecommendationModule, ArtistModule, UserModule, MetricsModule, PrismaModule],
   controllers: [NotificationController],
   providers: [
     NotificationService,
@@ -38,7 +38,6 @@ import { MetricsModule } from '../metrics/metrics.module';
     RecommendationStrategy,
     TicketReminderStrategy,
     NotificationStrategyService,
-    PrismaService,
     FirebaseInitService,
     NotificationQueueScheduler,
     TicketingReminderScheduler,
