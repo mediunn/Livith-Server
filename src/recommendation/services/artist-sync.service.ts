@@ -8,6 +8,8 @@ import {
   YoutubeApiErrorType,
   YoutubeApiService,
 } from '../integrations/youtube/youtube.api.service';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class ArtistSyncService {
@@ -18,26 +20,24 @@ export class ArtistSyncService {
     private readonly lastfmApiService: LastfmApiService,
     private readonly artistImageService: ArtistImageService,
     private readonly youtubeApiService: YoutubeApiService,
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
   // 6개월마다 1일 새벽 2시: 아티스트 목록만 동기화
+  @InstrumentJob('artist_sync')
   @Cron('0 2 1 */6 *', {
     timeZone: 'Asia/Seoul',
   })
-  async syncRepresentativeArtists() {
-    this.logger.log('Starting representative artsits sync (every 6 months)');
+  async syncRepresentativeArtists(): Promise<number> {
+    this.logger.log('Starting representative artists sync (every 6 months)');
+    const genres = await this.prismaService.genre.findMany();
 
-    try {
-      const genres = await this.prismaService.genre.findMany();
-
-      for (const genre of genres) {
-        await this.syncGenreArtists(genre.id, genre.name);
-      }
-
-      this.logger.log('Representative artists sync completed');
-    } catch (error) {
-      this.logger.error('Representative artists sync failed', error);
+    for (const genre of genres) {
+      await this.syncGenreArtists(genre.id, genre.name);
     }
+
+    this.logger.log('Representative artists sync completed');
+    return genres.length;
   }
 
   private async syncGenreArtists(genreId: number, genreName: string) {
@@ -73,10 +73,11 @@ export class ArtistSyncService {
     }
   }
 
+  @InstrumentJob('artist_image_sync')
   @Cron('0 3 * * *', {
     timeZone: 'Asia/Seoul',
   })
-  async syncArtistImages() {
+  async syncArtistImages(): Promise<number> {
     const artistsWithoutImage =
       await this.prismaService.representativeArtist.findMany({
         where: { imgUrl: '' },
@@ -86,8 +87,10 @@ export class ArtistSyncService {
       });
 
     if (artistsWithoutImage.length === 0) {
-      return;
+      return 0;
     }
+
+    let processedCount = 0;
 
     for (const artist of artistsWithoutImage) {
       const result = await this.youtubeApiService.getArtistImageUrl(
@@ -112,7 +115,10 @@ export class ArtistSyncService {
         data: { imgUrl: imgUrl },
       });
 
+      processedCount++;
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
+
+    return processedCount;
   }
 }

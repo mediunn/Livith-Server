@@ -61,6 +61,26 @@ describe('Notification send integration (FCM mock)', () => {
         { provide: NotificationHistoryService, useValue: mockHistoryService },
         PushSenderService,
         { provide: NotificationStrategyService, useValue: mockStrategyService },
+        {
+          provide: 'PROM_METRIC_FCM_NOTIFICATION_SENT_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
+        {
+          provide: 'PROM_METRIC_FCM_NOTIFICATION_SUCCESS_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
+        {
+          provide: 'PROM_METRIC_FCM_NOTIFICATION_FAILURE_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
+        {
+          provide: 'PROM_METRIC_FCM_SEND_DURATION_SECONDS',
+          useValue: { startTimer: jest.fn().mockReturnValue(() => {}) },
+        },
+        {
+          provide: 'PROM_METRIC_FCM_BATCH_SIZE',
+          useValue: { observe: jest.fn() },
+        },
       ],
     }).compile();
 

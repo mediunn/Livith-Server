@@ -40,7 +40,23 @@ describe('RecommendationService Integration Test', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [HttpModule, ConfigModule.forRoot({ isGlobal: true })],
-      providers: [RecommendationService, PrismaService, LastfmApiService],
+      providers: [
+        RecommendationService,
+        PrismaService,
+        LastfmApiService,
+        {
+          provide: 'PROM_METRIC_DB_QUERY_DURATION_SECONDS',
+          useValue: { observe: jest.fn() },
+        },
+        {
+          provide: 'PROM_METRIC_DB_QUERY_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
+        {
+          provide: 'PROM_METRIC_DB_SLOW_QUERY_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
+      ],
     }).compile();
 
     service = module.get<RecommendationService>(RecommendationService);

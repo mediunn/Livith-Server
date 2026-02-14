@@ -6,6 +6,8 @@ import {
   CONCERT_NOTIFICATION_EVENT_TYPE,
   CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE,
 } from '../constants/notification.constants';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class NotificationQueueScheduler {
@@ -14,16 +16,21 @@ export class NotificationQueueScheduler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
+  @InstrumentJob('notification_queue_processor')
   @Cron('*/1 * * * *', { timeZone: 'Asia/Seoul' })
-  async processQueue() {
+  async processQueue(): Promise<number> {
     const rows = await this.prisma.concertNotificationQueue.findMany({
       where: { processed: false },
       orderBy: { createdAt: 'asc' },
       take: 50,
     });
-    if (rows.length === 0) return;
+
+    if (rows.length === 0) {
+      return 0;
+    }
 
     for (const row of rows) {
       try {
@@ -53,8 +60,10 @@ export class NotificationQueueScheduler {
         );
       }
     }
+
     this.logger.log(
       `Processed ${rows.length} concert notification queue item(s)`,
     );
+    return rows.length;
   }
 }

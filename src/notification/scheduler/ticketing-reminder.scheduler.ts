@@ -4,25 +4,37 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class TicketingReminderScheduler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
+  @InstrumentJob('ticketing_reminder')
   @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
-  async dailyTicketingNotifications() {
-    await this.sendTicketingReminders(7, NotificationType.TICKET_7D);
-    await this.sendTicketingReminders(1, NotificationType.TICKET_1D);
-    await this.sendTicketingRemindersForToday();
+  async dailyTicketingNotifications(): Promise<number> {
+    const count7d = await this.sendTicketingReminders(
+      7,
+      NotificationType.TICKET_7D,
+    );
+    const count1d = await this.sendTicketingReminders(
+      1,
+      NotificationType.TICKET_1D,
+    );
+    const countToday = await this.sendTicketingRemindersForToday();
+
+    return count7d + count1d + countToday;
   }
 
   private async sendTicketingReminders(
     daysFromToday: number,
     type: NotificationType,
-  ) {
+  ): Promise<number> {
     const { start, end } = getKstDayRange(daysFromToday);
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -43,9 +55,11 @@ export class TicketingReminderScheduler {
         String(schedule.concert.id),
       );
     }
+
+    return schedules.length;
   }
 
-  private async sendTicketingRemindersForToday() {
+  private async sendTicketingRemindersForToday(): Promise<number> {
     const { start, end } = getKstDayRange(0);
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -68,5 +82,7 @@ export class TicketingReminderScheduler {
         String(schedule.concert.id),
       );
     }
+
+    return schedules.length;
   }
 }
