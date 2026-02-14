@@ -4,10 +4,11 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Gauge, Histogram } from 'prom-client';
 import { Request, Response } from 'express';
-import { Observable } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
 @Injectable()
@@ -28,31 +29,47 @@ export class HttpMetricsInterceptor implements NestInterceptor {
     next: CallHandler<any>,
   ): Observable<any> {
     const request = context.switchToHttp().getRequest<Request>();
-    const { method, path } = request;
+    const { method } = request;
 
-    if (path === '/metrics') {
+    if (request.path === '/metrics') {
       return next.handle();
     }
 
-    this.requestsInFlight.inc({ method, path });
-    const endTimer = this.requestDuration.startTimer({ method, path });
+    const route = this.getRoutePattern(context);
+
+    this.requestsInFlight.inc({ method, route });
+    const endTimer = this.requestDuration.startTimer({ method, route });
 
     return next.handle().pipe(
       tap({
         next: () => {
           const response = context.switchToHttp().getResponse<Response>();
           const statusCode = String(response.statusCode);
-          this.requestCounter.inc({ method, path, status_code: statusCode });
+          this.requestCounter.inc({ method, route, status_code: statusCode });
           endTimer({ status_code: statusCode });
-          this.requestsInFlight.dec({ method, path });
         },
         error: (error) => {
           const statusCode = String(error.status ?? 500);
-          this.requestCounter.inc({ method, path, status_code: statusCode });
+          this.requestCounter.inc({ method, route, status_code: statusCode });
           endTimer({ status_code: statusCode });
-          this.requestsInFlight.dec({ method, path });
         },
       }),
+      finalize(() => this.requestsInFlight.dec({ method, route })),
+    );
+  }
+
+  private getRoutePattern(context: ExecutionContext): string {
+    const controllerPath =
+      Reflect.getMetadata(PATH_METADATA, context.getClass()) ?? '';
+    const handlerPath =
+      Reflect.getMetadata(PATH_METADATA, context.getHandler()) ?? '';
+
+    return (
+      '/' +
+      [controllerPath, handlerPath]
+        .flat()
+        .filter((segment) => segment && segment !== '/')
+        .join('/')
     );
   }
 }
