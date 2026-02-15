@@ -7,7 +7,7 @@ import {
 } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../../prisma-v4/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import axios from 'axios';
 import jwkToPem from 'jwk-to-pem';
