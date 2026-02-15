@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../../prisma-v4/prisma.service';
 import { BannerResponseDto } from './dto/banner-response.dto';
 import { SearchSectionResponseDto } from './dto/search-section-response.dto';
 import { ConcertSort } from '../common/enums/concert-sort.enum';

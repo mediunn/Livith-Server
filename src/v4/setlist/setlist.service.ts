@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../../prisma-v4/prisma.service';
 import { SongResponseDto } from './dto/song-response.dto';
 import { FanchantResponseDto } from './dto/fanchant-response.dto';
 
@@ -61,9 +61,7 @@ export class SetlistService {
     });
 
     if (!fanchant) {
-      throw new NotFoundException(
-        ErrorCode.SETLIST_SONG_NOT_FOUND
-      );
+      throw new NotFoundException(ErrorCode.SETLIST_SONG_NOT_FOUND);
     }
 
     return new FanchantResponseDto(fanchant);
