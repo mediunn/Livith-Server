@@ -1,53 +1,52 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { APP_INTERCEPTOR } from '@nestjs/core';
-import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
-import { AuthModule } from './auth/auth.module';
-import { ConcertModule } from './concert/concert.module';
-import { HomeModule } from './home/home.module';
-import { SearchModule } from './search/search.module';
-import { SetlistModule } from './setlist/setlist.module';
-import { SongModule } from './song/song.module';
-import { CommentModule } from './comment/comment.module';
-import { UserModule } from './user/user.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { RecommendationModule } from './recommendation/recommendation.module';
-import { GenreModule } from './genre/genre.module';
-import { NotificationModule } from './notification/notification.module';
-import { ArtistModule } from './artist/artist.module';
-import { MetricsModule } from './metrics/metrics.module';
-import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
+import { AppModuleV4 } from './v4/app.module';
+import { AppModule as AppModuleV5 } from './v5/app.module';
+// v4 controllers
+import { AuthController as AuthControllerV4 } from './v4/auth/auth.controller';
+import { ConcertController as ConcertControllerV4 } from './v4/concert/concert.controller';
+import { HomeController as HomeControllerV4 } from './v4/home/home.controller';
+import { SearchController as SearchControllerV4 } from './v4/search/search.controller';
+import { SetlistController as SetlistControllerV4 } from './v4/setlist/setlist.controller';
+import { SongController as SongControllerV4 } from './v4/song/song.controller';
+import { CommentController as CommentControllerV4 } from './v4/comment/comment.controller';
+import { UserController as UserControllerV4 } from './v4/user/user.controller';
+// v5 controllers
+import { AuthController as AuthControllerV5 } from './v5/auth/auth.controller';
+import { ConcertController as ConcertControllerV5 } from './v5/concert/concert.controller';
+import { HomeController as HomeControllerV5 } from './v5/home/home.controller';
+import { SearchController as SearchControllerV5 } from './v5/search/search.controller';
+import { SetlistController as SetlistControllerV5 } from './v5/setlist/setlist.controller';
+import { SongController as SongControllerV5 } from './v5/song/song.controller';
+import { CommentController as CommentControllerV5 } from './v5/comment/comment.controller';
+import { UserController as UserControllerV5 } from './v5/user/user.controller';
+import { GenreController } from './v5/genre/genre.controller';
+import { NotificationController } from './v5/notification/notification.controller';
+import { RecommendationController } from './v5/recommendation/recommendation.controller';
 
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    AuthModule,
-    ConcertModule,
-    HomeModule,
-    SearchModule,
-    SetlistModule,
-    SongModule,
-    CommentModule,
-    UserModule,
-    RecommendationModule,
-    GenreModule,
-    NotificationModule,
-    ArtistModule,
-    MetricsModule,
-  ],
-  controllers: [],
-  providers: [
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: GlobalResponseInterceptor, // 인터셉터 등록
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: HttpMetricsInterceptor,
-    },
+  imports: [AppModuleV4, AppModuleV5],
+  controllers: [
+    // v4
+    AuthControllerV4,
+    ConcertControllerV4,
+    HomeControllerV4,
+    SearchControllerV4,
+    SetlistControllerV4,
+    SongControllerV4,
+    CommentControllerV4,
+    UserControllerV4,
+    // v5
+    AuthControllerV5,
+    ConcertControllerV5,
+    HomeControllerV5,
+    SearchControllerV5,
+    SetlistControllerV5,
+    SongControllerV5,
+    CommentControllerV5,
+    UserControllerV5,
+    GenreController,
+    NotificationController,
+    RecommendationController,
   ],
 })
 export class AppModule {}
