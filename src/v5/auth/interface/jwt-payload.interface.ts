@@ -1,3 +1,3 @@
-interface JwtPayload {
+export interface JwtPayload {
   userId: number;
 }

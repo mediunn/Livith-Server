@@ -1,8 +1,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { SetlistService } from './setlist.service.js';
-import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { SetlistService } from './setlist.service';
+import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('셋리스트')
 @Controller(`${API_PREFIX}/setlists`)

@@ -11,17 +11,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { NotificationService } from './service/notification.service.js';
-import { CreateNotificationConsentDto } from './dto/request/create-notification-consent.dto.js';
-import { CurrentUser } from '../common/decorator/current-user.decorator.js';
-import { GetNotificationDto } from './dto/request/get-notification.dto.js';
-import { NotificationResponseDto } from './dto/response/notification-response.dto.js';
-import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto.js';
-import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto.js';
-import { TestNotificationDto } from './dto/request/test-notification.dto.js';
-import { NotificationStrategyService } from './strategies/notification-strategy.service.js';
+import { API_PREFIX } from '../common/constants/api-prefix';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { NotificationService } from './service/notification.service';
+import { CreateNotificationConsentDto } from './dto/request/create-notification-consent.dto';
+import { CurrentUser } from '../common/decorator/current-user.decorator';
+import { GetNotificationDto } from './dto/request/get-notification.dto';
+import { JwtPayload } from '../auth/interface/jwt-payload.interface';
+import { NotificationResponseDto } from './dto/response/notification-response.dto';
+import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
+import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
+import { TestNotificationDto } from './dto/request/test-notification.dto';
+import { NotificationStrategyService } from './strategies/notification-strategy.service';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)

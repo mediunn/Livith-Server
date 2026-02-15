@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RecommendationService } from '../../recommendation/services/recommendation.service.js';
-import { NotificationService } from '../service/notification.service.js';
+import { RecommendationService } from '../../recommendation/services/recommendation.service';
+import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
-import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants.js';
-import { BatchProcessor } from '../../common/utils/batch-processor.util.js';
-import { NotificationStrategyService } from '../strategies/notification-strategy.service.js';
-import { NotificationHistoryService } from '../service/notification-history.service.js';
+import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.constants';
+import { BatchProcessor } from '../../common/utils/batch-processor.util';
+import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { NotificationHistoryService } from '../service/notification-history.service';
 
 @Injectable()
 export class RecommendationNotificationScheduler {

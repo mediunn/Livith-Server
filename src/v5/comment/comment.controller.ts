@@ -7,12 +7,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { CommentService } from './comment.service.js';
+import { CommentService } from './comment.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe.js';
-import { ReportCommentDto } from './dto/report-comment.dto.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
+import { ReportCommentDto } from './dto/report-comment.dto';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('댓글')
 @Controller(`${API_PREFIX}/comments`)

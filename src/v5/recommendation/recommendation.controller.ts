@@ -6,11 +6,11 @@ import {
   Get,
   Request,
 } from '@nestjs/common';
-import { ArtistSyncService } from './services/artist-sync.service.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { RecommendationService } from './services/recommendation.service.js';
+import { ArtistSyncService } from './services/artist-sync.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RecommendationService } from './services/recommendation.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('추천')
 @Controller(`${API_PREFIX}/recommendation`)

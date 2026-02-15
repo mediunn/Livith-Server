@@ -10,16 +10,16 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { UserService } from './user.service.js';
+import { UserService } from './user.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { SetInterestConcertDto } from './dto/set-interest-concert.dto.js';
-import { UpdateNicknameDto } from './dto/update-nickname.dto.js';
-import { CheckDeletedUser } from './dto/check-deleted-user.dto.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
-import { CurrentUser } from '../common/decorator/current-user.decorator.js';
-import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto.js';
-import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { CheckDeletedUser } from './dto/check-deleted-user.dto';
+import { API_PREFIX } from '../common/constants/api-prefix';
+import { CurrentUser } from '../common/decorator/current-user.decorator';
+import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
+import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)

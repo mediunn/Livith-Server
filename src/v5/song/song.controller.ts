@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { SongService } from './song.service.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { SongService } from './song.service';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('노래')
 @Controller(`${API_PREFIX}/songs`)
