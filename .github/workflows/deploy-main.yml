@@ -55,7 +55,7 @@ jobs:
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
           ssh $TARGET 'sudo mkdir -p /opt/app'
           ssh $TARGET 'sudo chown ubuntu:ubuntu /opt/app'
-          rsync -av --delete --exclude='node_modules' --exclude='.env' --exclude='dist' ./ $TARGET:/opt/app
+          rsync -av --delete --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='dist' ./ $TARGET:/opt/app
 
       - name: Install dependencies
         run: |
