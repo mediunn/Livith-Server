@@ -38,6 +38,15 @@ async function bootstrap() {
       saveUninitialized: false,
     }),
   );
+
+  app.enableCors({
+    origin: [
+      'http://localhost:5173',
+      'https://www.livith.site',
+      'https://staging.livith.site',
+    ],
+    credentials: true,
+  });
   const config = new DocumentBuilder()
     .setTitle('Livith API v4 문서')
     .setDescription('Livith API v4 문서입니다.')
