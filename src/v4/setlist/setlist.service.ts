@@ -61,9 +61,7 @@ export class SetlistService {
     });
 
     if (!fanchant) {
-      throw new NotFoundException(
-        ErrorCode.SETLIST_SONG_NOT_FOUND
-      );
+      throw new NotFoundException(ErrorCode.SETLIST_SONG_NOT_FOUND);
     }
 
     return new FanchantResponseDto(fanchant);
