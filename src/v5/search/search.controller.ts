@@ -1,11 +1,11 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
-import { ErrorCode } from '../common/enums/error-code.enum.js';
-import { BadRequestException } from '../common/exceptions/business.exception.js';
-import { GetArtistSearchResultsDto } from './dto/get-artist-search-results.dto.js';
-import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto.js';
-import { SearchService } from './search.service.js';
+import { API_PREFIX } from '../common/constants/api-prefix';
+import { ErrorCode } from '../common/enums/error-code.enum';
+import { BadRequestException } from '../common/exceptions/business.exception';
+import { GetArtistSearchResultsDto } from './dto/get-artist-search-results.dto';
+import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
+import { SearchService } from './search.service';
 
 @ApiTags('탐색')
 @Controller(`${API_PREFIX}/search`)

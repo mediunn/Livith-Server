@@ -8,19 +8,19 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ConcertService } from './concert.service.js';
+import { ConcertService } from './concert.service';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { GetConcertsDto } from './dto/get-concerts.dto.js';
-import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe.js';
-import { GetCommentsDto } from './dto/get-comments.dto.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { CreateCommentDto } from './dto/create-comment.dto.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { GetConcertsDto } from './dto/get-concerts.dto';
+import { ParsePositiveIntPipe } from '../common/pipes/parse-positive-int.pipe';
+import { GetCommentsDto } from './dto/get-comments.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('콘서트')
 @Controller(`${API_PREFIX}/concerts`)

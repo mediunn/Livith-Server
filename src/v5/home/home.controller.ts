@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { HomeService } from './home.service.js';
-import { API_PREFIX } from '../common/constants/api-prefix.js';
+import { HomeService } from './home.service';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('홈')
 @Controller(`${API_PREFIX}/home`)

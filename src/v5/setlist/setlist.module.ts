@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { SetlistController } from './setlist.controller.js';
-import { SetlistService } from './setlist.service.js';
-import { PrismaService } from '../../../prisma-v5/prisma.service.js';
+import { SetlistController } from './setlist.controller';
+import { SetlistService } from './setlist.service';
+import { PrismaService } from '../../../prisma-v5/prisma.service';
 
 @Module({
   controllers: [SetlistController],

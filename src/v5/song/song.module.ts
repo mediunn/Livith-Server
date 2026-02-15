@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { SongController } from './song.controller.js';
-import { SongService } from './song.service.js';
-import { PrismaService } from '../../../prisma-v5/prisma.service.js';
+import { SongController } from './song.controller';
+import { SongService } from './song.service';
+import { PrismaService } from '../../../prisma-v5/prisma.service';
 
 @Module({
   controllers: [SongController],
