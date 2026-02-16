@@ -120,6 +120,7 @@ describe('Notification send integration (FCM mock)', () => {
     const [message] = mockSendEachForMulticast.mock.calls[0];
     expect(message.notification?.title).toBe('예매 일정');
     expect(message.notification?.body).toContain('테스트콘서트 예매가 7일 뒤');
+    expect(message.data?.notificationType).toBe('TICKET_7D');
     expect(message.data?.targetId).toBe('100');
     expect(message.tokens).toEqual(['test-fcm-token-1']);
   });
