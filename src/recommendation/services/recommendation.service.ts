@@ -34,7 +34,7 @@ export class RecommendationService {
     });
 
     return concerts
-      .filter((concert) => getDaysUntil(concert.endDate) >= 0)
+      .filter((concert) => getDaysUntil(concert.endDate) > 0)
       .map(
         (concert) =>
           new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
@@ -119,7 +119,7 @@ export class RecommendationService {
 
     // 아티스트 매칭 콘서트를 우선 배치하고, 나머지 슬롯을 장르 기반으로 채움
     const artistConcertDtos = artistConcerts
-      .filter((concert) => getDaysUntil(concert.endDate) >= 0)
+      .filter((concert) => getDaysUntil(concert.endDate) > 0)
       .map(
         (concert) =>
           new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
