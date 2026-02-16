@@ -47,7 +47,7 @@ export const CONCERT_INFO_UPDATE_MESSAGES: Partial<
   [NotificationType.CONCERT_INFO_UPDATE_MD]: {
     title: 'MD 정보가 업데이트가 됐어요!',
     content: (t) =>
-      `${t}콘서트의 공식 굿즈 라인업이 공개됐어요. 어떤 아이템들이 있는지 지금 바로 확인해볼까요?`,
+      `${t} 콘서트의 공식 굿즈 라인업이 공개됐어요. 어떤 아이템들이 있는지 지금 바로 확인해볼까요?`,
   },
   [NotificationType.CONCERT_INFO_UPDATE_DETAIL]: {
     title: '관심 콘서트의 새로운 소식이 도착했어요!',
@@ -57,12 +57,12 @@ export const CONCERT_INFO_UPDATE_MESSAGES: Partial<
   [NotificationType.CONCERT_INFO_UPDATE_SCHEDULE]: {
     title: '관심 콘서트의 새로운 소식이 도착했어요!',
     content: (t) =>
-      `${t}콘서트의 일정이 업데이트 되었어요. 소중한 관람 기회를 놓치지 않도록 일정을 꼭 체크해주세요!`,
+      `${t} 콘서트의 일정이 업데이트 되었어요. 소중한 관람 기회를 놓치지 않도록 일정을 꼭 체크해주세요!`,
   },
   [NotificationType.CONCERT_INFO_UPDATE_TICKET]: {
     title: '관심 콘서트의 새로운 소식이 도착했어요!',
     content: (t) =>
-      `${t}콘서트 티켓 예매 정보가 업데이트 됐어요. 티켓팅 성공을 위해 상세 내용을 미리 확인해보세요.`,
+      `${t} 콘서트 티켓 예매 정보가 업데이트 됐어요. 티켓팅 성공을 위해 상세 내용을 미리 확인해보세요.`,
   },
 };
 

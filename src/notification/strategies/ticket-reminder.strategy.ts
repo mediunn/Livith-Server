@@ -79,7 +79,7 @@ export class TicketReminderStrategy implements NotificationStrategy {
     if (daysUntil === 0) {
       return {
         title: `오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작이에요`,
-        content: `관심 콘서트 '${concertTitle}', 오늘 ${timeStr} 예매가 시작돼요.`,
+        content: `관심 콘서트 '${concertTitle}', 오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작돼요.`,
       };
     }
 
