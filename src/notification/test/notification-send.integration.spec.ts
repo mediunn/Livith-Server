@@ -110,16 +110,16 @@ describe('Notification send integration (FCM mock)', () => {
 
     await service.sendPushNotification({
       type: NotificationType.TICKET_7D,
-      title: '예매 일정',
-      content: '테스트콘서트 예매가 7일 뒤에 시작해요!',
+      title: '띵동! 7일 뒤 예매가 시작돼요',
+      content: "관심 콘서트 '테스트콘서트', 예매 일정이 다가왔어요.",
       targetId: '100',
       userIds: [1],
     });
 
     expect(mockSendEachForMulticast).toHaveBeenCalledTimes(1);
     const [message] = mockSendEachForMulticast.mock.calls[0];
-    expect(message.notification?.title).toBe('예매 일정');
-    expect(message.notification?.body).toContain('테스트콘서트 예매가 7일 뒤');
+    expect(message.notification?.title).toBe('띵동! 7일 뒤 예매가 시작돼요');
+    expect(message.notification?.body).toContain('관심 콘서트');
     expect(message.data?.notificationType).toBe('TICKET_7D');
     expect(message.data?.targetId).toBe('100');
     expect(message.tokens).toEqual(['test-fcm-token-1']);
@@ -143,8 +143,8 @@ describe('Notification send integration (FCM mock)', () => {
 
     await service.sendPushNotification({
       type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
-      title: '콘서트 정보 업데이트',
-      content: 'OOO 정보가 업데이트되었어요!',
+      title: '셋리스트가 등록이 됐어요!',
+      content: 'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
       targetId: '50',
       userIds: [1],
     });
@@ -152,8 +152,8 @@ describe('Notification send integration (FCM mock)', () => {
     expect(mockHistoryService.createNotificationHistories).toHaveBeenCalledWith(
       [1],
       NotificationType.CONCERT_INFO_UPDATE_SETLIST,
-      '콘서트 정보 업데이트',
-      'OOO 정보가 업데이트되었어요!',
+      '셋리스트가 등록이 됐어요!',
+      'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
       '50',
     );
   });
