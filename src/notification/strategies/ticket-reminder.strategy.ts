@@ -8,6 +8,7 @@ import {
 } from './notification-strategy.interface';
 import { BatchProcessor } from 'src/common/utils/batch-processor.util';
 import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
+import { formatHourAmPm } from 'src/common/utils/date.util';
 
 @Injectable()
 export class TicketReminderStrategy implements NotificationStrategy {
@@ -54,40 +55,37 @@ export class TicketReminderStrategy implements NotificationStrategy {
   ): Promise<NotificationMessage> {
     let { concertTitle, timeStr, daysUntil } = params;
 
-    // concertId만 전달된 경우 조회 (테스트용)
     if (!concertTitle && params.concertId) {
       const concert = await this.prisma.concert.findUnique({
         where: { id: params.concertId },
         select: { title: true },
       });
       concertTitle = concert?.title ?? '콘서트';
-
-      if (daysUntil === undefined && params.notificationType) {
-        if (params.notificationType === NotificationType.TICKET_TODAY) {
-          daysUntil = 0;
-          timeStr = timeStr ?? '오후 8시';
-        } else if (params.notificationType === NotificationType.TICKET_1D) {
-          daysUntil = 1;
-        } else {
-          daysUntil = 7;
-        }
-      } else {
-        daysUntil = daysUntil ?? 7;
-      }
     }
 
-    let content = '';
-    if (daysUntil === 7) {
-      content = `${concertTitle} 예매가 7일 뒤에 시작해요!`;
-    } else if (daysUntil === 1) {
-      content = `${concertTitle} 예매가 내일 시작해요!`;
-    } else if (daysUntil === 0) {
-      content = `${concertTitle} 예매가 오늘 ${timeStr}에 시작해요!`;
+    if (daysUntil === undefined && params.notificationType) {
+      if (params.notificationType === NotificationType.TICKET_TODAY) {
+        daysUntil = 0;
+        timeStr = timeStr ?? '20시';
+      } else if (params.notificationType === NotificationType.TICKET_1D) {
+        daysUntil = 1;
+      } else {
+        daysUntil = 7;
+      }
+    } else {
+      daysUntil = daysUntil ?? 7;
+    }
+
+    if (daysUntil === 0) {
+      return {
+        title: `오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작이에요`,
+        content: `관심 콘서트 '${concertTitle}', 오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작돼요.`,
+      };
     }
 
     return {
-      title: '예매 일정',
-      content,
+      title: `띵동! ${daysUntil}일 뒤 예매가 시작돼요`,
+      content: `관심 콘서트 '${concertTitle}', 예매 일정이 다가왔어요.`,
     };
   }
 }
