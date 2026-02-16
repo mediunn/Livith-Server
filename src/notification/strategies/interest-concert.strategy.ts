@@ -43,7 +43,7 @@ export class InterestConcertStrategy implements NotificationStrategy {
     params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
     return {
-      title: '관심 콘서트',
+      title: '관심 가는 콘서트가 있나요?',
       content:
         '관심 콘서트를 설정해두면 예매 시작과 셋리스트 업데이트 소식을 바로 알려드려요!',
     };

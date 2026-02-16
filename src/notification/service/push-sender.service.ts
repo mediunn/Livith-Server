@@ -100,6 +100,7 @@ export class PushSenderService {
       tokens,
       finalTitle,
       finalContent,
+      type,
       targetId,
     );
 
@@ -193,10 +194,14 @@ export class PushSenderService {
     tokens: string[],
     title: string,
     body: string,
+    type: NotificationType,
     targetId?: string,
   ): Promise<{ successCount: number; failedTokens: string[] }> {
     const messaging = getMessaging();
-    const data: Record<string, string> = targetId ? { targetId } : {};
+    const data: Record<string, string> = {
+      notificationType: type,
+      ...(targetId && { targetId }),
+    };
     const batchSize = 500;
     let successCount = 0;
     const failedTokens: string[] = [];

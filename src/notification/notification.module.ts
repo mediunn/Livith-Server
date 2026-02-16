@@ -24,7 +24,13 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
-  imports: [RecommendationModule, ArtistModule, UserModule, MetricsModule, PrismaModule],
+  imports: [
+    RecommendationModule,
+    ArtistModule,
+    UserModule,
+    MetricsModule,
+    PrismaModule,
+  ],
   controllers: [NotificationController],
   providers: [
     NotificationService,
