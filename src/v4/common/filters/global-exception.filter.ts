@@ -10,17 +10,24 @@ import { ErrorCode } from '../enums/error-code.enum';
 import { ErrorMessages } from '../constants/error-messages';
 import { HTTP_STATUS_MESSAGES } from '../constants/http-status-messages';
 
-
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
-    if(exception instanceof BusinessException){
+    if (response.headersSent) {
+      // 이미 응답이 전송된 경우 아무 작업도 하지 않음
+      return;
+    }
+
+    if (exception instanceof BusinessException) {
       const status = exception.getStatus();
-      const exceptionResponse = exception.getResponse() as { statusCode: number; message: string };
-      
+      const exceptionResponse = exception.getResponse() as {
+        statusCode: number;
+        message: string;
+      };
+
       return response.status(status).json({
         message: exceptionResponse.message,
         error: HTTP_STATUS_MESSAGES[status] || 'Error',
@@ -36,7 +43,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'string') {
-        // 단순 문자열 메시지인 경우 
+        // 단순 문자열 메시지인 경우
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object') {
         // Nest 기본 HttpException 응답 형태 처리
