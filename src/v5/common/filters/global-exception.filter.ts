@@ -16,6 +16,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
+    if (response.headersSent) {
+      // 이미 응답이 전송된 경우 아무 작업도 하지 않음
+      return;
+    }
+
     if (exception instanceof BusinessException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse() as {
