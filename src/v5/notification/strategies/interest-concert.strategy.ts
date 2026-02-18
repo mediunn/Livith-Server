@@ -15,8 +15,7 @@ export class InterestConcertStrategy implements NotificationStrategy {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getTargetUserIds(_params: NotificationTargetParams): Promise<number[]> {
+  async getTargetUserIds(params: NotificationTargetParams): Promise<number[]> {
     const allUserIds: number[] = [];
 
     await BatchProcessor.processPaginated({
@@ -40,13 +39,13 @@ export class InterestConcertStrategy implements NotificationStrategy {
     return allUserIds;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async buildMessage(
-    _params: NotificationTargetParams,
+    params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
     return {
-      title: '관심 콘서트',
-      content: '관심 콘서트 알림 메시지입니다.',
+      title: '관심 가는 콘서트가 있나요?',
+      content:
+        '관심 콘서트를 설정해두면 예매 시작과 셋리스트 업데이트 소식을 바로 알려드려요!',
     };
   }
 }

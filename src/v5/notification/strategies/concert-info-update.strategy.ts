@@ -14,7 +14,7 @@ import { BatchProcessor } from '../../common/utils/batch-processor.util';
 
 @Injectable()
 export class ConcertInfoUpdateStrategy implements NotificationStrategy {
-  readonly type = NotificationType.CONCERT_INFO_UPDATE_MD; // 대표 타입
+  readonly type = NotificationType.CONCERT_INFO_UPDATE_SETLIST; // 대표 타입
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -50,7 +50,12 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
   ): Promise<NotificationMessage> {
     const { concertId, notificationType, concertTitle, content } = params;
 
-    const title = '콘서트 정보 업데이트';
+    const messageConfig = notificationType
+      ? CONCERT_INFO_UPDATE_MESSAGES[notificationType]
+      : undefined;
+
+    const finalTitle =
+      messageConfig?.title ?? '관심 콘서트의 새로운 소식이 도착했어요!';
     let finalContent = content as string;
 
     if (!finalContent) {
@@ -64,17 +69,14 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
           .then((c) => c?.title));
 
       if (fetchedTitle) {
-        const messageFn = notificationType
-          ? CONCERT_INFO_UPDATE_MESSAGES[notificationType]
-          : undefined;
-        finalContent = messageFn
-          ? messageFn(fetchedTitle)
+        finalContent = messageConfig?.content
+          ? messageConfig.content(fetchedTitle)
           : `${fetchedTitle} 정보가 업데이트되었어요!`;
       } else {
         finalContent = '콘서트 정보가 업데이트되었어요!';
       }
     }
 
-    return { title, content: finalContent };
+    return { title: finalTitle, content: finalContent };
   }
 }
