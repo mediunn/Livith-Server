@@ -15,8 +15,7 @@ export class RecommendationStrategy implements NotificationStrategy {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getTargetUserIds(_params: NotificationTargetParams): Promise<number[]> {
+  async getTargetUserIds(params: NotificationTargetParams): Promise<number[]> {
     const allUserIds: number[] = [];
 
     await BatchProcessor.processPaginated({
@@ -40,14 +39,12 @@ export class RecommendationStrategy implements NotificationStrategy {
     return allUserIds;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async buildMessage(
-    _params: NotificationTargetParams,
+    params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
     return {
-      title: '추천 콘서트',
-      content:
-        '선택하신 취향을 바탕으로 지금 가장 잘 맞는 콘서트 하나를 골라봤어요!',
+      title: '취향 기반 콘서트 정보가 업데이트됐어요 🎵',
+      content: '선택하신 취향과 관련된 콘서트를 확인해보세요.',
     };
   }
 }

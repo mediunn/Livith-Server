@@ -81,6 +81,17 @@ export function formatKstHour(date: Date): string {
 }
 
 /**
+ * "20시" → "오후 8시" 변환
+ */
+export function formatHourAmPm(hourStr: string): string {
+  const hour = parseInt(hourStr);
+  if (isNaN(hour)) return hourStr;
+  const period = hour < 12 ? '오전' : '오후';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${period} ${displayHour}시`;
+}
+
+/**
  * Date를 KST 기준 "YYYY.MM.DD HH:mm" 형식으로
  */
 export function formatKstDateTime(date: Date): string {

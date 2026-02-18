@@ -76,11 +76,11 @@ export class PushSenderService {
     const tokens = tokensWithUserId.map((t) => t.token);
     const userIdsByIndex = tokensWithUserId.map((t) => t.userId);
 
-    // Send push and get result
     const { successCount, failedTokens } = await this.sendFcmMulticast(
       tokens,
       finalTitle,
       finalContent,
+      type,
       targetId,
     );
     if (failedTokens.length > 0) {
@@ -164,10 +164,14 @@ export class PushSenderService {
     tokens: string[],
     title: string,
     body: string,
+    type: NotificationType,
     targetId?: string,
   ): Promise<{ successCount: number; failedTokens: string[] }> {
     const messaging = getMessaging();
-    const data: Record<string, string> = targetId ? { targetId } : {};
+    const data: Record<string, string> = {
+      notificationType: type,
+      ...(targetId && { targetId }),
+    };
     const batchSize = 500;
     let successCount = 0;
     const failedTokens: string[] = [];

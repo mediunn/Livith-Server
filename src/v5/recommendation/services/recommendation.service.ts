@@ -33,10 +33,16 @@ export class RecommendationService {
       distinct: ['id'],
     });
 
-    return concerts.map(
-      (concert) =>
-        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
-    );
+    return this.toConcertResponseDtos(concerts);
+  }
+
+  private toConcertResponseDtos(concerts: any[]): ConcertResponseDto[] {
+    return concerts
+      .filter((concert) => getDaysUntil(concert.endDate) > 0)
+      .map(
+        (concert) =>
+          new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+      );
   }
 
   // 추천 콘서트 조회
@@ -116,10 +122,7 @@ export class RecommendationService {
     ]);
 
     // 아티스트 매칭 콘서트를 우선 배치하고, 나머지 슬롯을 장르 기반으로 채움
-    const artistConcertDtos = artistConcerts.map(
-      (concert) =>
-        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
-    );
+    const artistConcertDtos = this.toConcertResponseDtos(artistConcerts);
 
     const artistConcertIds = new Set(artistConcerts.map((c) => c.id));
     const uniqueGenreConcerts = genreConcerts.filter(

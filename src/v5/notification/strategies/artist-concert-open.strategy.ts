@@ -50,11 +50,10 @@ export class ArtistConcertOpenStrategy implements NotificationStrategy {
       select: { artist: true },
     });
 
+    const artistName = concert?.artist ?? '아티스트';
     return {
-      title: '아티스트 콘서트 오픈',
-      content: concert
-        ? `${concert.artist} 콘서트가 등록되었어요!`
-        : '새로운 콘서트가 등록되었어요!',
+      title: `${artistName} 아티스트의 콘서트 오픈🔥`,
+      content: `선호 아티스트 ${artistName}의 내한 공연 소식이 도착했어요!`,
     };
   }
 }
