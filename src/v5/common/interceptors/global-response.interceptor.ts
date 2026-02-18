@@ -16,6 +16,10 @@ export class GlobalResponseInterceptor implements NestInterceptor {
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
+    if (request.path === '/metrics') {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => {
         // 응답이 null이나 undefined일 경우에도 처리할 수 있도록 기본값을 설정
