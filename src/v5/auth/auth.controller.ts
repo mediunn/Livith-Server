@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   Query,
   Req,
@@ -33,6 +34,8 @@ import { API_PREFIX } from '../common/constants/api-prefix';
 
 @Controller()
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private authService: AuthService,
     private cookieService: CookieService,
@@ -69,11 +72,14 @@ export class AuthController {
     @Res() res: Response,
     @Query('state') state: string,
   ) {
+    this.logger.debug(`[kakaoCallback] 진입 req.user=${JSON.stringify(req.user)}`);
+
     // state 디코딩
     const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
 
     // CSRF 검증
     if (decoded.nonce !== req.session.kakaoNonce) {
+      this.logger.warn('[kakaoCallback] CSRF 검증 실패');
       delete req.session.kakaoNonce;
       const payload = { error: 'CSRF 검증 실패' };
       return sendPostMessagePayload(res, payload);
@@ -81,7 +87,9 @@ export class AuthController {
     delete req.session.kakaoNonce;
 
     try {
+      this.logger.debug('[kakaoCallback] validateOAuthLogin 호출');
       const result = await this.authService.validateOAuthLogin(req.user);
+      this.logger.debug(`[kakaoCallback] validateOAuthLogin 결과 isNewUser=${result.isNewUser}`);
 
       let payload: any;
       if (result.isNewUser) {
@@ -95,6 +103,7 @@ export class AuthController {
       }
       return sendPostMessagePayload(res, payload);
     } catch (error: any) {
+      this.logger.error(`[kakaoCallback] 에러: ${error.message}`, error.stack);
       // 여기서 에러 메시지를 팝업으로 전달
       const payload = { error: error.message || '알 수 없는 오류' };
       return sendPostMessagePayload(res, payload);
