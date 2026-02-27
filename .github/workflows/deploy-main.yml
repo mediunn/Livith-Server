@@ -5,6 +5,7 @@ on:
     branches:
       - develop
       - main
+      - legacy
   workflow_dispatch:
 
 jobs:
@@ -19,7 +20,7 @@ jobs:
         id: paths-filter
         with:
           filters: |
-            prisma: ["prisma-v4/**", "prisma-v5/**"]
+            prisma: ["prisma/**"]
 
       - name: Configure SSH
         run: |
@@ -53,26 +54,26 @@ jobs:
       - name: Copy Workspace
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'sudo mkdir -p /opt/app'
-          ssh $TARGET 'sudo chown ubuntu:ubuntu /opt/app'
-          rsync -av --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='*firebase*.json' ./ $TARGET:/opt/app
+          ssh $TARGET 'sudo mkdir -p /opt/app-legacy'
+          ssh $TARGET 'sudo chown ubuntu:ubuntu /opt/app-legacy'
+          rsync -av --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='*firebase*.json' ./ $TARGET:/opt/app-legacy
 
       - name: Install dependencies
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'npm install --prefix /opt/app/'
-          ssh $TARGET 'cd /opt/app; npx prisma generate --schema=prisma-v5/schema.prisma'
+          ssh $TARGET 'npm install --prefix /opt/app-legacy/'
+          ssh $TARGET 'cd /opt/app-legacy; npx prisma generate --schema=prisma/schema.prisma'
 
       - name: Build project
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'cd /opt/app; npm run build'
+          ssh $TARGET 'cd /opt/app-legacy; npm run build'
 
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'cd /opt/app; npx prisma migrate deploy --schema=prisma-v5/schema.prisma'
+          ssh $TARGET 'cd /opt/app-legacy; npx prisma migrate deploy --schema=prisma/schema.prisma'
 
       - name: Copy systemd service file
         run: |
@@ -84,20 +85,20 @@ jobs:
 
             [Service]
             User=${USER}
-            ExecStart=/usr/bin/npm run start:prod --prefix /opt/app/
+            ExecStart=/usr/bin/npm run start:prod --prefix /opt/app-legacy/
             Restart=always
 
             [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/app.service
+            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/app-legacy.service
           '
 
       - name: Enable systemd service
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
           ssh $TARGET 'sudo systemctl daemon-reload'
-          ssh $TARGET 'sudo systemctl enable app'
+          ssh $TARGET 'sudo systemctl enable app-legacy'
 
       - name: Restart systemd service
         run: |
           TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'sudo systemctl restart app'
+          ssh $TARGET 'sudo systemctl restart app-legacy'

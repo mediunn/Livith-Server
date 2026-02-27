@@ -6,7 +6,7 @@ import { KakaoStrategy } from './strategies/kakao.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';
 import { CookieService } from '../common/utils/cookie.util';
-import { PrismaService } from 'prisma-v4/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 @Module({
   imports: [JwtModule.register({}), AuthModule],
   controllers: [AuthController],
