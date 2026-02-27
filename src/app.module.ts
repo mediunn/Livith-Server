@@ -15,7 +15,7 @@ import { UserModule } from './user/user.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: 'src/v4/.env',
+      envFilePath: '.env',
     }),
     AuthModule,
     ConcertModule,
