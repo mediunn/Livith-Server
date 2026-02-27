@@ -6,7 +6,7 @@ import {
 } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { ConcertStatus } from '@prisma/client';
-import { PrismaService } from '../../../prisma-v4/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CommentResponseDto } from '../comment/dto/comment-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { ArtistResponseDto } from './dto/artist-response.dto';

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
-import { PrismaService } from '../../../prisma-v4/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { LyricsResponseDto } from './dto/lyrics-response.dto';
 
 @Injectable()

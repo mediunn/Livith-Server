@@ -1,21 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
 
-import { AppModuleV4 } from './v4/app.module';
-import { GlobalExceptionFilter as GlobalExceptionFilterV4 } from './v4/common/filters/global-exception.filter';
-
-
-const CORS_ORIGINS = [
-  'http://localhost:5173',
-  'https://www.livith.site',
-  'https://staging.livith.site',
-];
-
-async function bootstrapLegacy() {
-  const app = await NestFactory.create(AppModuleV4);
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -31,7 +23,7 @@ async function bootstrapLegacy() {
     }),
   );
   app.use(cookieParser());
-  app.useGlobalFilters(new GlobalExceptionFilterV4());
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'default_secret',
@@ -39,7 +31,14 @@ async function bootstrapLegacy() {
       saveUninitialized: false,
     }),
   );
-  app.enableCors({ origin: CORS_ORIGINS, credentials: true });
+  app.enableCors({
+    origin: [
+      'http://localhost:5173',
+      'https://www.livith.site',
+      'https://staging.livith.site',
+    ],
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Livith API v4 문서')
@@ -50,11 +49,10 @@ async function bootstrapLegacy() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  await app.listen(process.env.PORT_LEGACY || 3000);
-  console.log(`Legacy (v4) server running on port ${process.env.PORT_LEGACY || 3000}`);
+  await app.listen(process.env.PORT || 3000);
 }
 
-bootstrapLegacy().catch((err) => {
+bootstrap().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
