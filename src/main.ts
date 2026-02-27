@@ -69,7 +69,7 @@ async function bootstrap() {
     credentials: true, // 자격 정보 허용
   });
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 4000);
 
   //직접 호출
   // const openApiService = app.get(OpenApiService);
