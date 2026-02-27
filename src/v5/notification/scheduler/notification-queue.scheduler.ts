@@ -6,6 +6,8 @@ import {
   CONCERT_NOTIFICATION_EVENT_TYPE,
   CONCERT_NOTIFICATION_EVENT_TYPE_TO_UPDATE_TYPE,
 } from '../constants/notification.constants';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class NotificationQueueScheduler {
@@ -14,8 +16,10 @@ export class NotificationQueueScheduler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
+  @InstrumentJob('notification_queue_processor')
   @Cron('*/1 * * * *', { timeZone: 'Asia/Seoul' })
   async processQueue(): Promise<number> {
     const rows = await this.prisma.concertNotificationQueue.findMany({
