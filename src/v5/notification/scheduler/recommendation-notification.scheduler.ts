@@ -7,6 +7,8 @@ import { NOTIFICATION_RECOMMEND_BATCH_SIZE } from '../constants/notification.con
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class RecommendationNotificationScheduler {
@@ -19,11 +21,11 @@ export class RecommendationNotificationScheduler {
     private readonly notificationService: NotificationService,
     private readonly strategyService: NotificationStrategyService,
     private readonly notificationHistoryService: NotificationHistoryService,
-    // readonly schedulerMetrics: SchedulerMetricsService, // Metrics removed
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
   // 주 1회: 관심 콘서트가 없는 유저에게 추천 콘서트 1개 푸시
-  // @InstrumentJob('recommendation_notification') // Metrics removed
+  @InstrumentJob('recommendation_notification')
   @Cron('0 10 * * 1', { timeZone: 'Asia/Seoul' })
   async sendWeeklyRecommendNotifications(): Promise<number> {
     const strategy = this.strategyService.getStrategy(

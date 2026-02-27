@@ -4,14 +4,18 @@ import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
 import { formatKstHour, getKstDayRange } from '../../common/utils/date.util';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
+import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 
 @Injectable()
 export class TicketingReminderScheduler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
+  @InstrumentJob('ticketing_reminder')
   @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
   async dailyTicketingNotifications(): Promise<number> {
     const count7d = await this.sendTicketingReminders(
