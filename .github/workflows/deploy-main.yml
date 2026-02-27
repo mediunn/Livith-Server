@@ -5,6 +5,7 @@ on:
     branches:
       - develop
       - main
+      - legacy
   workflow_dispatch:
 
 jobs:
@@ -20,6 +21,22 @@ jobs:
         with:
           filters: |
             prisma: ["prisma/**"]
+
+      - name: Set deploy variables
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
+            echo "TARGET=dev_livith_ec2" >> $GITHUB_ENV
+            echo "APP_DIR=/opt/app" >> $GITHUB_ENV
+            echo "SERVICE=app" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF}" == "refs/heads/legacy" ]]; then
+            echo "TARGET=livith_ec2" >> $GITHUB_ENV
+            echo "APP_DIR=/opt/app-legacy" >> $GITHUB_ENV
+            echo "SERVICE=app-legacy" >> $GITHUB_ENV
+          else
+            echo "TARGET=livith_ec2" >> $GITHUB_ENV
+            echo "APP_DIR=/opt/app" >> $GITHUB_ENV
+            echo "SERVICE=app" >> $GITHUB_ENV
+          fi
 
       - name: Configure SSH
         run: |
@@ -52,52 +69,47 @@ jobs:
 
       - name: Copy Workspace
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'sudo mkdir -p /opt/app'
-          ssh $TARGET 'sudo chown ubuntu:ubuntu /opt/app'
-          rsync -av ./ $TARGET:/opt/app
+          ssh ${{ env.TARGET }} "sudo mkdir -p ${{ env.APP_DIR }}"
+          ssh ${{ env.TARGET }} "sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}"
+          rsync -av ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
 
       - name: Install dependencies
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'npm install --prefix /opt/app/'
-          ssh $TARGET 'cd /opt/app; npm exec prisma generate'
+          ssh ${{ env.TARGET }} "npm install --prefix ${{ env.APP_DIR }}/"
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma generate"
 
       - name: Build project
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'cd /opt/app; npm run build'
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm run build"
 
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'cd /opt/app; npm exec prisma migrate deploy'
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma migrate deploy"
 
       - name: Copy systemd service file
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET '
-            echo "[Unit]
-            Description=Livith Project
-            After=network.target
+          APP_DIR="${{ env.APP_DIR }}"
+          SERVICE="${{ env.SERVICE }}"
+          ssh ${{ env.TARGET }} "sudo tee /etc/systemd/system/${SERVICE}.service" << EOF
+          [Unit]
+          Description=Livith Project
+          After=network.target
 
-            [Service]
-            User=${USER}
-            ExecStart=/usr/bin/npm run start:prod --prefix /opt/app/
-            Restart=always
+          [Service]
+          User=ubuntu
+          ExecStart=/usr/bin/npm run start:prod --prefix ${APP_DIR}/
+          Restart=always
 
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/app.service
-          '
+          [Install]
+          WantedBy=multi-user.target
+          EOF
 
       - name: Enable systemd service
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'sudo systemctl daemon-reload'
-          ssh $TARGET 'sudo systemctl enable app'
+          ssh ${{ env.TARGET }} 'sudo systemctl daemon-reload'
+          ssh ${{ env.TARGET }} "sudo systemctl enable ${{ env.SERVICE }}"
 
       - name: Restart systemd service
         run: |
-          TARGET=$([[ "${GITHUB_REF}" == "refs/heads/develop" ]] && echo "dev_livith_ec2" || echo "livith_ec2")
-          ssh $TARGET 'sudo systemctl restart app'
+          ssh ${{ env.TARGET }} "sudo systemctl restart ${{ env.SERVICE }}"
