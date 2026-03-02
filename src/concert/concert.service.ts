@@ -22,7 +22,7 @@ export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: string, id?: number, size?: number) {
-    let cursorValue;
+    let cursorValue: {startDate: string; id: number} | undefined;
     if (cursor && id) {
       cursorValue = {
         startDate: cursor.replaceAll('.', '-'),
