@@ -9,12 +9,22 @@
 ![AWS RDS](https://img.shields.io/badge/AWS%20RDS-527FFF?style=flat&logo=amazon-rds&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
 
+### 🔔 Notification
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
+
 ### ☁️ Infrastructure / DevOps
 ![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=flat&logo=amazon-ec2&logoColor=white)
 ![AWS Lambda](https://img.shields.io/badge/AWS%20Lambda-FF9900?style=flat&logo=aws-lambda&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat&logo=nginx&logoColor=white)
 ![Amazon EventBridge](https://img.shields.io/badge/Amazon%20EventBridge-FF4F8B?style=flat&logo=amazon-eventbridge&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat&logo=github-actions&logoColor=white)
+
+
+
+### 📊 Monitoring
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)
+
 
 
 ## **⚙️ Initial settings**
@@ -93,7 +103,27 @@
 
 ## **🚀 Deploy**
 
-> 운영 서버 배포 : `main` 브랜치  
- 개발 서버 배포 : `deploy` 브랜치
-> 
+### 브랜치 전략
+
+| 브랜치 | 설명 | 서버 | API 버전 | 포트 |
+|--------|------|------|----------|------|
+| `main` | 운영 서버 배포 | prod EC2 | v5 | 4000 |
+| `develop` | 개발 서버 배포 | dev EC2 | v5 | 4000 |
+| `legacy` | 구버전 운영 유지 | prod EC2 | v4 | 3000 |
+
+### Nginx 라우팅
+
+```
+/api/v4/  →  port 3000 (legacy)
+/api/v5/  →  port 4000 (main)
+/auth/    →  port 4000 (main)
+```
+
+### 버전 전환 패턴
+
+```
+v6 완성 시: main → legacy 머지, develop → main 머지
+```
+
+
 

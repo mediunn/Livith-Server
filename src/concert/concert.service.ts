@@ -22,22 +22,17 @@ export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: string, id?: number, size?: number) {
-    let cursorValue;
+    let cursorValue: {startDate: string; id: number} | undefined;
     if (cursor && id) {
-      try {
-        const parsed = JSON.parse(cursor);
-        cursorValue = {
-          startDate: parsed.startDate,
-          id: parsed.id,
-        };
-      } catch (e) {
-        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
-      }
+      cursorValue = {
+        startDate: cursor.replaceAll('.', '-'),
+        id: id,
+      };
     }
 
     const concerts = await this.prismaService.concert.findMany({
       where: {
-        status: { not: ConcertStatus.CANCELED }, // 콘서트 취소 상태 제외
+        status: { not: ConcertStatus.CANCELED },
       },
       orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
       cursor: cursorValue,
@@ -50,17 +45,12 @@ export class ConcertService {
         new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
     );
 
-    const nextCursor =
-      concerts.length > 0
-        ? {
-            startDate: concerts[concerts.length - 1].startDate,
-            id: concerts[concerts.length - 1].id,
-          }
-        : null;
+    const last = concerts.length > 0 ? concerts[concerts.length - 1] : null;
 
     return {
       data: concertResponse,
-      cursor: nextCursor,
+      cursor: last ? last.startDate.replaceAll('-', '.') : null,
+      id: last ? last.id : null,
     };
   }
 
@@ -398,7 +388,7 @@ export class ConcertService {
 
     const comments = await this.prismaService.concertComment.findMany({
       where: { concertId: id },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], //최신 댓글이 위로 오도록 정렬
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       cursor: cursorValue,
       take: size,
       skip: cursor ? 1 : 0,
