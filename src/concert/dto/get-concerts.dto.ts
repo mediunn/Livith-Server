@@ -3,9 +3,8 @@ import { IsNumber, IsOptional, Min } from 'class-validator';
 export class GetConcertsDto {
   @ApiProperty({
     description: '커서 (startDate)',
-    default: undefined,
     required: false,
-    example: undefined,
+    example: '2025.12.13',
   })
   @IsOptional()
   cursor?: string;
