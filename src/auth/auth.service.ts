@@ -333,6 +333,10 @@ export class AuthService {
         },
       });
 
+      await tx.fcmToken.deleteMany({
+        where: { userId },
+      });
+
       await tx.resignation.create({
         data: {
           content: reason,
