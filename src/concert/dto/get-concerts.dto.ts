@@ -1,13 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, Min } from 'class-validator';
+import { IsNumber, IsOptional, Min, Matches } from 'class-validator';
 export class GetConcertsDto {
   @ApiProperty({
     description: '커서 (startDate)',
-    default: undefined,
     required: false,
-    example: undefined,
+    example: '2025.12.13',
   })
   @IsOptional()
+  @Matches(/^\d{4}\.\d{2}\.\d{2}$/, {
+    message: '커서(날짜)는 YYYY.MM.DD 형식이어야 합니다.',
+  })
   cursor?: string;
 
   @ApiProperty({
