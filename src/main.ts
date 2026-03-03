@@ -59,13 +59,25 @@ async function bootstrap() {
   });
   SwaggerModule.setup('api-docs', app, document);
 
+  const defaultAllowedOrigins = [
+    'http://localhost:5173',
+    'https://www.livith.site',
+    'https://staging.livith.site',
+  ];
+
+  const allowedOrigins = Array.from(
+    new Set(
+      (process.env.FRONTEND_URLS?.split(',') ?? [])
+        .map((origin) => origin?.trim())
+        .filter((origin): origin is string =>
+          Boolean(origin && origin.length > 0),
+        ),
+    ),
+  );
+
   //cors 설정
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://www.livith.site',
-      'https://staging.livith.site',
-    ], // 클라이언트 주소 정확히 명시
+    origin: allowedOrigins.length ? allowedOrigins : defaultAllowedOrigins,
     credentials: true, // 자격 정보 허용
   });
 
