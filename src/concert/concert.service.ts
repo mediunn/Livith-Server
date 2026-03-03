@@ -25,7 +25,7 @@ export class ConcertService {
     let cursorValue: {startDate: string; id: number} | undefined;
     if (cursor && id) {
       cursorValue = {
-        startDate: cursor.replaceAll('.', '-'),
+        startDate: cursor,
         id: id,
       };
     }
@@ -49,7 +49,7 @@ export class ConcertService {
 
     return {
       data: concertResponse,
-      cursor: last ? last.startDate.replaceAll('-', '.') : null,
+      cursor: last ? last.startDate : null,
       id: last ? last.id : null,
     };
   }
