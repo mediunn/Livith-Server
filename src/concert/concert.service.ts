@@ -21,13 +21,17 @@ import { SetlistResponseDto } from './dto/setlist-response.dto';
 export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
-  async getConcerts(cursor?: string, id?: number, size?: number) {
-    let cursorValue: {startDate: string; id: number} | undefined;
-    if (cursor && id) {
-      cursorValue = {
-        startDate: cursor,
-        id: id,
-      };
+  async getConcerts(cursor?: number, size?: number) {
+    let cursorValue: { startDate: string; id: number } | undefined;
+    if (cursor) {
+      const cursorConcert = await this.prismaService.concert.findUnique({
+        where: { id: cursor },
+        select: { startDate: true },
+      });
+      if (!cursorConcert) {
+        throw new BadRequestException(ErrorCode.CONCERT_NOT_FOUND);
+      }
+      cursorValue = { startDate: cursorConcert.startDate, id: cursor };
     }
 
     const concerts = await this.prismaService.concert.findMany({
@@ -49,8 +53,7 @@ export class ConcertService {
 
     return {
       data: concertResponse,
-      cursor: last ? last.startDate : null,
-      id: last ? last.id : null,
+      cursor: last ? last.id : null,
     };
   }
 
