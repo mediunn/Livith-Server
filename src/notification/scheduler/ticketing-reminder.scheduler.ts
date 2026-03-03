@@ -38,7 +38,7 @@ export class TicketingReminderScheduler {
     const { start, end } = getKstDayRange(daysFromToday);
     const schedules = await this.prisma.schedule.findMany({
       where: {
-        type: 'TICKETING',
+        type: 'CONCERT',
         scheduledAt: { gte: start, lte: end },
       },
       include: { concert: { select: { id: true, title: true } } },
@@ -63,7 +63,7 @@ export class TicketingReminderScheduler {
     const { start, end } = getKstDayRange(0);
     const schedules = await this.prisma.schedule.findMany({
       where: {
-        type: 'TICKETING',
+        type: 'CONCERT',
         scheduledAt: { gte: start, lte: end },
       },
       include: { concert: { select: { id: true, title: true } } },
