@@ -117,9 +117,9 @@ export class AuthService {
     const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
 
     // absolute 만료가 없으면 최초 1회 설정
-    const refreshTokenExpiresAt =
-      user.refreshTokenExpiresAt ??
-      new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    const refreshTokenExpiresAt = new Date(
+      Date.now() + 4 * 24 * 60 * 60 * 1000,
+    );
 
     // 리프레시 토큰 DB 저장
     const updatedUser = await this.prisma.user.update({
@@ -167,7 +167,12 @@ export class AuthService {
       // 새 리프레시 토큰 DB 저장
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { refreshToken },
+        data: {
+          refreshToken,
+          refreshTokenExpiresAt: new Date(
+            Date.now() + 4 * 24 * 60 * 60 * 1000,
+          ),
+        },
       });
 
       return { accessToken, refreshToken };
