@@ -99,3 +99,19 @@ export function formatKstDateTime(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
 }
+
+
+/**
+ * 콘서트 D-day 계산(다일 공연)
+ */
+export function getConcertDaysLeft(startDate: string, endDate: string): number{
+  const today = getTodayKstYmd();
+  const todayUtcMs = Date.UTC(today.year, today.month - 1, today.day);
+  const start = parseYmd(startDate);
+  const end = parseYmd(endDate);
+  if(!start || !end) return 0;
+  const startUtcMs = Date.UTC(start.year, start.month - 1, start.day);
+  const endUtcMs = Date.UTC(end.year, end.month - 1, end.day);
+  if(todayUtcMs >= startUtcMs && todayUtcMs <= endUtcMs) return 0;
+  return Math.trunc((startUtcMs - todayUtcMs) / MS_PER_DAY);
+}

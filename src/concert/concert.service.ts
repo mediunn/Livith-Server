@@ -8,7 +8,7 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { CommentResponseDto } from '../comment/dto/comment-response.dto';
-import { getDaysUntil } from '../common/utils/date.util';
+import { getConcertDaysLeft, getDaysUntil } from '../common/utils/date.util';
 import { ArtistResponseDto } from './dto/artist-response.dto';
 import { InfoResponseDto } from './dto/concert-info-response.dto';
 import { ConcertResponseDto } from './dto/concert-response.dto';
@@ -47,7 +47,7 @@ export class ConcertService {
 
     const concertResponse = concerts.map(
       (concert) =>
-        new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+        new ConcertResponseDto(concert, getConcertDaysLeft(concert.startDate, concert.endDate)),
     );
 
     const nextCursor =
@@ -77,7 +77,7 @@ export class ConcertService {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
+    return new ConcertResponseDto(concert, getConcertDaysLeft(concert.startDate, concert.endDate));
   }
 
   // 콘서트의 아티스트 정보 조회
