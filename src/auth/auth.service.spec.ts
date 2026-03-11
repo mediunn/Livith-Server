@@ -288,4 +288,110 @@ describe('AuthService', () => {
       expect(result.user).toBeDefined();
     });
   });
+
+  describe('refreshToken', () => {
+    const mockUser = {
+      id: 1,
+      email: 'test@example.com',
+      refreshToken: 'old-refresh-token',
+      refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1일 후
+    };
+
+    beforeEach(() => {
+      configService.get.mockReturnValue('test-secret');
+      jwtService.verify.mockReturnValue({
+        userId: 1,
+        email: 'test@example.com',
+      });
+      jwtService.sign.mockReturnValue('new-token');
+    });
+
+    it('refresh token 갱신 시 refreshTokenExpiresAt이 연장된다', async () => {
+      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.update.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'new-token',
+      });
+
+      const before = Date.now();
+      await service.refreshToken('old-refresh-token');
+      const after = Date.now();
+
+      expect(prismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({
+          refreshToken: 'new-token',
+          refreshTokenExpiresAt: expect.any(Date),
+        }),
+      });
+
+      const updatedExpiresAt: Date =
+        prismaService.user.update.mock.calls[0][0].data.refreshTokenExpiresAt;
+      const expiresAtMs = updatedExpiresAt.getTime();
+
+      expect(expiresAtMs).toBeGreaterThanOrEqual(
+        before + 4 * 24 * 60 * 60 * 1000 - 1000,
+      );
+      expect(expiresAtMs).toBeLessThanOrEqual(
+        after + 4 * 24 * 60 * 60 * 1000 + 1000,
+      );
+    });
+
+    it('만료된 refreshTokenExpiresAt이면 에러 발생', async () => {
+      prismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        refreshTokenExpiresAt: new Date(Date.now() - 1000), // 이미 만료
+      });
+
+      await expect(service.refreshToken('old-refresh-token')).rejects.toThrow();
+    });
+  });
+
+  describe('validateOAuthLogin', () => {
+    const mockUser = {
+      id: 1,
+      email: 'test@example.com',
+      provider: Provider.kakao,
+      providerId: 'kakao123',
+      deletedAt: null,
+      refreshToken: 'old-token',
+      refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      userGenres: [],
+      userArtists: [],
+    };
+
+    beforeEach(() => {
+      configService.get.mockReturnValue('test-secret');
+      jwtService.sign.mockReturnValue('new-token');
+    });
+
+    it('기존 유저 로그인 시 refreshTokenExpiresAt이 갱신된다', async () => {
+      prismaService.user.findFirst.mockResolvedValue(mockUser);
+      prismaService.user.update.mockResolvedValue({
+        ...mockUser,
+        refreshToken: 'new-token',
+        userGenres: [],
+        userArtists: [],
+      });
+
+      const before = Date.now();
+      await service.validateOAuthLogin({
+        provider: 'kakao',
+        providerId: 'kakao123',
+        email: 'test@example.com',
+      });
+      const after = Date.now();
+
+      const updatedExpiresAt: Date =
+        prismaService.user.update.mock.calls[0][0].data.refreshTokenExpiresAt;
+      const expiresAtMs = updatedExpiresAt.getTime();
+
+      expect(expiresAtMs).toBeGreaterThanOrEqual(
+        before + 4 * 24 * 60 * 60 * 1000 - 1000,
+      );
+      expect(expiresAtMs).toBeLessThanOrEqual(
+        after + 4 * 24 * 60 * 60 * 1000 + 1000,
+      );
+    });
+  });
 });
