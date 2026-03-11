@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import {
   BadRequestException,
   ForbiddenException,
@@ -14,6 +15,8 @@ import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from '@prisma/client';
+
+const REFRESH_TOKEN_EXPIRES_IN_MS = 4 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -118,7 +121,7 @@ export class AuthService {
 
     // absolute 만료가 없으면 최초 1회 설정
     const refreshTokenExpiresAt = new Date(
-      Date.now() + 4 * 24 * 60 * 60 * 1000,
+      Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
     );
 
     // 리프레시 토큰 DB 저장
@@ -170,7 +173,7 @@ export class AuthService {
         data: {
           refreshToken,
           refreshTokenExpiresAt: new Date(
-            Date.now() + 4 * 24 * 60 * 60 * 1000,
+            Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
           ),
         },
       });
@@ -291,7 +294,9 @@ export class AuthService {
         where: { id: user.id },
         data: {
           refreshToken,
-          refreshTokenExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+          refreshTokenExpiresAt: new Date(
+            Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
+          ),
         },
         include: {
           userGenres: true,
