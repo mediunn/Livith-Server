@@ -144,7 +144,8 @@ describe('Notification send integration (FCM mock)', () => {
     await service.sendPushNotification({
       type: NotificationType.CONCERT_INFO_UPDATE_SETLIST,
       title: '셋리스트가 등록이 됐어요!',
-      content: 'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
+      content:
+        'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
       targetId: '50',
       userIds: [1],
     });

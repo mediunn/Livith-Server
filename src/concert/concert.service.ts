@@ -47,7 +47,10 @@ export class ConcertService {
 
     const concertResponse = concerts.map(
       (concert) =>
-        new ConcertResponseDto(concert, getConcertDaysLeft(concert.startDate, concert.endDate)),
+        new ConcertResponseDto(
+          concert,
+          getConcertDaysLeft(concert.startDate, concert.endDate),
+        ),
     );
 
     const nextCursor =
@@ -77,7 +80,10 @@ export class ConcertService {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    return new ConcertResponseDto(concert, getConcertDaysLeft(concert.startDate, concert.endDate));
+    return new ConcertResponseDto(
+      concert,
+      getConcertDaysLeft(concert.startDate, concert.endDate),
+    );
   }
 
   // 콘서트의 아티스트 정보 조회

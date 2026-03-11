@@ -249,7 +249,6 @@ describe('AuthService', () => {
     });
 
     it('빈 장르 배열로 회원가입 성공', async () => {
-
       // Arrange
       const signupDataWithEmptyGenres = {
         ...signupData,
@@ -300,7 +299,10 @@ describe('AuthService', () => {
 
     beforeEach(() => {
       configService.get.mockReturnValue('test-secret');
-      jwtService.verify.mockReturnValue({ userId: 1, email: 'test@example.com' });
+      jwtService.verify.mockReturnValue({
+        userId: 1,
+        email: 'test@example.com',
+      });
       jwtService.sign.mockReturnValue('new-token');
     });
 
