@@ -330,10 +330,10 @@ describe('AuthService', () => {
       const expiresAtMs = updatedExpiresAt.getTime();
 
       expect(expiresAtMs).toBeGreaterThanOrEqual(
-        before + 4 * 24 * 60 * 60 * 1000 - 1000,
+        before + 14 * 24 * 60 * 60 * 1000 - 1000,
       );
       expect(expiresAtMs).toBeLessThanOrEqual(
-        after + 4 * 24 * 60 * 60 * 1000 + 1000,
+        after + 14 * 24 * 60 * 60 * 1000 + 1000,
       );
     });
 
@@ -387,10 +387,10 @@ describe('AuthService', () => {
       const expiresAtMs = updatedExpiresAt.getTime();
 
       expect(expiresAtMs).toBeGreaterThanOrEqual(
-        before + 4 * 24 * 60 * 60 * 1000 - 1000,
+        before + 14 * 24 * 60 * 60 * 1000 - 1000,
       );
       expect(expiresAtMs).toBeLessThanOrEqual(
-        after + 4 * 24 * 60 * 60 * 1000 + 1000,
+        after + 14 * 24 * 60 * 60 * 1000 + 1000,
       );
     });
   });
