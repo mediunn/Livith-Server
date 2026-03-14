@@ -16,7 +16,7 @@ import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from '@prisma/client';
 
-const REFRESH_TOKEN_EXPIRES_IN_MS = 4 * 24 * 60 * 60 * 1000;
+const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
