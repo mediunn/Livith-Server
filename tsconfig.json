@@ -1,4 +1,5 @@
 {
+  "exclude": ["k6", "generated"],
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
