@@ -2,7 +2,7 @@ import { getApi } from '../common/http.ts';
 import { sleep } from 'k6';
 
 
-export function recommendationConcertsScnario(){
+export function recommendationConcertsScenario(){
   getApi('/recommendation/concerts', {
     tags: {endpoint: 'recommend-concerts'},
     headers: {
