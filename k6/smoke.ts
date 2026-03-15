@@ -5,7 +5,7 @@ import {
   searchSectionsScenario,
   searchSuggestionsScenario,
 } from './scenarios/search.ts';
-import { recommendationConcertsScnario } from './scenarios/recommendation.ts';
+import { recommendationConcertsScenario } from './scenarios/recommendation.ts';
 import { notificationListScenario, notificationUnreadCountScenario } from './scenarios/notification.ts';
 
 export const options = {
@@ -86,13 +86,13 @@ export function genres() {
 }
 
 export function recommendConcerts(){
-  recommendationConcertsScnario();
+  recommendationConcertsScenario();
 }
 
 export function notificationList(){
   notificationListScenario();
 }
 
-export function  notificationUnread(){
+export function notificationUnread(){
   notificationUnreadCountScenario();
 }
