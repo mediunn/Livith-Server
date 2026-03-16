@@ -10,12 +10,14 @@ import { PrismaModule } from 'prisma/prisma.module';
 import { RecommendationController } from './recommendation.controller';
 import { RecommendationService } from './services/recommendation.service';
 import { MetricsModule } from '../metrics/metrics.module';
+import { SpotifyApiService } from './integrations/spotify/spotify.api.service';
 
 @Module({
   imports: [HttpModule, ConfigModule, PrismaModule, MetricsModule],
   controllers: [RecommendationController],
   providers: [
     LastfmApiService,
+    SpotifyApiService,
     MusicApiFactoryService,
     YoutubeApiService,
     ArtistImageService,

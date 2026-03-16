@@ -10,6 +10,8 @@ import {
 } from '../integrations/youtube/youtube.api.service';
 import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
 import { InstrumentJob } from '../../metrics/instrument-job.decorator';
+import { getSpotifyGenreTag } from '../integrations/spotify/genre-mapping.util';
+import { SpotifyApiService } from '../integrations/spotify/spotify.api.service';
 
 @Injectable()
 export class ArtistSyncService {
@@ -20,6 +22,7 @@ export class ArtistSyncService {
     private readonly lastfmApiService: LastfmApiService,
     private readonly artistImageService: ArtistImageService,
     private readonly youtubeApiService: YoutubeApiService,
+    private readonly spotifyApiService: SpotifyApiService,
     readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
@@ -34,6 +37,7 @@ export class ArtistSyncService {
 
     for (const genre of genres) {
       await this.syncGenreArtists(genre.id, genre.name);
+      await this.syncGenreArtistsFromSpotify(genre.id, genre.name);
     }
 
     this.logger.log('Representative artists sync completed');
@@ -68,6 +72,32 @@ export class ArtistSyncService {
           genreId: genreId,
           artistName: artist.name,
           imgUrl: '',
+        },
+      });
+    }
+  }
+
+  private async syncGenreArtistsFromSpotify(genreId: number, genreName: string){
+    const spotifyTag = getSpotifyGenreTag(genreName);
+    if(!spotifyTag) return;
+
+    this.logger.log(`Syncing Top 100 artists from Spotify for genre: ${genreName}`);
+
+    const artists = await this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 100);
+
+    for(const artist of artists){
+      await this.prismaService.representativeArtist.upsert({
+        where: {
+          genreId_artistName: {
+            genreId,
+            artistName: artist.name,
+          },
+        },
+        update: {}, // 이미 있으면 건드리지 않음
+        create: {
+          genreId,
+          artistName: artist.name,
+          imgUrl: artist.imgUrl,
         },
       });
     }
