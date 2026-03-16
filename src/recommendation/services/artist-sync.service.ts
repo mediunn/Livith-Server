@@ -77,15 +77,23 @@ export class ArtistSyncService {
     }
   }
 
-  private async syncGenreArtistsFromSpotify(genreId: number, genreName: string){
+  private async syncGenreArtistsFromSpotify(
+    genreId: number,
+    genreName: string,
+  ) {
     const spotifyTag = getSpotifyGenreTag(genreName);
-    if(!spotifyTag) return;
+    if (!spotifyTag) return;
 
-    this.logger.log(`Syncing Top 100 artists from Spotify for genre: ${genreName}`);
+    this.logger.log(
+      `Syncing Top 100 artists from Spotify for genre: ${genreName}`,
+    );
 
-    const artists = await this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 100);
+    const artists = await this.spotifyApiService.getTopArtistsByGenre(
+      spotifyTag,
+      100,
+    );
 
-    for(const artist of artists){
+    for (const artist of artists) {
       await this.prismaService.representativeArtist.upsert({
         where: {
           genreId_artistName: {
