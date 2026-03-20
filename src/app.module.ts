@@ -17,6 +17,7 @@ import { NotificationModule } from './notification/notification.module';
 import { ArtistModule } from './artist/artist.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
+import { LoggerModule } from './logger/logger.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
     NotificationModule,
     ArtistModule,
     MetricsModule,
+    LoggerModule,
   ],
   controllers: [],
   providers: [
