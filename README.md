@@ -19,11 +19,16 @@
 ![Amazon EventBridge](https://img.shields.io/badge/Amazon%20EventBridge-FF4F8B?style=flat&logo=amazon-eventbridge&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat&logo=github-actions&logoColor=white)
 
-
+### 🧪 Testing
+![Jest](https://img.shields.io/badge/Jest-C21325?style=flat&logo=jest&logoColor=white)
+![k6](https://img.shields.io/badge/k6-7D64FF?style=flat&logo=k6&logoColor=white)
 
 ### 📊 Monitoring
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)
+![Loki](https://img.shields.io/badge/Loki-F5A623?style=flat&logo=grafana&logoColor=white)
+![Tempo](https://img.shields.io/badge/Tempo-6C63FF?style=flat&logo=grafana&logoColor=white)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-000000?style=flat&logo=opentelemetry&logoColor=white)
 
 
 
