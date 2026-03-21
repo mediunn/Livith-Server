@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class SpotifyApiService {
   private readonly logger = new Logger(SpotifyApiService.name);
+  private readonly SPOTIFY_API_DELAY_MS = 500;
   private readonly clientId: string;
   private readonly clientSecret: string;
   private accessToken: string | null = null;
@@ -85,7 +86,7 @@ export class SpotifyApiService {
         }
 
         if (artists.length < pageSize) break; // 더 없으면 중단
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, this.SPOTIFY_API_DELAY_MS));
       }
 
       return results
@@ -95,6 +96,7 @@ export class SpotifyApiService {
     } catch (error) {
       this.logger.warn(
         `Spotify getTopArtistsByGenre failed for ${genre}: ${error.message}`,
+        error.stack,
       );
       return [];
     }
