@@ -12,6 +12,7 @@ import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service
 import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 import { getSpotifyGenreTag } from '../integrations/spotify/genre-mapping.util';
 import { SpotifyApiService } from '../integrations/spotify/spotify.api.service';
+import { normalizeArtistName } from '../../common/utils/artist-name.util';
 
 @Injectable()
 export class ArtistSyncService {
@@ -104,25 +105,27 @@ export class ArtistSyncService {
     ]);
 
     const normalizedExistingNames = new Set(
-      existingArtists.map((a) =>
-        this.normalizeArtistName(a.artistName).toLowerCase(),
-      ),
+      existingArtists.map((a) => normalizeArtistName(a.artistName)),
     );
 
+    const artistsToCreate = [];
+
     for (const artist of spotifyArtists) {
-      const normalizedName = this.normalizeArtistName(
-        artist.name,
-      ).toLowerCase();
+      const normalizedName = normalizeArtistName(artist.name);
       if (normalizedExistingNames.has(normalizedName)) continue;
 
-      await this.prismaService.representativeArtist.create({
-        data: {
-          genreId,
-          artistName: artist.name,
-          imgUrl: artist.imgUrl,
-        },
+      artistsToCreate.push({
+        genreId,
+        artistName: artist.name,
+        imgUrl: artist.imgUrl,
       });
       normalizedExistingNames.add(normalizedName);
+    }
+
+    if (artistsToCreate.length > 0) {
+      await this.prismaService.representativeArtist.createMany({
+        data: artistsToCreate,
+      });
     }
   }
 
@@ -173,9 +176,5 @@ export class ArtistSyncService {
     }
 
     return processedCount;
-  }
-
-  private normalizeArtistName(name: string): string {
-    return name.split('(')[0].trim();
   }
 }
