@@ -5,6 +5,8 @@ import {
   searchSectionsScenario,
   searchSuggestionsScenario,
 } from './scenarios/search.ts';
+import { recommendationConcertsScenario } from './scenarios/recommendation.ts';
+import { notificationListScenario, notificationUnreadCountScenario } from './scenarios/notification.ts';
 
 export const options = {
   scenarios: {
@@ -38,6 +40,24 @@ export const options = {
       iterations: 1,
       exec: 'genres',
     },
+    recommend_concerts: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'recommendConcerts',
+    },
+    notification_list: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'notificationList',
+    },
+    notification_unread: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'notificationUnread',
+    }
   },
   thresholds: {
     http_req_failed: ['rate<0.01'],
@@ -63,4 +83,16 @@ export function concertsList() {
 
 export function genres() {
   genresScenario();
+}
+
+export function recommendConcerts(){
+  recommendationConcertsScenario();
+}
+
+export function notificationList(){
+  notificationListScenario();
+}
+
+export function notificationUnread(){
+  notificationUnreadCountScenario();
 }

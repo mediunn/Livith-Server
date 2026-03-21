@@ -5,6 +5,8 @@ import {
   searchSectionsScenario,
   searchSuggestionsScenario,
 } from './scenarios/search.ts';
+import { recommendationConcertsScnario } from './scenarios/recommendation.ts';
+import { notificationListScenario, notificationUnreadCountScenario } from './scenarios/notification.ts';
 
 export const options = {
   scenarios: {
@@ -59,6 +61,36 @@ export const options = {
       ],
       exec: 'genres',
     },
+    recommend_concerts: {
+      executor: 'ramping-vus',
+      startVUs: 1,
+      stages: [
+        { duration: '30s', target: 5 },
+        { duration: '2m', target: 15 },
+        { duration: '30s', target: 0 },
+      ],
+      exec: 'recommendConcerts',
+    },
+    notification_list: {
+      executor: 'ramping-vus',
+      startVUs: 1,
+      stages: [
+        { duration: '30s', target: 5 },
+        { duration: '2m', target: 20 },
+        { duration: '30s', target: 0 },
+      ],
+      exec: 'notificationList',
+    },
+    notification_unread: {
+      executor: 'ramping-vus',
+      startVUs: 1,
+      stages: [
+        { duration: '30s', target: 5 },
+        { duration: '2m', target: 20 },
+        { duration: '30s', target: 0 },
+      ],
+      exec: 'notificationUnread',
+    },
   },
   thresholds: {
     http_req_failed: ['rate<0.01'],
@@ -84,4 +116,16 @@ export function concertsList() {
 
 export function genres() {
   genresScenario();
+}
+
+export function recommendConcerts() {
+  recommendationConcertsScnario();
+}
+
+export function notificationList() {
+  notificationListScenario();
+}
+
+export function notificationUnread() {
+  notificationUnreadCountScenario();
 }
