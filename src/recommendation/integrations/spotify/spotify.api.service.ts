@@ -56,7 +56,8 @@ export class SpotifyApiService {
   ): Promise<{ name: string; imgUrl: string }[]> {
     try {
       const token = await this.getAccessToken();
-      const results: { name: string; imgUrl: string }[] = [];
+      const results: { name: string; imgUrl: string; popularity: number }[] =
+        [];
       const pageSize = 50;
       const pages = Math.ceil(limit / pageSize);
 
@@ -66,7 +67,7 @@ export class SpotifyApiService {
           this.httpService.get('https://api.spotify.com/v1/search', {
             headers: { Authorization: `Bearer ${token}` },
             params: {
-              q: `genre: ${genre}`,
+              q: `genre:${genre}`,
               type: 'artist',
               limit: pageSize,
               offset,
@@ -79,13 +80,18 @@ export class SpotifyApiService {
           results.push({
             name: artist.name,
             imgUrl: artist.images?.[0]?.url ?? '',
+            popularity: artist.popularity ?? 0,
           });
         }
 
         if (artists.length < pageSize) break; // 더 없으면 중단
+        await new Promise((r) => setTimeout(r, 500));
       }
 
-      return results;
+      return results
+        .sort((a, b) => b.popularity - a.popularity)
+        .slice(0, limit)
+        .map(({ name, imgUrl }) => ({ name, imgUrl }));
     } catch (error) {
       this.logger.warn(
         `Spotify getTopArtistsByGenre failed for ${genre}: ${error.message}`,
