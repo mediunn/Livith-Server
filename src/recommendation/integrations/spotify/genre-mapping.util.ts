@@ -3,7 +3,7 @@ export const SPOTIFY_GENRE_TAG_MAPPING: Record<string, string> = {
   ROCK_METAL: 'rock',
   RAP_HIPHOP: 'hip-hop',
   CLASSIC_JAZZ: 'jazz',
-  ACOUSTIC: 'accoustic',
+  ACOUSTIC: 'acoustic',
   ELECTRONIC: 'electronic',
 };
 

@@ -36,6 +36,19 @@ export class RecommendationController {
   }
 
   /**
+   * 수동: Spotify 아티스트 동기화
+   */
+  @Post('/sync/spotify')
+  async syncSpotifyArtists() {
+    this.logger.log('Manual Spotify artist sync triggered');
+    await this.artistSyncService.syncAllGenreArtistsFromSpotify();
+    return {
+      success: true,
+      message: 'Spotify artists sync completed',
+    };
+  }
+
+  /**
    * 수동: 아티스트 이미지 동기화
    */
   @Post('/sync/images')

@@ -77,6 +77,13 @@ export class ArtistSyncService {
     }
   }
 
+  async syncAllGenreArtistsFromSpotify(): Promise<void> {
+    const genres = await this.prismaService.genre.findMany();
+    for (const genre of genres) {
+      await this.syncGenreArtistsFromSpotify(genre.id, genre.name);
+    }
+  }
+
   private async syncGenreArtistsFromSpotify(
     genreId: number,
     genreName: string,
@@ -85,29 +92,37 @@ export class ArtistSyncService {
     if (!spotifyTag) return;
 
     this.logger.log(
-      `Syncing Top 100 artists from Spotify for genre: ${genreName}`,
+      `Syncing Top 200 artists from Spotify for genre: ${genreName}`,
     );
 
-    const artists = await this.spotifyApiService.getTopArtistsByGenre(
-      spotifyTag,
-      100,
+    const [spotifyArtists, existingArtists] = await Promise.all([
+      this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 200),
+      this.prismaService.representativeArtist.findMany({
+        where: { genreId },
+        select: { artistName: true },
+      }),
+    ]);
+
+    const normalizedExistingNames = new Set(
+      existingArtists.map((a) =>
+        this.normalizeArtistName(a.artistName).toLowerCase(),
+      ),
     );
 
-    for (const artist of artists) {
-      await this.prismaService.representativeArtist.upsert({
-        where: {
-          genreId_artistName: {
-            genreId,
-            artistName: artist.name,
-          },
-        },
-        update: {}, // 이미 있으면 건드리지 않음
-        create: {
+    for (const artist of spotifyArtists) {
+      const normalizedName = this.normalizeArtistName(
+        artist.name,
+      ).toLowerCase();
+      if (normalizedExistingNames.has(normalizedName)) continue;
+
+      await this.prismaService.representativeArtist.create({
+        data: {
           genreId,
           artistName: artist.name,
           imgUrl: artist.imgUrl,
         },
       });
+      normalizedExistingNames.add(normalizedName);
     }
   }
 
@@ -158,5 +173,9 @@ export class ArtistSyncService {
     }
 
     return processedCount;
+  }
+
+  private normalizeArtistName(name: string): string {
+    return name.split('(')[0].trim();
   }
 }
