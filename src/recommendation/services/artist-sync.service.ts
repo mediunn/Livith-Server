@@ -93,11 +93,11 @@ export class ArtistSyncService {
     if (!spotifyTag) return;
 
     this.logger.log(
-      `Syncing Top 200 artists from Spotify for genre: ${genreName}`,
+      `Syncing Top 100 artists from Spotify for genre: ${genreName}`,
     );
 
     const [spotifyArtists, existingArtists] = await Promise.all([
-      this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 200),
+      this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 100),
       this.prismaService.representativeArtist.findMany({
         where: { genreId },
         select: { artistName: true },
