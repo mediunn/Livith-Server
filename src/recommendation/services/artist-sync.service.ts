@@ -10,6 +10,9 @@ import {
 } from '../integrations/youtube/youtube.api.service';
 import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
 import { InstrumentJob } from '../../metrics/instrument-job.decorator';
+import { getSpotifyGenreTag } from '../integrations/spotify/genre-mapping.util';
+import { SpotifyApiService } from '../integrations/spotify/spotify.api.service';
+import { normalizeArtistName } from '../../common/utils/artist-name.util';
 
 @Injectable()
 export class ArtistSyncService {
@@ -20,6 +23,7 @@ export class ArtistSyncService {
     private readonly lastfmApiService: LastfmApiService,
     private readonly artistImageService: ArtistImageService,
     private readonly youtubeApiService: YoutubeApiService,
+    private readonly spotifyApiService: SpotifyApiService,
     readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
@@ -34,6 +38,7 @@ export class ArtistSyncService {
 
     for (const genre of genres) {
       await this.syncGenreArtists(genre.id, genre.name);
+      await this.syncGenreArtistsFromSpotify(genre.id, genre.name);
     }
 
     this.logger.log('Representative artists sync completed');
@@ -69,6 +74,57 @@ export class ArtistSyncService {
           artistName: artist.name,
           imgUrl: '',
         },
+      });
+    }
+  }
+
+  async syncAllGenreArtistsFromSpotify(): Promise<void> {
+    const genres = await this.prismaService.genre.findMany();
+    for (const genre of genres) {
+      await this.syncGenreArtistsFromSpotify(genre.id, genre.name);
+    }
+  }
+
+  private async syncGenreArtistsFromSpotify(
+    genreId: number,
+    genreName: string,
+  ) {
+    const spotifyTag = getSpotifyGenreTag(genreName);
+    if (!spotifyTag) return;
+
+    this.logger.log(
+      `Syncing Top 200 artists from Spotify for genre: ${genreName}`,
+    );
+
+    const [spotifyArtists, existingArtists] = await Promise.all([
+      this.spotifyApiService.getTopArtistsByGenre(spotifyTag, 200),
+      this.prismaService.representativeArtist.findMany({
+        where: { genreId },
+        select: { artistName: true },
+      }),
+    ]);
+
+    const normalizedExistingNames = new Set(
+      existingArtists.map((a) => normalizeArtistName(a.artistName)),
+    );
+
+    const artistsToCreate = [];
+
+    for (const artist of spotifyArtists) {
+      const normalizedName = normalizeArtistName(artist.name);
+      if (normalizedExistingNames.has(normalizedName)) continue;
+
+      artistsToCreate.push({
+        genreId,
+        artistName: artist.name,
+        imgUrl: artist.imgUrl,
+      });
+      normalizedExistingNames.add(normalizedName);
+    }
+
+    if (artistsToCreate.length > 0) {
+      await this.prismaService.representativeArtist.createMany({
+        data: artistsToCreate,
       });
     }
   }
