@@ -59,7 +59,7 @@ export class SpotifyApiService {
       const token = await this.getAccessToken();
       const results: { name: string; imgUrl: string; popularity: number }[] =
         [];
-      const pageSize = 50;
+      const pageSize = 10;
       const pages = Math.ceil(limit / pageSize);
 
       for (let page = 0; page < pages; page++) {
@@ -96,7 +96,7 @@ export class SpotifyApiService {
     } catch (error) {
       this.logger.warn(
         `Spotify getTopArtistsByGenre failed for ${genre}: ${error.message}`,
-        error.stack,
+        error.response?.data ?? error.stack,
       );
       return [];
     }
