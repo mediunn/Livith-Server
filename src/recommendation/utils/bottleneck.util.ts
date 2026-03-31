@@ -19,7 +19,7 @@ interface QueueItem {
  * Bottlenect: Token Bucket(동시 실행 제한) + Leaky Bucket(요청 간격 제한)
  * + Selective Retry(지수 백오프)
  */
-export class Bottlenexk {
+export class Bottleneck {
   private readonly queue: QueueItem[] = [];
   private running = 0;
   private lastStartTime = 0;
@@ -58,7 +58,7 @@ export class Bottlenexk {
       const result = await this.runWithRetry(item.fn);
       item.resolve(result);
     } catch (err) {
-      itme.reject(err);
+      item.reject(err);
     }
   }
 
