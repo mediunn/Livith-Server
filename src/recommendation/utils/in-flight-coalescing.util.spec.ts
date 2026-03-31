@@ -59,7 +59,8 @@ describe('InFlightCoalescing', () => {
   });
 
   it('실패 후 같은 key 재요청 시 fn 다시 실행', async () => {
-    const fn = jest.fn()
+    const fn = jest
+      .fn()
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValueOnce('ok');
 
@@ -72,7 +73,9 @@ describe('InFlightCoalescing', () => {
 
   it('진행 중인 요청 수를 size()로 확인', async () => {
     let resolve: (v: string) => void;
-    const pending = new Promise<string>((r) => { resolve = r; });
+    const pending = new Promise<string>((r) => {
+      resolve = r;
+    });
     const fn = jest.fn().mockReturnValue(pending);
 
     const promise = coalescing.wrap('key', fn);

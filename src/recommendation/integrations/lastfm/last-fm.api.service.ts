@@ -17,13 +17,13 @@ export class LastfmApiService implements MusicApiService {
   private readonly baseUrl = 'https://ws.audioscrobbler.com/2.0/';
 
   private readonly similarCache = new SwrCache<string[]>();
-  private readonly topArtistCache = new SwrCache<{name: string}[]>();
+  private readonly topArtistCache = new SwrCache<{ name: string }[]>();
   private readonly coalescing = new InFlightCoalescing();
   private readonly bottleneck = new Bottleneck({
     maxConcurrent: 3,
-    minTime: 200,  // 200ms 간격 -> 최대 5 req/s
+    minTime: 200, // 200ms 간격 -> 최대 5 req/s
     maxRetries: 2,
-    retryDelay: 500,  // 500ms -> 1000ms 지수 백오프
+    retryDelay: 500, // 500ms -> 1000ms 지수 백오프
   });
 
   constructor(
@@ -42,7 +42,7 @@ export class LastfmApiService implements MusicApiService {
 
     // Layer1: SWR Cache
     const cached = this.similarCache.get(key);
-    if(cached && !cached.isStale) return cached.data;
+    if (cached && !cached.isStale) return cached.data;
 
     // Layer 2 + 3: InFlightCoalescing -> Bottleneck -> HTTP
     const fetch = () =>
@@ -50,22 +50,25 @@ export class LastfmApiService implements MusicApiService {
         this.bottleneck.schedule(() => this.fetchSimilarArtists(artistName)),
       );
 
-    if(cached?.isStale){
+    if (cached?.isStale) {
       // stale -> 즉시 반환 + 백그라운드 재검증
       fetch()
         .then((data) =>
-          this.similarCache.set(key, data, {ttl: TTL_MS, stateTtl: STALE_TTL_MS}),
+          this.similarCache.set(key, data, {
+            ttl: TTL_MS,
+            stateTtl: STALE_TTL_MS,
+          }),
         )
         .catch(() => {});
       return cached.data;
     }
 
     const data = await fetch();
-    this.similarCache.set(key, data, {ttl: TTL_MS, stateTtl: STALE_TTL_MS});
+    this.similarCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
     return data;
   }
 
-  private async fetchSimilarArtists(artistName: string): Promise<string[]>{
+  private async fetchSimilarArtists(artistName: string): Promise<string[]> {
     try {
       const params: any = {
         method: 'artist.getSimilar',
@@ -116,24 +119,32 @@ export class LastfmApiService implements MusicApiService {
     if (cached && !cached.isStale) return cached.data;
 
     // Layer 2 + 3: InFlightCoalescing -> Bottleneck -> HTTP
-    const fetch = () => this.coalescing.wrap(key, () =>
-    this.bottleneck.schedule(() => this.fetchTopArtistByTag(tag, limit)),
+    const fetch = () =>
+      this.coalescing.wrap(key, () =>
+        this.bottleneck.schedule(() => this.fetchTopArtistByTag(tag, limit)),
       );
 
-    if(cached?.isStale){
+    if (cached?.isStale) {
       fetch()
-        .then((data) => this.topArtistCache.set(key, data, {ttl: TTL_MS, stateTtl: STALE_TTL_MS}),
-          )
+        .then((data) =>
+          this.topArtistCache.set(key, data, {
+            ttl: TTL_MS,
+            stateTtl: STALE_TTL_MS,
+          }),
+        )
         .catch(() => {});
       return cached.data;
     }
 
     const data = await fetch();
-    this.topArtistCache.set(key, data, {ttl: TTL_MS, stateTtl: STALE_TTL_MS});
+    this.topArtistCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
     return data;
   }
 
-  private async fetchTopArtistByTag(tag: string, limit: number): Promise<{ name: string }[]> {
+  private async fetchTopArtistByTag(
+    tag: string,
+    limit: number,
+  ): Promise<{ name: string }[]> {
     try {
       const params: any = {
         method: 'tag.getTopArtists',
