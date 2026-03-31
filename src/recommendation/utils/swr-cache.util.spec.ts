@@ -24,8 +24,9 @@ describe('SwrCache', () => {
 
     it('ttl 경과 후 stateTtl 이내면 isStale: true로 반환', () => {
       const now = Date.now();
-      jest.spyOn(Date, 'now')
-        .mockReturnValueOnce(now)          // set 시점
+      jest
+        .spyOn(Date, 'now')
+        .mockReturnValueOnce(now) // set 시점
         .mockReturnValueOnce(now + 6_000); // get 시점 (ttl 5초 경과)
 
       cache.set('key', 'value', { ttl: 5_000, stateTtl: 10_000 });
@@ -40,9 +41,10 @@ describe('SwrCache', () => {
 
     it('ttl + stateTtl 모두 경과하면 null 반환 (evict)', () => {
       const now = Date.now();
-      jest.spyOn(Date, 'now')
-        .mockReturnValueOnce(now)               // set 시점
-        .mockReturnValueOnce(now + 16_000);     // get 시점 (ttl 5초 + stateTtl 10초 초과)
+      jest
+        .spyOn(Date, 'now')
+        .mockReturnValueOnce(now) // set 시점
+        .mockReturnValueOnce(now + 16_000); // get 시점 (ttl 5초 + stateTtl 10초 초과)
 
       cache.set('key', 'value', { ttl: 5_000, stateTtl: 10_000 });
 
@@ -53,7 +55,8 @@ describe('SwrCache', () => {
 
     it('evict 후 size가 줄어듦', () => {
       const now = Date.now();
-      jest.spyOn(Date, 'now')
+      jest
+        .spyOn(Date, 'now')
         .mockReturnValueOnce(now)
         .mockReturnValueOnce(now + 16_000);
 

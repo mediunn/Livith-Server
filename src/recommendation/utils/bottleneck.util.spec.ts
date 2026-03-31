@@ -97,7 +97,8 @@ describe('Bottleneck', () => {
     });
 
     it('재시도 중 성공하면 결과 반환', async () => {
-      const fn = jest.fn()
+      const fn = jest
+        .fn()
         .mockRejectedValueOnce(new Error('fail'))
         .mockResolvedValueOnce('ok');
 
@@ -183,7 +184,9 @@ describe('Bottleneck', () => {
       });
 
       let resolveFirst: () => void;
-      const blocking = new Promise<void>((r) => { resolveFirst = r; });
+      const blocking = new Promise<void>((r) => {
+        resolveFirst = r;
+      });
 
       bottleneck.schedule(() => blocking);
       bottleneck.schedule(() => Promise.resolve());
