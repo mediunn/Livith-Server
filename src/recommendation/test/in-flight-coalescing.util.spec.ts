@@ -1,4 +1,4 @@
-import { InFlightCoalescing } from './in-flight-coalescing.util';
+import { InFlightCoalescing } from '../utils/in-flight-coalescing.util';
 
 describe('InFlightCoalescing', () => {
   let coalescing: InFlightCoalescing;

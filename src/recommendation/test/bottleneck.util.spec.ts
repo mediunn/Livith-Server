@@ -1,4 +1,4 @@
-import { Bottleneck } from './bottleneck.util';
+import { Bottleneck } from '../utils/bottleneck.util';
 
 describe('Bottleneck', () => {
   beforeEach(() => {
