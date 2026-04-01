@@ -63,49 +63,46 @@ export class LastfmApiService implements MusicApiService {
       return cached.data;
     }
 
-    const data = await fetch();
-    this.similarCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
-    return data;
+    try {
+      const data = await fetch();
+      this.similarCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
+      return data;
+    } catch {
+      return [];
+    }
   }
 
   private async fetchSimilarArtists(artistName: string): Promise<string[]> {
-    try {
-      const params: any = {
-        method: 'artist.getSimilar',
-        artist: artistName,
-        api_key: this.apiKey,
-        format: 'json',
-      };
+    const params: any = {
+      method: 'artist.getSimilar',
+      artist: artistName,
+      api_key: this.apiKey,
+      format: 'json',
+    };
 
-      const response = await firstValueFrom(
-        this.httpService.get(this.baseUrl, { params }),
-      );
+    const response = await firstValueFrom(
+      this.httpService.get(this.baseUrl, { params }),
+    );
 
-      if (response.data.error) {
-        // error 29: rate limit → throw해서 Bottleneck retry 발동
-        if (response.data.error === 29) {
-          throw new Error(`Last.fm rate limit: ${response.data.message}`);
-        }
-        this.logger.warn(
-          `Last.fm API error: ${response.data.error} - ${response.data.message}`,
-        );
-        return [];
+    if (response.data.error) {
+      // error 29: rate limit → throw해서 Bottleneck retry 발동
+      if (response.data.error === 29) {
+        throw new Error(`Last.fm rate limit: ${response.data.message}`);
       }
-
-      const similarArtists = response.data.similarartists?.artist || [];
-      const artists = Array.isArray(similarArtists)
-        ? similarArtists
-        : similarArtists
-          ? [similarArtists]
-          : [];
-
-      return artists.map((a: any) => a.name);
-    } catch (error) {
       this.logger.warn(
-        `Last.fm getSimilar failed for ${artistName}: ${error.message}`,
+        `Last.fm API error: ${response.data.error} - ${response.data.message}`,
       );
-      return [];
+      throw new Error(`Last.fm API error: ${response.data.error}`);
     }
+
+    const similarArtists = response.data.similarartists?.artist || [];
+    const artists = Array.isArray(similarArtists)
+      ? similarArtists
+      : similarArtists
+        ? [similarArtists]
+        : [];
+
+    return artists.map((a: any) => a.name);
   }
 
   async getTopArtistByTag(
@@ -136,47 +133,47 @@ export class LastfmApiService implements MusicApiService {
       return cached.data;
     }
 
-    const data = await fetch();
-    this.topArtistCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
-    return data;
+    try {
+      const data = await fetch();
+      this.topArtistCache.set(key, data, {
+        ttl: TTL_MS,
+        stateTtl: STALE_TTL_MS,
+      });
+      return data;
+    } catch {
+      return [];
+    }
   }
 
   private async fetchTopArtistByTag(
     tag: string,
     limit: number,
   ): Promise<{ name: string }[]> {
-    try {
-      const params: any = {
-        method: 'tag.getTopArtists',
-        tag: tag,
-        limit: limit,
-        api_key: this.apiKey,
-        format: 'json',
-      };
+    const params: any = {
+      method: 'tag.getTopArtists',
+      tag: tag,
+      limit: limit,
+      api_key: this.apiKey,
+      format: 'json',
+    };
 
-      const response = await firstValueFrom(
-        this.httpService.get(this.baseUrl, { params }),
-      );
+    const response = await firstValueFrom(
+      this.httpService.get(this.baseUrl, { params }),
+    );
 
-      if (response.data.error) {
-        if (response.data.error === 29) {
-          throw new Error(`Last.fm rate limit: ${response.data.message}`);
-        }
-        this.logger.warn(
-          `Last.fm API error: ${response.data.error} - ${response.data.message}`,
-        );
-        return [];
+    if (response.data.error) {
+      if (response.data.error === 29) {
+        throw new Error(`Last.fm rate limit: ${response.data.message}`);
       }
-
-      const artists = response.data.topartists?.artist;
-      return Array.isArray(artists)
-        ? artists.map((a: any) => ({ name: a.name }))
-        : [];
-    } catch (error) {
       this.logger.warn(
-        `Last.fm getTopArtistByTag failed for ${tag}: ${error.message}`,
+        `Last.fm API error: ${response.data.error} - ${response.data.message}`,
       );
-      return [];
+      throw new Error(`Last.fm API error: ${response.data.error}`);
     }
+
+    const artists = response.data.topartists?.artist;
+    return Array.isArray(artists)
+      ? artists.map((a: any) => ({ name: a.name }))
+      : [];
   }
 }

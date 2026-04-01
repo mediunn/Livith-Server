@@ -1,4 +1,4 @@
-import { SwrCache } from './swr-cache.util';
+import { SwrCache } from '../utils/swr-cache.util';
 
 describe('SwrCache', () => {
   let cache: SwrCache<string>;
