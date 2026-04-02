@@ -1,11 +1,11 @@
 import { PrismaService } from 'prisma/prisma.service';
-import { ArtistSyncService } from './artist-sync.service';
+import { ArtistSyncService } from '../services/artist-sync.service';
 import { Test } from '@nestjs/testing';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { LastfmApiService } from '../integrations/lastfm/last-fm.api.service';
 import { YoutubeApiService } from '../integrations/youtube/youtube.api.service';
-import { ArtistImageService } from './artist-image.service';
+import { ArtistImageService } from '../services/artist-image.service';
 
 // API + Mock DB
 describe('ArtistSyncService Logic Test ', () => {
