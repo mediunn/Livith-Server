@@ -142,6 +142,44 @@ describe('Bottleneck', () => {
       expect(delays[2]).toBeGreaterThanOrEqual(200);
     });
 
+    it('isRetryable: false인 에러는 maxRetries 무시하고 즉시 reject', async () => {
+      const fn = jest.fn().mockRejectedValue(new Error('not retryable'));
+
+      const bottleneck = new Bottleneck({
+        maxConcurrent: 1,
+        minTime: 0,
+        maxRetries: 3,
+        retryDelay: 100,
+        isRetryable: () => false,
+      });
+
+      const assertion = expect(bottleneck.schedule(fn)).rejects.toThrow('not retryable');
+      await jest.runAllTimersAsync();
+      await assertion;
+
+      expect(fn).toHaveBeenCalledTimes(1); // 재시도 없이 1회만
+    });
+
+    it('isRetryable: 특정 에러만 재시도', async () => {
+      const fn = jest.fn()
+        .mockRejectedValueOnce(new Error('rate limit'))
+        .mockResolvedValueOnce('ok');
+
+      const bottleneck = new Bottleneck({
+        maxConcurrent: 1,
+        minTime: 0,
+        maxRetries: 2,
+        retryDelay: 100,
+        isRetryable: (err) => err instanceof Error && err.message === 'rate limit',
+      });
+
+      const promise = bottleneck.schedule(fn);
+      await jest.runAllTimersAsync();
+
+      await expect(promise).resolves.toBe('ok');
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
     it('maxRetries: 0이면 재시도 없이 즉시 reject', async () => {
       const fn = jest.fn().mockRejectedValue(new Error('fail'));
 

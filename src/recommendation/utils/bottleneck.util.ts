@@ -7,6 +7,8 @@ export interface BottleneckOptions {
   maxRetries: number;
   /** 재시도 기본 대기 ms(지수 백오프: delay * 2^attempt) */
   retryDelay: number;
+  /** 재시도 가능한 에러인지 판단. 미제공 시 모든 에러 재시도 */
+  isRetryable?: (err: unknown) => boolean;
 }
 
 interface QueueItem {
@@ -23,6 +25,7 @@ export class Bottleneck {
   private readonly queue: QueueItem[] = [];
   private running = 0;
   private lastStartTime = 0;
+  private drainScheduled = false;
 
   constructor(private readonly options: BottleneckOptions) {}
 
@@ -39,7 +42,14 @@ export class Bottleneck {
 
     const wait = this.options.minTime - (Date.now() - this.lastStartTime);
     if (wait > 0) {
-      setTimeout(() => this.drain(), wait);
+      // 이미 예약된 타이머가 있으면 중복 생성 방지 (타이머 스톰 방지)
+      if (!this.drainScheduled) {
+        this.drainScheduled = true;
+        setTimeout(() => {
+          this.drainScheduled = false;
+          this.drain();
+        }, wait);
+      }
       return;
     }
 
@@ -66,7 +76,8 @@ export class Bottleneck {
     try {
       return await fn();
     } catch (err) {
-      if (attempt >= this.options.maxRetries) throw err;
+      const retryable = this.options.isRetryable ? this.options.isRetryable(err) : true;
+      if (!retryable || attempt >= this.options.maxRetries) throw err;
       const delay = this.options.retryDelay * Math.pow(2, attempt);
       await new Promise((r) => setTimeout(r, delay));
       return this.runWithRetry(fn, attempt + 1);
