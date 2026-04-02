@@ -24,6 +24,8 @@ export class LastfmApiService implements MusicApiService {
     minTime: 200, // 200ms 간격 -> 최대 5 req/s
     maxRetries: 2,
     retryDelay: 500, // 500ms -> 1000ms 지수 백오프
+    isRetryable: (err) =>
+      err instanceof Error && err.message.startsWith('Last.fm rate limit'),
   });
 
   constructor(
@@ -56,7 +58,7 @@ export class LastfmApiService implements MusicApiService {
         .then((data) =>
           this.similarCache.set(key, data, {
             ttl: TTL_MS,
-            stateTtl: STALE_TTL_MS,
+            staleTtl: STALE_TTL_MS,
           }),
         )
         .catch(() => {});
@@ -65,7 +67,7 @@ export class LastfmApiService implements MusicApiService {
 
     try {
       const data = await fetch();
-      this.similarCache.set(key, data, { ttl: TTL_MS, stateTtl: STALE_TTL_MS });
+      this.similarCache.set(key, data, { ttl: TTL_MS, staleTtl: STALE_TTL_MS });
       return data;
     } catch {
       return [];
@@ -126,7 +128,7 @@ export class LastfmApiService implements MusicApiService {
         .then((data) =>
           this.topArtistCache.set(key, data, {
             ttl: TTL_MS,
-            stateTtl: STALE_TTL_MS,
+            staleTtl: STALE_TTL_MS,
           }),
         )
         .catch(() => {});
@@ -137,7 +139,7 @@ export class LastfmApiService implements MusicApiService {
       const data = await fetch();
       this.topArtistCache.set(key, data, {
         ttl: TTL_MS,
-        stateTtl: STALE_TTL_MS,
+        staleTtl: STALE_TTL_MS,
       });
       return data;
     } catch {
@@ -171,9 +173,13 @@ export class LastfmApiService implements MusicApiService {
       throw new Error(`Last.fm API error: ${response.data.error}`);
     }
 
-    const artists = response.data.topartists?.artist;
-    return Array.isArray(artists)
-      ? artists.map((a: any) => ({ name: a.name }))
-      : [];
+    const topartists = response.data.topartists?.artist || [];
+    const artists = Array.isArray(topartists)
+      ? topartists
+      : topartists
+        ? [topartists]
+        : [];
+
+    return artists.map((a: any) => ({ name: a.name }));
   }
 }
