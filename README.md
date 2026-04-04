@@ -8,6 +8,7 @@
 ### 🗄️ Database
 ![AWS RDS](https://img.shields.io/badge/AWS%20RDS-527FFF?style=flat&logo=amazon-rds&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+![Meilisearch](https://img.shields.io/badge/Meilisearch-FF5CAA?style=flat&logo=meilisearch&logoColor=white)
 
 ### 🔔 Notification
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
