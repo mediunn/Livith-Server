@@ -1,12 +1,25 @@
-import { concertsListScenario } from './scenarios/concert.ts';
+import {
+  concertCommentsScenario,
+  concertDetailsScenario,
+  concertSetlistsScenario,
+  concertsListScenario,
+} from './scenarios/concert.ts';
 import { genresScenario } from './scenarios/genre.ts';
 import { homeSectionsScenario } from './scenarios/home.ts';
 import {
+  searchArtistsScenario,
+  searchConcertsScenario,
   searchSectionsScenario,
   searchSuggestionsScenario,
 } from './scenarios/search.ts';
 import { recommendationConcertsScenario } from './scenarios/recommendation.ts';
-import { notificationListScenario, notificationUnreadCountScenario } from './scenarios/notification.ts';
+import {
+  notificationListScenario,
+  notificationUnreadCountScenario,
+} from './scenarios/notification.ts';
+import { setlistSongsScenario } from './scenarios/setlist.ts';
+
+const hasAccessToken = Boolean(__ENV.ACCESS_TOKEN);
 
 export const options = {
   scenarios: {
@@ -34,30 +47,70 @@ export const options = {
       iterations: 1,
       exec: 'concertsList',
     },
+    concert_details: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'concertDetails',
+    },
+    concert_setlists: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'concertSetlists',
+    },
+    concert_comments: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'concertComments',
+    },
+    search_concerts: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'searchConcerts',
+    },
+    search_artists: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'searchArtists',
+    },
+    setlist_songs: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: 1,
+      exec: 'setlistSongs',
+    },
     genres: {
       executor: 'per-vu-iterations',
       vus: 1,
       iterations: 1,
       exec: 'genres',
     },
-    recommend_concerts: {
-      executor: 'per-vu-iterations',
-      vus: 1,
-      iterations: 1,
-      exec: 'recommendConcerts',
-    },
-    notification_list: {
-      executor: 'per-vu-iterations',
-      vus: 1,
-      iterations: 1,
-      exec: 'notificationList',
-    },
-    notification_unread: {
-      executor: 'per-vu-iterations',
-      vus: 1,
-      iterations: 1,
-      exec: 'notificationUnread',
-    }
+    ...(hasAccessToken
+      ? {
+          recommend_concerts: {
+            executor: 'per-vu-iterations',
+            vus: 1,
+            iterations: 1,
+            exec: 'recommendConcerts',
+          },
+          notification_list: {
+            executor: 'per-vu-iterations',
+            vus: 1,
+            iterations: 1,
+            exec: 'notificationList',
+          },
+          notification_unread: {
+            executor: 'per-vu-iterations',
+            vus: 1,
+            iterations: 1,
+            exec: 'notificationUnread',
+          },
+        }
+      : {}),
   },
   thresholds: {
     http_req_failed: ['rate<0.01'],
@@ -81,18 +134,42 @@ export function concertsList() {
   concertsListScenario();
 }
 
+export function concertDetails() {
+  concertDetailsScenario();
+}
+
+export function concertSetlists() {
+  concertSetlistsScenario();
+}
+
+export function concertComments() {
+  concertCommentsScenario();
+}
+
+export function searchConcerts() {
+  searchConcertsScenario();
+}
+
+export function searchArtists() {
+  searchArtistsScenario();
+}
+
+export function setlistSongs() {
+  setlistSongsScenario();
+}
+
 export function genres() {
   genresScenario();
 }
 
-export function recommendConcerts(){
+export function recommendConcerts() {
   recommendationConcertsScenario();
 }
 
-export function notificationList(){
+export function notificationList() {
   notificationListScenario();
 }
 
-export function notificationUnread(){
+export function notificationUnread() {
   notificationUnreadCountScenario();
 }
