@@ -18,6 +18,7 @@ import {
   notificationUnreadCountScenario,
 } from './scenarios/notification.ts';
 import { setlistSongsScenario } from './scenarios/setlist.ts';
+import { ScenarioSetupData, setupScenarioData } from './common/setup-data.ts';
 
 const hasAccessToken = Boolean(__ENV.ACCESS_TOKEN);
 
@@ -118,6 +119,10 @@ export const options = {
   },
 };
 
+export function setup(): ScenarioSetupData {
+  return setupScenarioData();
+}
+
 export function homeSections() {
   homeSectionsScenario();
 }
@@ -134,16 +139,16 @@ export function concertsList() {
   concertsListScenario();
 }
 
-export function concertDetails() {
-  concertDetailsScenario();
+export function concertDetails(data: ScenarioSetupData) {
+  concertDetailsScenario(data);
 }
 
-export function concertSetlists() {
-  concertSetlistsScenario();
+export function concertSetlists(data: ScenarioSetupData) {
+  concertSetlistsScenario(data);
 }
 
-export function concertComments() {
-  concertCommentsScenario();
+export function concertComments(data: ScenarioSetupData) {
+  concertCommentsScenario(data);
 }
 
 export function searchConcerts() {
@@ -154,8 +159,8 @@ export function searchArtists() {
   searchArtistsScenario();
 }
 
-export function setlistSongs() {
-  setlistSongsScenario();
+export function setlistSongs(data: ScenarioSetupData) {
+  setlistSongsScenario(data);
 }
 
 export function genres() {
