@@ -11,13 +11,17 @@ npm run perf:load:local
 
 - `BASE_URL` (default: `http://localhost:3000`)
 - `API_PREFIX` (default: `/api/v5`)
+- `ACCESS_TOKEN` (optional, required for auth scenarios)
 
 Examples:
 
 ```bash
 BASE_URL=https://staging-api.example.com npm run perf:smoke
 BASE_URL=https://staging-api.example.com API_PREFIX=/api/v5 npm run perf:load
+BASE_URL=https://staging-api.example.com ACCESS_TOKEN=<jwt> npm run perf:load
 ```
+
+If `ACCESS_TOKEN` is not provided, auth-required scenarios are skipped automatically.
 
 ## Script layout
 
