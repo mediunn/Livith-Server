@@ -14,3 +14,17 @@ export function searchSuggestionsScenario() {
   });
   sleep(1);
 }
+
+export function searchConcertsScenario() {
+  getApi('/search/concerts?size=20', {
+    tags: { endpoint: 'search-concerts' },
+  });
+  sleep(1);
+}
+
+export function searchArtistsScenario() {
+  getApi('/search/artists?size=20', {
+    tags: { endpoint: 'search-artists' },
+  });
+  sleep(1);
+}
