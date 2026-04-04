@@ -1,41 +1,6 @@
 import { sleep } from 'k6';
 import { getApi } from '../common/http.ts';
-
-type ResponseWithData<T> = {
-  data?: T;
-};
-
-type ConcertListData = {
-  data?: Array<{ id: number }>;
-};
-
-function parseJsonBody<T>(body: string): T | null {
-  try {
-    return JSON.parse(body) as T;
-  } catch {
-    return null;
-  }
-}
-
-function getFirstConcertId(): number | null {
-  const response = getApi('/concerts?size=1', {
-    tags: { endpoint: 'concerts-list-id-probe' },
-  });
-
-  const parsed = parseJsonBody<ResponseWithData<ConcertListData>>(
-    response.body,
-  );
-  return parsed?.data?.data?.[0]?.id ?? null;
-}
-
-export function resolveConcertId(): number | null {
-  const envConcertId = Number(__ENV.CONCERT_ID);
-  if (Number.isInteger(envConcertId) && envConcertId > 0) {
-    return envConcertId;
-  }
-
-  return getFirstConcertId();
-}
+import { ScenarioSetupData } from '../common/setup-data.ts';
 
 export function concertsListScenario() {
   getApi('/concerts?size=20', {
@@ -44,8 +9,8 @@ export function concertsListScenario() {
   sleep(1);
 }
 
-export function concertDetailsScenario() {
-  const concertId = resolveConcertId();
+export function concertDetailsScenario(data?: ScenarioSetupData) {
+  const concertId = data?.concertId;
   if (!concertId) {
     console.warn(
       'No valid concert id found; skipping concert-details scenario.',
@@ -60,8 +25,8 @@ export function concertDetailsScenario() {
   sleep(1);
 }
 
-export function concertSetlistsScenario() {
-  const concertId = resolveConcertId();
+export function concertSetlistsScenario(data?: ScenarioSetupData) {
+  const concertId = data?.concertId;
   if (!concertId) {
     console.warn(
       'No valid concert id found; skipping concert-setlists scenario.',
@@ -76,8 +41,8 @@ export function concertSetlistsScenario() {
   sleep(1);
 }
 
-export function concertCommentsScenario() {
-  const concertId = resolveConcertId();
+export function concertCommentsScenario(data?: ScenarioSetupData) {
+  const concertId = data?.concertId;
   if (!concertId) {
     console.warn(
       'No valid concert id found; skipping concert-comments scenario.',
