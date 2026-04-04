@@ -29,18 +29,21 @@ Swagger docs available at `http://localhost:3000/api-docs` when server is runnin
 
 ### Module Structure
 
-NestJS modular architecture with 11 feature modules registered in `src/app.module.ts`:
+NestJS modular architecture with 14 feature modules registered in `src/app.module.ts`:
 
 - **auth** - OAuth (Kakao/Apple) login + JWT token issuance. Passport strategies in `auth/strategies/`, guards in `auth/guards/`.
 - **concert** - Core concert CRUD with status tracking (ONGOING, UPCOMING, COMPLETED, CANCELED).
 - **notification** - FCM push notifications with scheduled delivery. Has sub-structure: `fcm/` (Firebase init), `scheduler/` (cron jobs for queue processing, ticketing reminders, cleanup), `service/`, `enums/`, `constants/`.
-- **recommendation** - Genre/artist-based recommendations. Integrates with LastFM and YouTube APIs via `integrations/`. Uses `music-api-factory.service.ts` pattern.
+- **recommendation** - Genre/artist-based recommendations. Integrates with LastFM/Spotify/YouTube via `integrations/`. Uses `music-api-factory.service.ts` pattern. LastFM rate limit 방어를 위해 `utils/`에 3-레이어 구조 구현: `SwrCache` (LRU + Stale-While-Revalidate) → `InFlightCoalescing` → `Bottleneck` (Token Bucket + 지수 백오프 retry).
+- **artist** - 아티스트 매칭 서비스 (`service/artist-matching.service.ts`).
 - **setlist** - Concert setlists with songs and fanchants.
 - **song** - Song details including lyrics, pronunciation, translation.
 - **comment** - User comments on concerts with reporting.
 - **user** - User management, favorite artists/genres.
 - **home** / **search** - Home page sections and search functionality.
 - **genre** - Genre catalog management.
+- **metrics** - Prometheus 메트릭 수집. `HttpMetricsInterceptor`로 전역 등록 (`http_request_total`, `http_request_duration_seconds`, `http_requests_in_flight`). `@InstrumentJob` 데코레이터로 스케줄러 메트릭도 수집.
+- **logger** - Winston + OpenTelemetry 연동. 모든 로그에 `traceId`/`spanId` 자동 주입. `@Global()` 모듈로 등록.
 
 ### Cross-Cutting Concerns (`src/common/`)
 
@@ -55,6 +58,14 @@ NestJS modular architecture with 11 feature modules registered in `src/app.modul
 - **Schema**: `prisma/schema.prisma` (~25 models). Key models: Concert, Artist, Setlist, SetlistSong, Song, User, FcmToken, NotificationSet, ConcertNotificationQueue.
 - **PrismaModule** (`prisma/prisma.module.ts`) - Shared module exporting `PrismaService`. Imported by feature modules that need DB access.
 - **Migrations**: `prisma/migrations/` (83+ migration files).
+- **Meilisearch** - 아티스트 검색 엔진 (추가 예정). `searchableAttributes: ["artistName", "searchNames"]`, `filterableAttributes: ["genreId"]`. Artist 생성/수정 시 인덱스 동기화.
+
+### Observability
+
+- **OpenTelemetry** - `src/tracing.ts`에서 초기화. Tempo로 분산 트레이스 수집.
+- **Loki** - Winston JSON 로그 수집. 로그에 traceId 포함되어 Tempo 트레이스와 연동.
+- **Prometheus + Grafana** - HTTP 메트릭 및 스케줄러 메트릭 시각화.
+- k6로 부하 테스트 (`chore/#247-k6-test` 브랜치 참고).
 
 ### Global Middleware (configured in `src/main.ts`)
 
