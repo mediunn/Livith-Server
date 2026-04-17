@@ -95,7 +95,6 @@ export class UserService {
       where: { id: userId },
       include: {
         userGenres: true,
-        userArtists: true,
       },
     });
     await this.validateUser(userId);
