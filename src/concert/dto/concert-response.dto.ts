@@ -16,12 +16,16 @@ export class ConcertResponseDto {
   introduction: string;
   label: string;
 
+  private static formatDate(date: string | null): string | null {
+    return date ? date.replaceAll('-', '.') : null;
+  }
+
   constructor(concert: Concert, daysLeft?: number) {
     this.id = concert.id;
     this.code = concert.code;
     this.title = concert.title;
-    this.startDate = concert.startDate.replaceAll('-', '.');
-    this.endDate = concert.endDate.replaceAll('-', '.');
+    this.startDate = ConcertResponseDto.formatDate(concert.startDate);
+    this.endDate = ConcertResponseDto.formatDate(concert.endDate);
     this.status = concert.status;
     this.poster = concert.poster;
     this.artist = concert.artist;
