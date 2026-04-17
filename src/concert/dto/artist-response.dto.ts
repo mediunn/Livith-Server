@@ -7,6 +7,7 @@ export class ArtistResponseDto {
   category: string;
   detail: string;
   instagramUrl: string;
+  twitterUrl: string;
   keywords: string[];
   imgUrl: string;
 
@@ -17,6 +18,7 @@ export class ArtistResponseDto {
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
+    this.twitterUrl = artist.twitterUrl;
     this.keywords = artist.keywords
       ? artist.keywords.split(',').map((keyword) => keyword.trim())
       : [];
