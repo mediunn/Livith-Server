@@ -373,7 +373,7 @@ model UserInterestConcert {
   id         Int      @id @default(autoincrement())
   userId     Int      @map("user_id")
   concertId   Int      @map("concert_id")
-  concerTitle String?   @map("concert_title") @db.VarChar(300)
+  concertTitle String?   @map("concert_title") @db.VarChar(300)
   userNickname String   @map("user_nickname") @db.VarChar(50)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
