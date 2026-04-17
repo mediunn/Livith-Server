@@ -14,7 +14,7 @@ export class ArtistResponseDto {
   constructor(artist: Artist) {
     this.id = artist.id;
     this.artist = artist.artist;
-    this.debutDate = artist.debutDate.replaceAll('-', '.');
+    this.debutDate = artist.debutDate.replaceAll('-', '.') ?? null;
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
