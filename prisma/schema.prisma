@@ -10,18 +10,18 @@ datasource db {
 model Concert {
   id                    Int                    @id @default(autoincrement())
   code                  String?                @unique @db.VarChar(20)
-  title                 String                 @unique(map: "uk_title") @db.VarChar(300)
-  startDate             String                 @map("start_date") @db.VarChar(20)
-  endDate               String                 @map("end_date") @db.VarChar(20)
+  title                 String?                @unique(map: "uk_title") @db.VarChar(300)
+  startDate             String?                 @map("start_date") @db.VarChar(20)
+  endDate               String?                 @map("end_date") @db.VarChar(20)
   status                ConcertStatus
-  poster                String                 @db.VarChar(2048)
+  poster                String?                 @db.VarChar(2048)
   artist                String                 @db.VarChar(100)
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @default(now()) @updatedAt @map("updated_at")
   artistId              Int                    @map("artist_id")
   ticketSite            String?                @map("ticket_site") @db.VarChar(50)
   ticketUrl             String?                @map("ticket_url") @db.VarChar(2048)
-  venue                 String                 @db.VarChar(100)
+  venue                 String?                 @db.VarChar(100)
   introduction          String                 @db.Text
   label                 String?                @db.VarChar(50)
   concertComments       ConcertComment[]
@@ -34,7 +34,7 @@ model Concert {
   mdItems               Md[]
   schedules             Schedule[]
   searchConcertSections SearchConcertSection[]
-  user                  User[]
+  userInterestConcerts  UserInterestConcert[]
 
   @@unique([startDate, id])
   @@unique([title, id])
@@ -49,6 +49,7 @@ model Artist {
   category     String?   @db.VarChar(30)
   detail       String?   @db.Text
   instagramUrl String?   @map("instagram_url") @db.VarChar(2048)
+  twitterUrl   String?   @map("twitter_url") @db.VarChar(2048)
   keywords     String?   @db.VarChar(100)
   imgUrl       String?   @map("img_url") @db.VarChar(2048)
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -295,7 +296,6 @@ model Genre {
 
 model User {
   id                    Int              @id @default(autoincrement())
-  interestConcertId     Int?             @map("interest_concert_id")
   provider              Provider
   providerId            String?          @unique @map("provider_id")
   email                 String?          @db.VarChar(255)
@@ -307,13 +307,14 @@ model User {
   refreshToken          String?          @map("refresh_token") @db.Text
   refreshTokenExpiresAt DateTime?        @map("refresh_token_expires_at")
   concertComments       ConcertComment[]
-  concert               Concert?         @relation(fields: [interestConcertId], references: [id])
   userGenres            UserGenre[]
   userArtists   UserArtist[]
   fcmTokens             FcmToken[]
   notificationSet       NotificationSet?
   notificationhistories NotificationHistories[]
   notificationConsents  NotificationConsent[]
+  userInterestConcerts  UserInterestConcert[]
+
 
   @@map("users")
 }
@@ -366,6 +367,24 @@ model UserArtist {
   @@index([userId])
   @@index([artistId])
   @@map("user_artists")
+}
+
+model UserInterestConcert {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  concertId   Int      @map("concert_id")
+  concerTitle String?   @map("concert_title") @db.VarChar(300)
+  userNickname String   @map("user_nickname") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concert   Concert  @relation(fields: [concertId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, concertId]) 
+  @@index([userId])
+  @@index([concertId])
+  @@map("user_interest_concerts")
 }
 
 model ConcertComment {
@@ -494,9 +513,8 @@ enum GenreType {
   JPOP
   ROCK_METAL
   RAP_HIPHOP
-  CLASSIC_JAZZ
-  ACOUSTIC
-  ELECTRONIC
+  POP
+  INDIE
 }
 
 enum NotificationType{
@@ -520,7 +538,8 @@ enum ConsentType{
 
 enum ScheduleType {
   CONCERT
-  TICKETING
+  PRE_TICKETING
+  GENERAL_TICKETING
 }
 
 enum Provider {
