@@ -76,7 +76,9 @@ export class Bottleneck {
     try {
       return await fn();
     } catch (err) {
-      const retryable = this.options.isRetryable ? this.options.isRetryable(err) : true;
+      const retryable = this.options.isRetryable
+        ? this.options.isRetryable(err)
+        : true;
       if (!retryable || attempt >= this.options.maxRetries) throw err;
       const delay = this.options.retryDelay * Math.pow(2, attempt);
       await new Promise((r) => setTimeout(r, delay));

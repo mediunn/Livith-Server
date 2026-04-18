@@ -153,7 +153,9 @@ describe('Bottleneck', () => {
         isRetryable: () => false,
       });
 
-      const assertion = expect(bottleneck.schedule(fn)).rejects.toThrow('not retryable');
+      const assertion = expect(bottleneck.schedule(fn)).rejects.toThrow(
+        'not retryable',
+      );
       await jest.runAllTimersAsync();
       await assertion;
 
@@ -161,7 +163,8 @@ describe('Bottleneck', () => {
     });
 
     it('isRetryable: 특정 에러만 재시도', async () => {
-      const fn = jest.fn()
+      const fn = jest
+        .fn()
         .mockRejectedValueOnce(new Error('rate limit'))
         .mockResolvedValueOnce('ok');
 
@@ -170,7 +173,8 @@ describe('Bottleneck', () => {
         minTime: 0,
         maxRetries: 2,
         retryDelay: 100,
-        isRetryable: (err) => err instanceof Error && err.message === 'rate limit',
+        isRetryable: (err) =>
+          err instanceof Error && err.message === 'rate limit',
       });
 
       const promise = bottleneck.schedule(fn);
