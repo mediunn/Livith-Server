@@ -29,7 +29,7 @@ export class ConcertInfoUpdateStrategy implements NotificationStrategy {
       fetchBatch: async (skip, take) => {
         return await this.prisma.user.findMany({
           where: {
-            interestConcertId: concertId,
+            userInterestConcerts: { some: { concertId } },
             deletedAt: null,
           },
           select: { id: true },
