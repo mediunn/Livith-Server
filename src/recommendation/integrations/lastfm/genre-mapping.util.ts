@@ -2,9 +2,8 @@ export const GENRE_TAG_MAPPING: Record<string, string> = {
   JPOP: 'j-pop',
   ROCK_METAL: 'rock',
   RAP_HIPHOP: 'hip hop',
-  CLASSIC_JAZZ: 'jazz',
-  ACOUSTIC: 'acoustic',
-  ELECTRONIC: 'electronic',
+  POP: 'pop',
+  INDIE: 'indie',
 };
 
 /**

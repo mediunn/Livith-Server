@@ -19,7 +19,7 @@ export class GetConcertSearchResultsDto {
   @IsEnum(ConcertGenre, {
     each: true,
     message:
-      'genre는 JPOP | ROCK_METAL | RAP_HIPHOP | CLASSIC_JAZZ | ACOUSTIC | ELECTRONIC | ALL 중 하나여야 해요',
+      'genre는 JPOP | ROCK_METAL | RAP_HIPHOP | POP | INDIE | ALL 중 하나여야 해요',
   })
   @IsOptional()
   @Transform(({ value }) => (Array.isArray(value) ? value : [value]))

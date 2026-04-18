@@ -40,15 +40,14 @@ describe('ArtistSyncService Logic Test ', () => {
     prismaService = module.get(PrismaService);
   });
 
-  it('전체 6개 장르에서 각 200명씩 총 1200명 가져오기', async () => {
+  it('전체 5개 장르에서 각 200명씩 총 1000명 가져오기', async () => {
     // Given:
     mockPrisma.genre.findMany.mockResolvedValue([
       { id: 1, name: 'JPOP' },
       { id: 2, name: 'ROCK_METAL' },
       { id: 3, name: 'RAP_HIPHOP' },
-      { id: 4, name: 'CLASSIC_JAZZ' },
-      { id: 5, name: 'ACOUSTIC' },
-      { id: 6, name: 'ELECTRONIC' },
+      { id: 4, name: 'POP' },
+      { id: 5, name: 'INDIE' },
     ] as any);
 
     mockPrisma.representativeArtist.upsert.mockResolvedValue({} as any);
@@ -207,7 +206,7 @@ describe('ArtistSyncService Logic Test ', () => {
     mockPrisma.genre.findMany.mockResolvedValue([
       { id: 1, name: 'JPOP' },
       { id: 2, name: 'ROCK_METAL' },
-      { id: 3, name: 'CLASSIC_JAZZ' },
+      { id: 3, name: 'POP' },
     ] as any);
 
     const apiCalls: string[] = [];
@@ -226,6 +225,6 @@ describe('ArtistSyncService Logic Test ', () => {
     // Then
     expect(apiCalls).toContain('j-pop');
     expect(apiCalls).toContain('rock');
-    expect(apiCalls).toContain('jazz');
+    expect(apiCalls).toContain('pop');
   }, 60000);
 });
