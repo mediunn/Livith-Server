@@ -35,9 +35,8 @@ export class UserService {
     return user;
   }
 
-  //관심 콘서트 설정
+  //관심 콘서트 추가
   async setInterestConcert(concertId: number, userId: number) {
-    // 콘서트 ID가 유효한지 확인
     const concert = await this.prismaService.concert.findUnique({
       where: { id: concertId },
     });
@@ -45,35 +44,38 @@ export class UserService {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    await this.validateUser(userId);
+    const user = await this.validateUser(userId);
 
-    // 관심 콘서트 설정
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: {
-        interestConcertId: concertId,
+    await this.prismaService.userInterestConcert.upsert({
+      where: { userId_concertId: { userId, concertId } },
+      update: {},
+      create: {
+        userId,
+        concertId,
+        concertTitle: concert.title,
+        userNickname: user.nickname,
       },
     });
 
     return new ConcertResponseDto(concert);
   }
 
-  //관심 콘서트 조회
+  //관심 콘서트 목록 조회
   async getInterestConcert(userId: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: { concert: true },
-    });
-
     await this.validateUser(userId);
 
-    if (!user.concert) {
-      return null;
-    }
+    const items = await this.prismaService.userInterestConcert.findMany({
+      where: { userId },
+      include: { concert: true },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    return new ConcertResponseDto(
-      user.concert,
-      getDaysUntil(user.concert.startDate),
+    return items.map(
+      (item) =>
+        new ConcertResponseDto(
+          item.concert,
+          getDaysUntil(item.concert.startDate),
+        ),
     );
   }
 
@@ -81,9 +83,8 @@ export class UserService {
   async removeInterestConcert(userId: number) {
     await this.validateUser(userId);
 
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: { interestConcertId: { set: null } },
+    await this.prismaService.userInterestConcert.deleteMany({
+      where: { userId },
     });
 
     return;
