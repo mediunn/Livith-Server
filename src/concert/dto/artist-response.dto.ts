@@ -7,16 +7,18 @@ export class ArtistResponseDto {
   category: string;
   detail: string;
   instagramUrl: string;
+  twitterUrl: string;
   keywords: string[];
   imgUrl: string;
 
   constructor(artist: Artist) {
     this.id = artist.id;
     this.artist = artist.artist;
-    this.debutDate = artist.debutDate.replaceAll('-', '.');
+    this.debutDate = artist.debutDate.replaceAll('-', '.') ?? null;
     this.category = artist.category;
     this.detail = artist.detail;
     this.instagramUrl = artist.instagramUrl;
+    this.twitterUrl = artist.twitterUrl;
     this.keywords = artist.keywords
       ? artist.keywords.split(',').map((keyword) => keyword.trim())
       : [];
