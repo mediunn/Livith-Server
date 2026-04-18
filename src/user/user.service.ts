@@ -61,7 +61,7 @@ export class UserService {
   }
 
   //관심 콘서트 목록 조회
-  async getInterestConcert(userId: number) {
+  async getInterestConcerts(userId: number) {
     await this.validateUser(userId);
 
     const items = await this.prismaService.userInterestConcert.findMany({

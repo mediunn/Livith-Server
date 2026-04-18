@@ -49,7 +49,7 @@ export class UserController {
   })
   async getInterestConcert(@Req() req) {
     const userId = req.user.userId;
-    return this.userService.getInterestConcert(userId);
+    return this.userService.getInterestConcerts(userId);
   }
 
   // 관심 콘서트 삭제
