@@ -105,13 +105,16 @@ describe('SwrCache', () => {
       lruCache.set('d', '4', { ttl: 10_000, staleTtl: 10_000 }); // b 제거됨
 
       expect(lruCache.get('a')!.data).toBe('1'); // a는 살아있음
-      expect(lruCache.get('b')).toBeNull();       // b가 제거됨
+      expect(lruCache.get('b')).toBeNull(); // b가 제거됨
     });
 
     it('기본 maxSize는 500', () => {
       const defaultCache = new SwrCache<string>();
       for (let i = 0; i < 500; i++) {
-        defaultCache.set(`key${i}`, `val${i}`, { ttl: 10_000, staleTtl: 10_000 });
+        defaultCache.set(`key${i}`, `val${i}`, {
+          ttl: 10_000,
+          staleTtl: 10_000,
+        });
       }
       expect(defaultCache.size()).toBe(500);
 
