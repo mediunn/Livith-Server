@@ -15,7 +15,7 @@ describe('GenreController', () => {
     }),
     new GenreResponseDto({
       id: 2,
-      name: 'ACOUSTIC',
+      name: 'POP',
       imgUrl: 'https://example.com/rock.jpg',
     }),
     new GenreResponseDto({
