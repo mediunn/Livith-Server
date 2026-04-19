@@ -85,15 +85,15 @@ export class UserService {
   }
 
   // 관심 콘서트 삭제
-  async removeInterestConcert(userId: number) {
-    await this.validateUser(userId);
+  // async removeInterestConcert(userId: number) {
+  //   await this.validateUser(userId);
 
-    await this.prismaService.userInterestConcert.deleteMany({
-      where: { userId },
-    });
+  //   await this.prismaService.userInterestConcert.deleteMany({
+  //     where: { userId },
+  //   });
 
-    return;
-  }
+  //   return;
+  // }
 
   // 유저 정보 조회
   async getUserInfo(userId: number) {
