@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   Patch,
   Post,
   Put,
@@ -11,7 +12,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { CheckDeletedUser } from './dto/check-deleted-user.dto';
@@ -20,6 +26,7 @@ import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
 import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
 import { SetInterestConcertsDto } from './dto/set-interest-concerts.dto';
+import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)
@@ -50,6 +57,31 @@ export class UserController {
   async getInterestConcert(@Req() req) {
     const userId = req.user.userId;
     return this.userService.getInterestConcerts(userId);
+  }
+
+  //유저의 관심 콘서트 여부 확인
+  @Get('interest-concerts/:id/exists')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 여부 확인',
+    description: '유저가 특정 콘서트를 관심 콘서트로 설정했는지 확인합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async checkInterestConcert(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    const interestConcerts = await this.userService.getInterestConcerts(userId);
+    return {
+      isInterested: interestConcerts.some((concert) => concert.id === id),
+    };
   }
 
   // 관심 콘서트 삭제
