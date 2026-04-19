@@ -34,7 +34,7 @@ export class TicketReminderStrategy implements NotificationStrategy {
       fetchBatch: async (skip, take) => {
         return await this.prisma.user.findMany({
           where: {
-            interestConcertId: schedule.concertId,
+            userInterestConcerts: { some: { concertId: schedule.concertId } },
             deletedAt: null,
           },
           select: { id: true },
