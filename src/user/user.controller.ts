@@ -13,30 +13,30 @@ import {
 import { UserService } from './user.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { CheckDeletedUser } from './dto/check-deleted-user.dto';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
 import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
+import { SetInterestConcertsDto } from './dto/set-interest-concerts.dto';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  //관심 콘서트 설정
-  @Post('interest-concert')
+  //관심 콘서트 설정/수정
+  @Put('interest-concerts')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: '유저의 관심 콘서트 설정',
-    description: '유저의 관심 콘서트를 설정합니다.',
+    summary: '유저의 관심 콘서트 설정/수정',
+    description: '유저의 관심 콘서트를 설정/수정합니다.',
   })
-  async setInterestConcert(@Body() dto: SetInterestConcertDto, @Req() req) {
+  async setInterestConcerts(@Req() req, @Body() dto: SetInterestConcertsDto) {
     const userId = req.user.userId;
-    return this.userService.setInterestConcert(dto.concertId, userId);
+    return this.userService.setInterestConcerts(dto.concertIds, userId);
   }
 
   //관심 콘서트 조회
@@ -53,17 +53,17 @@ export class UserController {
   }
 
   // 관심 콘서트 삭제
-  @Delete('interest-concert')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: '유저의 관심 콘서트 삭제',
-    description: '유저의 관심 콘서트를 삭제합니다.',
-  })
-  async removeInterestConcert(@Req() req) {
-    const userId = req.user.userId;
-    return this.userService.removeInterestConcert(userId);
-  }
+  // @Delete('interest-concert')
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
+  // @ApiOperation({
+  //   summary: '유저의 관심 콘서트 삭제',
+  //   description: '유저의 관심 콘서트를 삭제합니다.',
+  // })
+  // async removeInterestConcert(@Req() req) {
+  //   const userId = req.user.userId;
+  //   return this.userService.removeInterestConcert(userId);
+  // }
 
   // 유저 정보 조회
   @Get('me')
