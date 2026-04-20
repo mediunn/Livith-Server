@@ -73,12 +73,11 @@ describe('TicketReminderStrategy.buildMessage', () => {
     expect(message.content).toContain('콘서트');
   });
 
-  it('notificationType 이 없으면 default 메시지 반환', async () => {
-    const message = await strategy.buildMessage({
-      concertTitle: '기본',
-    });
-
-    expect(message.title).toBeDefined();
-    expect(message.content).toBeDefined();
+  it('지원하지 않는 notificationType 이면 Error 를 던진다', async () => {
+    await expect(
+      strategy.buildMessage({
+        concertTitle: '기본',
+      }),
+    ).rejects.toThrow(/Unsupported notificationType/);
   });
 });
