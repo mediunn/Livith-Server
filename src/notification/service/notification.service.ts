@@ -154,48 +154,6 @@ export class NotificationService {
           title: message.title,
           content: message.content,
           targetId,
-          userIds: batchUserIds,
-        });
-        totalSent += result.sent;
-        totalFailed += result.failed;
-      },
-    );
-
-    return { sent: totalSent, failed: totalFailed };
-  }
-
-  /**
-   * Ticket Reminder 알림
-   */
-  async sendTicketReminderNotification(
-    type: NotificationType,
-    params: NotificationTargetParams,
-    targetId?: string,
-  ): Promise<{ sent: number; failed: number }> {
-    const strategy = this.strategyService.getStrategy(type);
-
-    const userIds = await strategy.getTargetUserIds(params);
-    if (userIds.length === 0) {
-      return { sent: 0, failed: 0 };
-    }
-
-    const message = await strategy.buildMessage({
-      ...params,
-      notificationType: type,
-    });
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    await BatchProcessor.processInChunks(
-      userIds,
-      NOTIFICATION_BATCH_SIZE,
-      async (batchUserIds: number[]) => {
-        const result = await this.sendPushNotification({
-          type,
-          title: message.title,
-          content: message.content,
-          targetId,
           scheduleId: params.scheduleId,
           userIds: batchUserIds,
         });

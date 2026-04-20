@@ -16,7 +16,7 @@ describe('TicketingReminderScheduler', () => {
   };
 
   const mockNotificationService = {
-    sendTicketReminderNotification: jest
+    sendNotificationByStrategy: jest
       .fn()
       .mockResolvedValue({ sent: 1, failed: 0 }),
   };
@@ -70,7 +70,7 @@ describe('TicketingReminderScheduler', () => {
       await scheduler.oneDayBeforeNotification();
 
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledWith(
         NotificationType.PRE_TICKETING_1D,
         expect.objectContaining({
@@ -97,7 +97,7 @@ describe('TicketingReminderScheduler', () => {
       await scheduler.oneDayBeforeNotification();
 
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledWith(
         NotificationType.GENERAL_TICKETING_1D,
         expect.objectContaining({
@@ -132,7 +132,7 @@ describe('TicketingReminderScheduler', () => {
 
       expect(total).toBe(2);
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledTimes(2);
     });
 
@@ -178,7 +178,7 @@ describe('TicketingReminderScheduler', () => {
 
       expect(count).toBe(0);
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).not.toHaveBeenCalled();
     });
 
@@ -199,7 +199,7 @@ describe('TicketingReminderScheduler', () => {
 
       expect(count).toBe(1);
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledWith(
         NotificationType.PRE_TICKETING_30MIN,
         expect.objectContaining({
@@ -245,7 +245,7 @@ describe('TicketingReminderScheduler', () => {
 
       expect(count).toBe(0);
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).not.toHaveBeenCalled();
     });
 
@@ -266,7 +266,7 @@ describe('TicketingReminderScheduler', () => {
 
       expect(count).toBe(1);
       expect(
-        notificationService.sendTicketReminderNotification,
+        notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledWith(
         NotificationType.GENERAL_TICKETING_OPEN,
         expect.objectContaining({

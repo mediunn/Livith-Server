@@ -93,10 +93,9 @@ export class TicketReminderStrategy implements NotificationStrategy {
         };
 
       default:
-        return {
-          title: `선호 아티스트의 선예매 오픈🔥`,
-          content: `관심 콘서트로 선택하신 ${title}, 선예매 일정 소식이 도착했어요.`,
-        };
+        throw new Error(
+          `Unsupported notificationType for TicketReminderStrategy: ${notificationType}`,
+        );
     }
   }
 }
