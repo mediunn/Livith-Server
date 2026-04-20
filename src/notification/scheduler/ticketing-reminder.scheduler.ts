@@ -87,7 +87,7 @@ export class TicketingReminderScheduler {
 
     for (const schedule of schedules) {
       const timeStr = formatKstHour(schedule.scheduledAt);
-      await this.notificationService.sendTicketReminderNotification(
+      await this.notificationService.sendNotificationByStrategy(
         notificationType,
         {
           scheduleId: schedule.id,
@@ -127,7 +127,7 @@ export class TicketingReminderScheduler {
       if (already) continue;
 
       const timeStr = formatKstHour(schedule.scheduledAt);
-      await this.notificationService.sendTicketReminderNotification(
+      await this.notificationService.sendNotificationByStrategy(
         notificationType,
         {
           scheduleId: schedule.id,
@@ -168,7 +168,7 @@ export class TicketingReminderScheduler {
       if (already) continue;
 
       const timeStr = formatKstHour(schedule.scheduledAt);
-      await this.notificationService.sendTicketReminderNotification(
+      await this.notificationService.sendNotificationByStrategy(
         notificationType,
         {
           scheduleId: schedule.id,
