@@ -97,6 +97,7 @@ export class NotificationService {
     title: string;
     content: string;
     targetId?: string;
+    scheduleId?: number;
     userIds: number[];
   }): Promise<{ sent: number; failed: number }> {
     const result = await this.pushSenderService.sendPushNotification(params);
@@ -109,6 +110,7 @@ export class NotificationService {
         result.finalTitle,
         result.finalContent,
         params.targetId ?? null,
+        params.scheduleId ?? null,
       );
     }
 
@@ -116,7 +118,7 @@ export class NotificationService {
   }
 
   /**
-   * Straegy 패턴을 사용한 통합 알림 전송
+   * Strategy 패턴을 사용한 통합 알림 전송
    * - Strategy가 대상 유저와 메시지를 결정
    */
   async sendNotificationByStrategy(
@@ -177,7 +179,10 @@ export class NotificationService {
       return { sent: 0, failed: 0 };
     }
 
-    const message = await strategy.buildMessage(params);
+    const message = await strategy.buildMessage({
+      ...params,
+      notificationType: type,
+    });
 
     let totalSent = 0;
     let totalFailed = 0;
@@ -191,6 +196,7 @@ export class NotificationService {
           title: message.title,
           content: message.content,
           targetId,
+          scheduleId: params.scheduleId,
           userIds: batchUserIds,
         });
         totalSent += result.sent;
