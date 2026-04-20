@@ -434,15 +434,15 @@ model NotificationSet {
 }
 
 model NotificationHistories {
-  id        Int              @id @default(autoincrement())
-  userId    Int              @map("user_id")
-  type      NotificationType
-  title     String           @db.VarChar(100)
-  content   String           @db.VarChar(500)
-  targetId  String?          @map("target_id") @db.VarChar(500)
+  id         Int              @id @default(autoincrement())
+  userId     Int              @map("user_id")
+  type       NotificationType
+  title      String           @db.VarChar(100)
+  content    String           @db.VarChar(500)
+  targetId   String?          @map("target_id") @db.VarChar(500)
   scheduleId Int?             @map("schedule_id")
-  isRead    Boolean          @default(false) @map("is_read")
-  createdAt DateTime         @default(now()) @map("created_at")
+  isRead     Boolean          @default(false) @map("is_read")
+  createdAt  DateTime         @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -520,7 +520,6 @@ enum GenreType {
 
 enum NotificationType {
   INTEREST_CONCERT
-
   PRE_TICKETING_OPEN
   GENERAL_TICKETING_OPEN
   PRE_TICKETING_1D
