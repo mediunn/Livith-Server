@@ -87,7 +87,7 @@ NestJS modular architecture with 14 feature modules registered in `src/app.modul
 - Each feature module follows Controller → Service → PrismaService pattern.
 - DTOs use `class-validator` decorators for request validation and `@ApiProperty()` for Swagger.
 - Dates handled with `dayjs` (see `common/utils/date.util.ts`).
-- Notification types are enumerated in `NotificationType` (INTEREST_CONCERT, TICKET_7D, TICKET_1D, TICKET_TODAY, etc.).
+- Notification types are enumerated in `NotificationType` (INTEREST_CONCERT, PRE_TICKETING_OPEN, GENERAL_TICKETING_OPEN, PRE_TICKETING_1D, GENERAL_TICKETING_1D, PRE_TICKETING_30MIN, GENERAL_TICKETING_30MIN, etc.).
 
 ## Deployment
 

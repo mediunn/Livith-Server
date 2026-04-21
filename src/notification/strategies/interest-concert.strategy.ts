@@ -21,7 +21,7 @@ export class InterestConcertStrategy implements NotificationStrategy {
     await BatchProcessor.processPaginated({
       batchSize: NOTIFICATION_BATCH_SIZE,
       fetchBatch: async (skip, take) => {
-        return await this.prisma.user.findMany({
+        return this.prisma.user.findMany({
           where: {
             userInterestConcerts: { none: {} },
             deletedAt: null,

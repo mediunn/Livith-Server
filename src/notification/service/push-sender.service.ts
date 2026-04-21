@@ -40,6 +40,7 @@ export class PushSenderService {
     title: string;
     content: string;
     targetId?: string;
+    scheduleId?: number;
     userIds: number[];
   }): Promise<{
     sent: number;
