@@ -9,9 +9,12 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { UserResponseDto } from './dto/user-response.dto';
-import { Provider, User } from '@prisma/client';
+import { Prisma, Provider, User } from '@prisma/client';
 import { UserGenreResponseDto } from './dto/user-genre-response.dto';
 import { UserArtistResponseDto } from './dto/user-artist-response.dto';
+import { GetInterestConcertsDto } from './dto/get-interest-concerts.dto';
+import { InterestConcertSort } from 'src/common/enums/interest-concert-sort.enum';
+import { InterestConcertResponseDto } from './dto/interest-concert-response.dto';
 
 @Injectable()
 export class UserService {
@@ -65,23 +68,324 @@ export class UserService {
     return concerts.map((concert) => new ConcertResponseDto(concert));
   }
 
-  //관심 콘서트 목록 조회
-  async getInterestConcerts(userId: number) {
+  // 유저의 관심 콘서트 여부 확인
+  async checkInterestConcert(userId: number, concertId: number) {
     await this.validateUser(userId);
 
+    const interestConcert =
+      await this.prismaService.userInterestConcert.findFirst({
+        where: {
+          userId,
+          concertId,
+        },
+        select: { id: true },
+      });
+
+    return {
+      isInterested: Boolean(interestConcert),
+    };
+  }
+
+  //관심 콘서트 목록 조회
+  async getInterestConcerts(
+    query: GetInterestConcertsDto | undefined,
+    userId: number,
+  ) {
+    await this.validateUser(userId);
+
+    const {
+      cursorDate,
+      cursorId,
+      size = 20,
+      sort = InterestConcertSort.CONCERT,
+    } = query ?? {};
+
+    // 예매일 기준
+    if (sort === InterestConcertSort.TICKETING) {
+      return this.getInterestConcertsByTicketing(
+        userId,
+        cursorDate,
+        cursorId,
+        size,
+      );
+    }
+
+    // 공연일 기준 (기본값)
+    return this.getInterestConcertsByConcertDate(
+      userId,
+      cursorDate,
+      cursorId,
+      size,
+    );
+  }
+
+  private async getInterestConcertsByConcertDate(
+    userId: number,
+    cursorDate?: string,
+    cursorId?: number,
+    size?: number,
+  ) {
+    const where: Prisma.UserInterestConcertWhereInput = {
+      userId,
+      concert: {
+        status: {
+          in: ['ONGOING', 'UPCOMING'],
+        },
+      },
+    };
+
+    if (cursorDate && cursorId) {
+      where.OR = [
+        {
+          concert: {
+            startDate: {
+              gt: cursorDate,
+            },
+          },
+        },
+        {
+          AND: [
+            {
+              concert: {
+                startDate: cursorDate,
+              },
+            },
+            {
+              concertId: {
+                gt: cursorId,
+              },
+            },
+          ],
+        },
+      ];
+    }
+
     const items = await this.prismaService.userInterestConcert.findMany({
-      where: { userId },
-      include: { concert: true },
-      orderBy: { createdAt: 'desc' },
+      where,
+      include: {
+        concert: {
+          include: {
+            schedules: {
+              where: {
+                type: { in: ['PRE_TICKETING', 'GENERAL_TICKETING'] },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { concert: { startDate: { sort: 'asc', nulls: 'last' } } },
+        { concertId: 'asc' },
+      ],
+      take: size + 1,
     });
 
-    return items.map(
+    const hasNext = items.length > size;
+    const pageItems = hasNext ? items.slice(0, size) : items;
+
+    const mappedItems = pageItems.map(
       (item) =>
-        new ConcertResponseDto(
+        new InterestConcertResponseDto(
           item.concert,
+          this.formatScheduleDate(item.concert.schedules, 'PRE_TICKETING'),
+          this.formatScheduleDate(item.concert.schedules, 'GENERAL_TICKETING'),
           getDaysUntil(item.concert.startDate),
         ),
     );
+
+    const lastItem = pageItems[pageItems.length - 1];
+
+    return {
+      data: mappedItems,
+      cursor:
+        hasNext && lastItem
+          ? {
+              date: lastItem.concert.startDate,
+              id: lastItem.concertId,
+            }
+          : null,
+    };
+  }
+
+  private formatScheduleDate(
+    schedules: Array<{ type: string; scheduledAt: Date }>,
+    type: string,
+  ): string | null {
+    const schedule = schedules.find((item) => item.type === type);
+    return schedule ? schedule.scheduledAt.toISOString() : null;
+  }
+
+  private async getInterestConcertsByTicketing(
+    userId: number,
+    cursorDate?: string,
+    cursorId?: number,
+    size?: number,
+  ) {
+    let parsedCursorDate: Date | undefined;
+    let cursorSortBucket: number | undefined;
+
+    if (cursorDate) {
+      parsedCursorDate = new Date(cursorDate);
+
+      if (Number.isNaN(parsedCursorDate.getTime())) {
+        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
+      }
+    }
+
+    if (parsedCursorDate !== undefined && cursorId !== undefined) {
+      const cursorRows = await this.prismaService.$queryRaw<
+        Array<{ sortBucket: number }>
+      >(
+        Prisma.sql`
+      SELECT
+        CASE
+          WHEN MIN(s.scheduled_at) IS NOT NULL AND MIN(s.scheduled_at) >= NOW() THEN 0
+          WHEN MIN(s.scheduled_at) IS NOT NULL
+            AND MIN(s.scheduled_at) < NOW()
+            AND STR_TO_DATE(REPLACE(REPLACE(c.start_date, '.', '-'), '/', '-'), '%Y-%m-%d') IS NOT NULL THEN 1
+          ELSE 2
+        END AS sortBucket
+      FROM user_interest_concerts uic
+      INNER JOIN concerts c ON c.id = uic.concert_id
+      LEFT JOIN schedule s
+        ON s.concert_id = c.id
+       AND s.type IN ('PRE_TICKETING', 'GENERAL_TICKETING')
+      WHERE uic.user_id = ${userId}
+        AND c.status IN ('ONGOING', 'UPCOMING')
+        AND c.id = ${cursorId}
+      GROUP BY c.id, c.start_date
+    `,
+      );
+
+      if (cursorRows.length === 0) {
+        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
+      }
+
+      cursorSortBucket = Number(cursorRows[0].sortBucket);
+    }
+
+    const cursorCondition =
+      parsedCursorDate !== undefined &&
+      cursorId !== undefined &&
+      cursorSortBucket !== undefined
+        ? Prisma.sql`
+          HAVING
+            sortBucket > ${cursorSortBucket}
+            OR (
+              sortBucket = ${cursorSortBucket}
+              AND (
+                (sortDate IS NOT NULL AND sortDate > ${parsedCursorDate})
+                OR (
+                  sortDate IS NOT NULL
+                  AND sortDate = ${parsedCursorDate}
+                  AND c.id < ${cursorId}
+                )
+                OR (
+                  sortDate IS NULL
+                  AND c.id < ${cursorId}
+                )
+              )
+            )
+        `
+        : Prisma.empty;
+
+    const rows = await this.prismaService.$queryRaw<
+      Array<{
+        concertId: number;
+        sortDate: Date | null;
+        preSaleDate: Date | null;
+        generalSaleDate: Date | null;
+      }>
+    >(
+      Prisma.sql`
+    SELECT c.id AS concertId
+      , CASE
+          WHEN MIN(s.scheduled_at) IS NOT NULL AND MIN(s.scheduled_at) >= NOW() THEN 0
+          WHEN MIN(s.scheduled_at) IS NOT NULL
+            AND MIN(s.scheduled_at) < NOW()
+            AND STR_TO_DATE(REPLACE(REPLACE(c.start_date, '.', '-'), '/', '-'), '%Y-%m-%d') IS NOT NULL THEN 1
+          ELSE 2
+        END AS sortBucket
+      , CASE
+          WHEN MIN(s.scheduled_at) IS NOT NULL AND MIN(s.scheduled_at) >= NOW() THEN MIN(s.scheduled_at)
+          WHEN MIN(s.scheduled_at) IS NOT NULL
+            AND MIN(s.scheduled_at) < NOW() THEN STR_TO_DATE(REPLACE(REPLACE(c.start_date, '.', '-'), '/', '-'), '%Y-%m-%d')
+          ELSE STR_TO_DATE(REPLACE(REPLACE(c.start_date, '.', '-'), '/', '-'), '%Y-%m-%d')
+        END AS sortDate
+      , MIN(CASE WHEN s.type = 'PRE_TICKETING' THEN s.scheduled_at END) AS preSaleDate
+      , MIN(CASE WHEN s.type = 'GENERAL_TICKETING' THEN s.scheduled_at END) AS generalSaleDate
+    FROM user_interest_concerts uic
+    INNER JOIN concerts c ON c.id = uic.concert_id
+    LEFT JOIN schedule s 
+      ON s.concert_id = c.id
+     AND s.type IN ('PRE_TICKETING', 'GENERAL_TICKETING')
+    WHERE uic.user_id = ${userId}
+      AND c.status IN ('ONGOING', 'UPCOMING')
+    GROUP BY c.id, c.start_date
+    ${cursorCondition}
+    ORDER BY 
+      sortBucket ASC,
+      sortDate IS NULL ASC,
+      sortDate ASC,
+      c.id DESC
+    LIMIT ${size + 1}
+  `,
+    );
+
+    const hasNext = rows.length > size;
+    const pageRows = hasNext ? rows.slice(0, size) : rows;
+
+    const concertIds = pageRows.map((row) => Number(row.concertId));
+    if (concertIds.length === 0) {
+      return {
+        items: [],
+        cursor: null,
+      };
+    }
+
+    const concerts = await this.prismaService.concert.findMany({
+      where: {
+        id: { in: concertIds },
+        status: { in: ['ONGOING', 'UPCOMING'] },
+      },
+    });
+
+    const concertMap = new Map(
+      concerts.map((concert) => [concert.id, concert]),
+    );
+
+    const rowMap = new Map(pageRows.map((row) => [row.concertId, row]));
+
+    const mappedItems = concertIds
+      .map((concertId) => {
+        const concert = concertMap.get(concertId);
+        const row = rowMap.get(concertId);
+
+        if (!concert || !row) return undefined;
+
+        return new InterestConcertResponseDto(
+          concert,
+          row.preSaleDate ? row.preSaleDate.toISOString() : null,
+          row.generalSaleDate ? row.generalSaleDate.toISOString() : null,
+          getDaysUntil(concert.startDate),
+        );
+      })
+      .filter((concert): concert is InterestConcertResponseDto => {
+        return concert !== undefined;
+      });
+
+    const lastRow = pageRows[pageRows.length - 1];
+
+    return {
+      data: mappedItems,
+      cursor:
+        hasNext && lastRow
+          ? {
+              date: lastRow.sortDate?.toISOString() ?? null,
+              id: lastRow.concertId,
+            }
+          : null,
+    };
   }
 
   // 관심 콘서트 삭제
