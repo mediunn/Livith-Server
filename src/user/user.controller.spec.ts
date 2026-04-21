@@ -312,7 +312,7 @@ describe('UserController - Artist Preferences', () => {
       mockUserService.getInterestConcerts.mockResolvedValue(expectedResult);
 
       // When
-      const result = await controller.getInterestConcert(req, query as any);
+      const result = await controller.getInterestConcerts(req, query as any);
 
       // Then
       expect(result).toEqual(expectedResult);
