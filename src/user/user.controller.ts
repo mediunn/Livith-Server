@@ -1,32 +1,31 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Patch,
-  Post,
   Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { UserService } from './user.service';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdateNicknameDto } from './dto/update-nickname.dto';
-import { CheckDeletedUser } from './dto/check-deleted-user.dto';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
-import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
-import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
-import { SetInterestConcertsDto } from './dto/set-interest-concerts.dto';
 import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CheckDeletedUser } from './dto/check-deleted-user.dto';
+import { GetInterestConcertsDto } from './dto/get-interest-concerts.dto';
+import { SetInterestConcertsDto } from './dto/set-interest-concerts.dto';
+import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
+import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { UserService } from './user.service';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)
@@ -47,16 +46,16 @@ export class UserController {
   }
 
   //관심 콘서트 조회
-  @Get('interest-concert')
+  @Get('interest-concerts')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: '유저의 관심 콘서트 조회',
-    description: '유저의 관심 콘서트를 조회합니다.',
+    summary: '유저의 관심 콘서트 목록 조회',
+    description: '유저의 관심 콘서트 목록을 조회합니다.',
   })
-  async getInterestConcert(@Req() req) {
+  async getInterestConcert(@Req() req, @Query() query: GetInterestConcertsDto) {
     const userId = req.user.userId;
-    return this.userService.getInterestConcerts(userId);
+    return this.userService.getInterestConcerts(query, userId);
   }
 
   //유저의 관심 콘서트 여부 확인
@@ -78,10 +77,7 @@ export class UserController {
     @Param('id', ParsePositiveIntPipe) id: number,
   ) {
     const userId = req.user.userId;
-    const interestConcerts = await this.userService.getInterestConcerts(userId);
-    return {
-      isInterested: interestConcerts.some((concert) => concert.id === id),
-    };
+    return this.userService.checkInterestConcert(userId, id);
   }
 
   // 관심 콘서트 삭제
