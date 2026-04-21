@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { InterestConcertSort } from 'src/common/enums/interest-concert-sort.enum';
 export class GetInterestConcertsDto {
   @ApiProperty({
@@ -38,6 +38,6 @@ export class GetInterestConcertsDto {
     example: 'TICKETING',
   })
   @IsOptional()
-  @IsString()
+  @IsEnum(InterestConcertSort)
   sort?: InterestConcertSort;
 }

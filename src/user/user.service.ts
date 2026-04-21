@@ -40,31 +40,30 @@ export class UserService {
 
   //관심 콘서트 추가
   async setInterestConcerts(concertIds: number[], userId: number) {
+    const uniqueConcertIds = [...new Set(concertIds)];
     const concerts = await this.prismaService.concert.findMany({
-      where: { id: { in: concertIds } },
+      where: { id: { in: uniqueConcertIds } },
     });
-
-    if (concerts.length !== concertIds.length) {
+    if (concerts.length !== uniqueConcertIds.length) {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
     const user = await this.validateUser(userId);
 
-    await this.prismaService.userInterestConcert.deleteMany({
-      where: { userId },
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.userInterestConcert.deleteMany({
+        where: { userId },
+      });
+      const createData = concerts.map((concert) => ({
+        userId,
+        concertId: concert.id,
+        concertTitle: concert.title,
+        userNickname: user.nickname,
+      }));
+      await tx.userInterestConcert.createMany({
+        data: createData,
+      });
     });
-
-    const createData = concerts.map((concert) => ({
-      userId,
-      concertId: concert.id,
-      concertTitle: concert.title,
-      userNickname: user.nickname,
-    }));
-
-    await this.prismaService.userInterestConcert.createMany({
-      data: createData,
-    });
-
     return concerts.map((concert) => new ConcertResponseDto(concert));
   }
 
@@ -327,7 +326,7 @@ export class UserService {
       sortBucket ASC,
       sortDate IS NULL ASC,
       sortDate ASC,
-      c.id DESC
+      c.id ASC
     LIMIT ${size + 1}
   `,
     );
@@ -338,7 +337,7 @@ export class UserService {
     const concertIds = pageRows.map((row) => Number(row.concertId));
     if (concertIds.length === 0) {
       return {
-        items: [],
+        data: [],
         cursor: null,
       };
     }

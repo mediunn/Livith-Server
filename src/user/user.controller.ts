@@ -53,7 +53,10 @@ export class UserController {
     summary: '유저의 관심 콘서트 목록 조회',
     description: '유저의 관심 콘서트 목록을 조회합니다.',
   })
-  async getInterestConcert(@Req() req, @Query() query: GetInterestConcertsDto) {
+  async getInterestConcerts(
+    @Req() req,
+    @Query() query: GetInterestConcertsDto,
+  ) {
     const userId = req.user.userId;
     return this.userService.getInterestConcerts(query, userId);
   }
