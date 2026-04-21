@@ -16,9 +16,9 @@ describe('NotificationService - 알림 목록', () => {
     {
       id: 3,
       userId: 1,
-      type: NotificationType.TICKET_7D,
+      type: NotificationType.PRE_TICKETING_OPEN,
       title: '예매 일정',
-      content: '7일 뒤 예매 시작',
+      content: '선예매 시작',
       targetId: '123',
       isRead: false,
       createdAt: '2026.01.20 10:00',

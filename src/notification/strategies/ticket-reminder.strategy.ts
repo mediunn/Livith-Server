@@ -8,11 +8,10 @@ import {
 } from './notification-strategy.interface';
 import { BatchProcessor } from 'src/common/utils/batch-processor.util';
 import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
-import { formatHourAmPm } from 'src/common/utils/date.util';
 
 @Injectable()
 export class TicketReminderStrategy implements NotificationStrategy {
-  readonly type = NotificationType.TICKET_7D; // 대표 타입
+  readonly type = NotificationType.PRE_TICKETING_OPEN; // 대표 타입
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -32,7 +31,7 @@ export class TicketReminderStrategy implements NotificationStrategy {
     await BatchProcessor.processPaginated({
       batchSize: NOTIFICATION_BATCH_SIZE,
       fetchBatch: async (skip, take) => {
-        return await this.prisma.user.findMany({
+        return this.prisma.user.findMany({
           where: {
             userInterestConcerts: { some: { concertId: schedule.concertId } },
             deletedAt: null,
@@ -53,39 +52,50 @@ export class TicketReminderStrategy implements NotificationStrategy {
   async buildMessage(
     params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
-    let { concertTitle, timeStr, daysUntil } = params;
+    const { concertTitle, notificationType } = params;
+    const title = concertTitle ?? '콘서트';
 
-    if (!concertTitle && params.concertId) {
-      const concert = await this.prisma.concert.findUnique({
-        where: { id: params.concertId },
-        select: { title: true },
-      });
-      concertTitle = concert?.title ?? '콘서트';
+    switch (notificationType) {
+      case NotificationType.PRE_TICKETING_OPEN:
+        return {
+          title: `선호 아티스트의 선예매 오픈🔥`,
+          content: `관심 콘서트로 선택하신 ${title}, 선예매 일정 소식이 도착했어요.`,
+        };
+
+      case NotificationType.GENERAL_TICKETING_OPEN:
+        return {
+          title: `선호 아티스트의 일반 예매 오픈🔥`,
+          content: `관심 콘서트로 선택하신 ${title}, 일반 예매 일정 소식이 도착했어요.`,
+        };
+
+      case NotificationType.PRE_TICKETING_1D:
+        return {
+          title: `콘서트 선예매 1일전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 내일 선예매가 시작돼요.`,
+        };
+
+      case NotificationType.PRE_TICKETING_30MIN:
+        return {
+          title: `콘서트 선예매 30분전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작해요.`,
+        };
+
+      case NotificationType.GENERAL_TICKETING_1D:
+        return {
+          title: `콘서트 일반 예매 1일전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 내일 일반 예매가 시작돼요.`,
+        };
+
+      case NotificationType.GENERAL_TICKETING_30MIN:
+        return {
+          title: `콘서트 일반 예매 30분전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작해요.`,
+        };
+
+      default:
+        throw new Error(
+          `Unsupported notificationType for TicketReminderStrategy: ${notificationType}`,
+        );
     }
-
-    if (daysUntil === undefined && params.notificationType) {
-      if (params.notificationType === NotificationType.TICKET_TODAY) {
-        daysUntil = 0;
-        timeStr = timeStr ?? '20시';
-      } else if (params.notificationType === NotificationType.TICKET_1D) {
-        daysUntil = 1;
-      } else {
-        daysUntil = 7;
-      }
-    } else {
-      daysUntil = daysUntil ?? 7;
-    }
-
-    if (daysUntil === 0) {
-      return {
-        title: `오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작이에요`,
-        content: `관심 콘서트 '${concertTitle}', 오늘 ${formatHourAmPm(timeStr ?? '')} 예매가 시작돼요.`,
-      };
-    }
-
-    return {
-      title: `띵동! ${daysUntil}일 뒤 예매가 시작돼요`,
-      content: `관심 콘서트 '${concertTitle}', 예매 일정이 다가왔어요.`,
-    };
   }
 }

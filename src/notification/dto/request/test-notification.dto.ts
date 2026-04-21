@@ -6,7 +6,7 @@ export class TestNotificationDto {
   @ApiProperty({
     description: '알림 타입',
     enum: NotificationType,
-    example: NotificationType.TICKET_7D,
+    example: NotificationType.PRE_TICKETING_OPEN,
   })
   @IsEnum(NotificationType)
   type: NotificationType;

@@ -15,7 +15,7 @@ export class RecommendationStrategy implements NotificationStrategy {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getTargetUserIds(params: NotificationTargetParams): Promise<number[]> {
+  async getTargetUserIds(_params: NotificationTargetParams): Promise<number[]> {
     const allUserIds: number[] = [];
 
     await BatchProcessor.processPaginated({
@@ -40,7 +40,7 @@ export class RecommendationStrategy implements NotificationStrategy {
   }
 
   async buildMessage(
-    params: NotificationTargetParams,
+    _params: NotificationTargetParams,
   ): Promise<NotificationMessage> {
     return {
       title: '취향 기반 콘서트 정보가 업데이트됐어요 🎵',
