@@ -5,6 +5,7 @@ import { UserGenreResponseDto } from './dto/user-genre-response.dto';
 import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
+import { InterestConcertSort } from '../common/enums/interest-concert-sort.enum';
 
 describe('UserService', () => {
   let service: UserService;
@@ -77,6 +78,9 @@ describe('UserService', () => {
       userArtist: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
+      },
+      userInterestConcert: {
+        findFirst: jest.fn(),
       },
     };
 
@@ -174,7 +178,6 @@ describe('UserService', () => {
       // Then
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
-        include: { userArtists: { include: { artist: true } } },
       });
 
       expect(result).toHaveLength(2);
@@ -219,7 +222,6 @@ describe('UserService', () => {
 
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
-        include: { userArtists: { include: { artist: true } } },
       });
     });
   });
@@ -250,7 +252,6 @@ describe('UserService', () => {
       // Then
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
-        include: { userArtists: { include: { artist: true } } },
       });
 
       expect(
@@ -323,7 +324,6 @@ describe('UserService', () => {
 
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
-        include: { userArtists: { include: { artist: true } } },
       });
     });
 
@@ -416,6 +416,116 @@ describe('UserService', () => {
         mockPrismaService.representativeArtist.findMany,
       ).toHaveBeenCalledWith({
         where: { id: { in: artistIds } },
+      });
+    });
+  });
+
+  describe('interest concerts', () => {
+    describe('getInterestConcerts', () => {
+      it('sort=TICKETING이면 예매일 정렬 메서드를 호출해야 함', async () => {
+        // Given
+        const userId = 1;
+        const query = {
+          sort: InterestConcertSort.TICKETING,
+          size: 10,
+          cursorDate: '2026-01-01T00:00:00.000Z',
+          cursorId: 123,
+        };
+        const expected = {
+          data: [{ id: 1 }],
+          cursor: { date: '2026-01-02T00:00:00.000Z', id: 2 },
+        };
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        const ticketingSpy = jest
+          .spyOn(service as any, 'getInterestConcertsByTicketing')
+          .mockResolvedValue(expected);
+
+        // When
+        const result = await service.getInterestConcerts(query as any, userId);
+
+        // Then
+        expect(result).toEqual(expected);
+        expect(ticketingSpy).toHaveBeenCalledWith(
+          userId,
+          query.cursorDate,
+          query.cursorId,
+          query.size,
+        );
+      });
+
+      it('기본 정렬이면 공연일 정렬 메서드를 호출해야 함', async () => {
+        // Given
+        const userId = 1;
+        const query = {
+          size: 20,
+          cursorDate: '2026.01.01',
+          cursorId: 10,
+        };
+        const expected = {
+          data: [{ id: 3 }],
+          cursor: { date: '2026.01.02', id: 4 },
+        };
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        const concertSpy = jest
+          .spyOn(service as any, 'getInterestConcertsByConcertDate')
+          .mockResolvedValue(expected);
+
+        // When
+        const result = await service.getInterestConcerts(query as any, userId);
+
+        // Then
+        expect(result).toEqual(expected);
+        expect(concertSpy).toHaveBeenCalledWith(
+          userId,
+          query.cursorDate,
+          query.cursorId,
+          query.size,
+        );
+      });
+    });
+
+    describe('checkInterestConcert', () => {
+      it('관심 콘서트가 존재하면 isInterested=true를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 11;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue({
+          id: 1,
+        });
+
+        // When
+        const result = await service.checkInterestConcert(userId, concertId);
+
+        // Then
+        expect(result).toEqual({ isInterested: true });
+        expect(mockPrismaService.userInterestConcert.findFirst).toHaveBeenCalledWith(
+          {
+            where: {
+              userId,
+              concertId,
+            },
+            select: { id: true },
+          },
+        );
+      });
+
+      it('관심 콘서트가 없으면 isInterested=false를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 12;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue(null);
+
+        // When
+        const result = await service.checkInterestConcert(userId, concertId);
+
+        // Then
+        expect(result).toEqual({ isInterested: false });
       });
     });
   });
