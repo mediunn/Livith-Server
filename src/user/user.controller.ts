@@ -1,69 +1,100 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
+  Param,
   Patch,
-  Post,
   Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { UserService } from './user.service';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { SetInterestConcertDto } from './dto/set-interest-concert.dto';
-import { UpdateNicknameDto } from './dto/update-nickname.dto';
-import { CheckDeletedUser } from './dto/check-deleted-user.dto';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
-import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
+import { ParsePositiveIntPipe } from 'src/common/pipes/parse-positive-int.pipe';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CheckDeletedUser } from './dto/check-deleted-user.dto';
+import { GetInterestConcertsDto } from './dto/get-interest-concerts.dto';
+import { SetInterestConcertsDto } from './dto/set-interest-concerts.dto';
 import { SetUserArtistPreferencesDto } from './dto/set-user-artist-preferences.dto';
+import { SetUserGenrePreferencesDto } from './dto/set-user-genre-preferences.dto';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { UserService } from './user.service';
 
 @ApiTags('유저')
 @Controller(`${API_PREFIX}/users`)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  //관심 콘서트 설정
-  @Post('interest-concert')
+  //관심 콘서트 설정/수정
+  @Put('interest-concerts')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: '유저의 관심 콘서트 설정',
-    description: '유저의 관심 콘서트를 설정합니다.',
+    summary: '유저의 관심 콘서트 설정/수정',
+    description: '유저의 관심 콘서트를 설정/수정합니다.',
   })
-  async setInterestConcert(@Body() dto: SetInterestConcertDto, @Req() req) {
+  async setInterestConcerts(@Req() req, @Body() dto: SetInterestConcertsDto) {
     const userId = req.user.userId;
-    return this.userService.setInterestConcert(dto.concertId, userId);
+    return this.userService.setInterestConcerts(dto.concertIds, userId);
   }
 
   //관심 콘서트 조회
-  @Get('interest-concert')
+  @Get('interest-concerts')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: '유저의 관심 콘서트 조회',
-    description: '유저의 관심 콘서트를 조회합니다.',
+    summary: '유저의 관심 콘서트 목록 조회',
+    description: '유저의 관심 콘서트 목록을 조회합니다.',
   })
-  async getInterestConcert(@Req() req) {
+  async getInterestConcerts(
+    @Req() req,
+    @Query() query: GetInterestConcertsDto,
+  ) {
     const userId = req.user.userId;
-    return this.userService.getInterestConcerts(userId);
+    return this.userService.getInterestConcerts(query, userId);
+  }
+
+  //유저의 관심 콘서트 여부 확인
+  @Get('interest-concerts/:id/exists')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 여부 확인',
+    description: '유저가 특정 콘서트를 관심 콘서트로 설정했는지 확인합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async checkInterestConcert(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.checkInterestConcert(userId, id);
   }
 
   // 관심 콘서트 삭제
-  @Delete('interest-concert')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: '유저의 관심 콘서트 삭제',
-    description: '유저의 관심 콘서트를 삭제합니다.',
-  })
-  async removeInterestConcert(@Req() req) {
-    const userId = req.user.userId;
-    return this.userService.removeInterestConcert(userId);
-  }
+  // @Delete('interest-concert')
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
+  // @ApiOperation({
+  //   summary: '유저의 관심 콘서트 삭제',
+  //   description: '유저의 관심 콘서트를 삭제합니다.',
+  // })
+  // async removeInterestConcert(@Req() req) {
+  //   const userId = req.user.userId;
+  //   return this.userService.removeInterestConcert(userId);
+  // }
 
   // 유저 정보 조회
   @Get('me')
