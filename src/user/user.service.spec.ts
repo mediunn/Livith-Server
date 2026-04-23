@@ -502,15 +502,15 @@ describe('UserService', () => {
 
         // Then
         expect(result).toEqual({ isInterested: true });
-        expect(mockPrismaService.userInterestConcert.findFirst).toHaveBeenCalledWith(
-          {
-            where: {
-              userId,
-              concertId,
-            },
-            select: { id: true },
+        expect(
+          mockPrismaService.userInterestConcert.findFirst,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            concertId,
           },
-        );
+          select: { id: true },
+        });
       });
 
       it('관심 콘서트가 없으면 isInterested=false를 반환해야 함', async () => {
