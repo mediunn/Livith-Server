@@ -36,7 +36,8 @@ export class GetConcertSearchResultsDto {
   })
   @IsEnum(ConcertStatus, {
     each: true,
-    message: 'status는 ONGOING | UPCOMING | COMPLETED | ALL 중 하나여야 해요',
+    message:
+      'status는 ONGOING | UPCOMING | COMPLETED | CANCELED | ALL 중 하나여야 해요',
   })
   @IsOptional()
   @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
@@ -66,12 +67,13 @@ export class GetConcertSearchResultsDto {
   keyword?: string;
 
   @ApiProperty({
-    description: '커서(startDate + id 또는 title + id)',
+    description: '커서(마지막 콘서트의 id)',
     required: false,
-    example: '{"value":"2025.06.20","id":1}',
+    example: 50,
   })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   cursor?: string;
 
   @ApiProperty({

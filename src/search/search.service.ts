@@ -76,13 +76,29 @@ export class SearchService {
   async getConcertSearchResults(query: GetConcertSearchResultsDto) {
     const { genre, status, sort, keyword, cursor, size } = query;
 
-    // cursor 파싱
-    let parsedCursor: { value: string; id: number } | undefined;
+    // 1, cursor -> 해당 콘서트 조회해서 composite cursor 구성
+    let cursorObj;
     if (cursor) {
-      try {
-        parsedCursor = JSON.parse(cursor);
-      } catch (e) {
+      const cursorConcert = await this.prismaService.concert.findUnique({
+        where: { id: cursor },
+        select: { id: true, startDate: true, title: true },
+      });
+
+      if (!cursorConcert) {
         throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
+      }
+
+      if (sort === ConcertSort.ALPHABETICAL) {
+        cursorObj = {
+          title_id: { title: cursorConcert.title, id: cursorConcert.id },
+        };
+      } else {
+        cursorObj = {
+          startDate_id: {
+            startDate: cursorConcert.startDate,
+            id: cursorConcert.id,
+          },
+        };
       }
     }
 
@@ -96,26 +112,16 @@ export class SearchService {
         }
       : undefined;
 
+    // 3. 정렬 조건
     let orderBy;
-    let cursorObj;
-
-    // 정렬 조건에 따른 orderBy 및 cursor 설정
-    if (sort === undefined || sort === ConcertSort.LATEST) {
-      orderBy = [{ startDate: 'desc' }, { id: 'asc' }];
-      if (parsedCursor) {
-        cursorObj = {
-          startDate_id: { startDate: parsedCursor.value, id: parsedCursor.id },
-        };
-      }
-    } else {
+    if (sort === ConcertSort.ALPHABETICAL) {
       orderBy = [{ title: 'asc' }, { id: 'asc' }];
-      if (parsedCursor) {
-        cursorObj = {
-          title_id: { title: parsedCursor.value, id: parsedCursor.id },
-        };
-      }
+    } else {
+      // 공연 날짜 가까운 순
+      orderBy = [{ startDate: 'asc' }, { id: 'asc' }];
     }
 
+    // 4. WHERE 조건 조합
     const where = {
       AND: [],
     };
@@ -139,28 +145,26 @@ export class SearchService {
       where.AND.push(keywordCondition);
     }
 
-    const searchResults = await this.prismaService.concert.findMany({
-      where: where.AND.length > 0 ? where : undefined,
-      orderBy,
-      skip: parsedCursor ? 1 : 0,
-      cursor: cursorObj,
-      take: size,
-    });
+    // 5. 쿼리 실행
+    const whereClause = where.AND.length > 0 ? where : undefined;
+
+    const [searchResults, totalCount] =
+      await this.prismaService.concert.findMany({
+        where: whereClause,
+        orderBy,
+        skip: cursor ? 1 : 0,
+        cursor: cursorObj,
+        take: size,
+      });
 
     // 전체 개수
     const totalCount = await this.prismaService.concert.count({
       where: where.AND.length > 0 ? where : undefined,
     });
 
-    // 다음 커서 계산
+    // 6. 다음 커서 계산
     const last = searchResults[searchResults.length - 1];
-    let nextCursor;
-    if (last) {
-      nextCursor =
-        sort === ConcertSort.LATEST
-          ? { value: last.startDate, id: last.id }
-          : { value: last.title, id: last.id };
-    }
+    const nextCursor = last ? last.id : null;
 
     return {
       data: searchResults.map(
