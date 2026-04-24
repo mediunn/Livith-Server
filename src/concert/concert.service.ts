@@ -8,7 +8,7 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { ConcertStatus } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { CommentResponseDto } from '../comment/dto/comment-response.dto';
-import { getConcertDaysLeft, getDaysUntil } from '../common/utils/date.util';
+import { getConcertDaysLeft } from '../common/utils/date.util';
 import { ArtistResponseDto } from './dto/artist-response.dto';
 import { InfoResponseDto } from './dto/concert-info-response.dto';
 import { ConcertResponseDto } from './dto/concert-response.dto';
@@ -22,7 +22,7 @@ export class ConcertService {
   constructor(private readonly prismaService: PrismaService) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: number, size?: number) {
-    let cursorValue: { startDate: string; id: number } | undefined;
+    let cursorValue: { startDate: string | null; id: number } | undefined;
     if (cursor) {
       const cursorConcert = await this.prismaService.concert.findUnique({
         where: { id: cursor },
@@ -36,9 +36,9 @@ export class ConcertService {
 
     const concerts = await this.prismaService.concert.findMany({
       where: {
-        status: { not: ConcertStatus.CANCELED },
+        status: { in: [ConcertStatus.ONGOING, ConcertStatus.UPCOMING] },
       },
-      orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
+      orderBy: [{ startDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
       cursor: cursorValue,
       take: size,
       skip: cursor ? 1 : 0,
