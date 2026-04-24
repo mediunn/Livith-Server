@@ -140,7 +140,7 @@ export class SearchService {
     }
 
     // 5. 쿼리 실행
-    const [searchResults, totalCount] = await this.prismaService.$transaction([
+    const [searchResults, totalCount] = await Promise.all([
       this.prismaService.concert.findMany({
         where,
         orderBy,
