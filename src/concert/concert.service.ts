@@ -38,7 +38,7 @@ export class ConcertService {
       where: {
         status: { in: [ConcertStatus.ONGOING, ConcertStatus.UPCOMING] },
       },
-      orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+      orderBy: [{ startDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
       cursor: cursorValue,
       take: size,
       skip: cursor ? 1 : 0,
