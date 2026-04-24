@@ -67,14 +67,14 @@ export class GetConcertSearchResultsDto {
   keyword?: string;
 
   @ApiProperty({
-    description: '커서(마지막 콘서트의 id)',
+    description: '커서 (마지막 콘서트 ID)',
     required: false,
-    example: 50,
+    example: 59,
   })
   @IsOptional()
-  @IsString()
-  @Transform(({ value }) => (value ? Number(value) : undefined))
-  cursor?: string;
+  @IsNumber()
+  @Min(1)
+  cursor?: number;
 
   @ApiProperty({
     description: '가져올 데이터 개수',

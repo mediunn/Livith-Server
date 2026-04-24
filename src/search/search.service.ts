@@ -6,10 +6,10 @@ import { ConcertSort } from '../common/enums/concert-sort.enum';
 import { ConcertGenre } from '../common/enums/concert-genre.enum';
 import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
-import { getDaysUntil } from '../common/utils/date.util';
+import { getConcertDaysLeft } from '../common/utils/date.util';
 import { GenreType } from '@prisma/client';
 import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
-import { BadRequestException } from '../common/exceptions/business.exception';
+import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { RepresentativeArtistResponseDto } from './dto/representative-artist-response.dto';
 
@@ -76,102 +76,91 @@ export class SearchService {
   async getConcertSearchResults(query: GetConcertSearchResultsDto) {
     const { genre, status, sort, keyword, cursor, size } = query;
 
-    // 1, cursor -> 해당 콘서트 조회해서 composite cursor 구성
+    const hasAll = status?.includes(ConcertStatus.ALL) ?? false;
+
+    // 1. cursor 콘서트 조회 -> composite cursor 구성
+    const cursorConcert = cursor
+      ? await this.prismaService.concert.findUnique({
+          where: { id: cursor },
+          select: { id: true, startDate: true, title: true },
+        })
+      : null;
+    if (cursor && !cursorConcert) {
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
+    }
+
+    // 2. 정렬 조건 (가나다순 또는 공연 날짜순)
+    const orderBy =
+      sort === ConcertSort.ALPHABETICAL
+        ? [{ title: 'asc' as const }, { id: 'asc' as const }]
+        : [{ startDate: 'asc' as const }, { id: 'asc' as const }];
+
+    // 3. composite cursor 구성
     let cursorObj;
-    if (cursor) {
-      const cursorConcert = await this.prismaService.concert.findUnique({
-        where: { id: cursor },
-        select: { id: true, startDate: true, title: true },
-      });
-
-      if (!cursorConcert) {
-        throw new BadRequestException(ErrorCode.INVALID_CURSOR_FORMAT);
-      }
-
-      if (sort === ConcertSort.ALPHABETICAL) {
-        cursorObj = {
-          title_id: { title: cursorConcert.title, id: cursorConcert.id },
-        };
-      } else {
-        cursorObj = {
-          startDate_id: {
-            startDate: cursorConcert.startDate,
-            id: cursorConcert.id,
-          },
-        };
-      }
+    if (cursorConcert) {
+      cursorObj =
+        sort === ConcertSort.ALPHABETICAL
+          ? {
+              title_id: { title: cursorConcert.title, id: cursorConcert.id },
+            }
+          : {
+              startDate_id: {
+                startDate: cursorConcert.startDate,
+                id: cursorConcert.id,
+              },
+            };
     }
 
-    // 키워드 검색 조건
-    const keywordCondition = keyword
-      ? {
-          OR: [
-            { title: { contains: keyword } },
-            { artist: { contains: keyword } },
-          ],
-        }
-      : undefined;
+    // 4. WHERE 조건
+    const where = { AND: [] };
 
-    // 3. 정렬 조건
-    let orderBy;
-    if (sort === ConcertSort.ALPHABETICAL) {
-      orderBy = [{ title: 'asc' }, { id: 'asc' }];
-    } else {
-      // 공연 날짜 가까운 순
-      orderBy = [{ startDate: 'asc' }, { id: 'asc' }];
-    }
-
-    // 4. WHERE 조건 조합
-    const where = {
-      AND: [],
-    };
-
-    if (status && !status.includes(ConcertStatus.ALL)) {
+    if (status && !hasAll) {
       where.AND.push({ status: { in: status } });
+    } else {
+      // ALL 또는 미입력 시 CANCELED 제외
+      where.AND.push({ status: { not: ConcertStatus.CANCELED } });
     }
 
-    // genre 조건 (Prisma enum 변환)
     if (genre && !genre.includes(ConcertGenre.ALL)) {
       const prismaGenres = genre.map(
         (g) => GenreType[g as keyof typeof GenreType],
       );
-
       where.AND.push({
         concertGenre: { some: { genre: { name: { in: prismaGenres } } } },
       });
     }
 
     if (keyword) {
-      where.AND.push(keywordCondition);
+      where.AND.push({
+        OR: [
+          { title: { contains: keyword } },
+          { artist: { contains: keyword } },
+        ],
+      });
     }
 
     // 5. 쿼리 실행
-    const whereClause = where.AND.length > 0 ? where : undefined;
-
-    const [searchResults, totalCount] =
-      await this.prismaService.concert.findMany({
-        where: whereClause,
+    const [searchResults, totalCount] = await this.prismaService.$transaction([
+      this.prismaService.concert.findMany({
+        where,
         orderBy,
         skip: cursor ? 1 : 0,
         cursor: cursorObj,
         take: size,
-      });
+      }),
+      this.prismaService.concert.count({ where }),
+    ]);
 
-    // 전체 개수
-    const totalCount = await this.prismaService.concert.count({
-      where: where.AND.length > 0 ? where : undefined,
-    });
-
-    // 6. 다음 커서 계산
     const last = searchResults[searchResults.length - 1];
-    const nextCursor = last ? last.id : null;
-
     return {
       data: searchResults.map(
         (concert) =>
-          new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
+          new ConcertResponseDto(
+            concert,
+            getConcertDaysLeft(concert.startDate, concert.endDate),
+          ),
       ),
-      cursor: nextCursor,
+      cursor: last ? last.id : null,
       totalCount,
     };
   }
