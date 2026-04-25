@@ -74,64 +74,58 @@ export class SearchService {
 
   //필터에 따른 검색 결과 콘서트 목록 조회
   async getConcertSearchResults(query: GetConcertSearchResultsDto) {
-    const { genre, status, sort, keyword, cursor, size } = query;
+    const { genre, status, sort, keyword, cursor, size = 20 } = query;
 
     const hasAll = status?.includes(ConcertStatus.ALL) ?? false;
 
-    // 1. cursor 콘서트 조회 -> composite cursor 구성
+    // 1. cursor 콘서트 조회 (status까지 가져와서 phase 판단에 사용)
     const cursorConcert = cursor
       ? await this.prismaService.concert.findUnique({
           where: { id: cursor },
-          select: { id: true, startDate: true, title: true },
+          select: { id: true, startDate: true, title: true, status: true },
         })
       : null;
     if (cursor && !cursorConcert) {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    // 2. 정렬 조건 (가나다순 또는 공연 날짜순)
+    // 2. 선택 상태 분류 (CANCELED는 항상 뒤로 보내야 하므로 분리)
+    const explicitStatuses =
+      status && !hasAll
+        ? status.filter((s) => s !== ConcertStatus.ALL)
+        : null;
+    const wantsCancelled = explicitStatuses
+      ? explicitStatuses.includes(ConcertStatus.CANCELED)
+      : false;
+    const nonCancelledStatuses = explicitStatuses
+      ? explicitStatuses.filter((s) => s !== ConcertStatus.CANCELED)
+      : null;
+    const wantsNonCancelled =
+      nonCancelledStatuses === null || nonCancelledStatuses.length > 0;
+
+    // 3. 정렬 조건
     const orderBy =
       sort === ConcertSort.ALPHABETICAL
         ? [{ title: 'asc' as const }, { id: 'asc' as const }]
         : [{ startDate: 'asc' as const }, { id: 'asc' as const }];
 
-    // 3. composite cursor 구성
-    let cursorObj;
-    if (cursorConcert) {
-      cursorObj =
-        sort === ConcertSort.ALPHABETICAL
-          ? {
-              title_id: { title: cursorConcert.title, id: cursorConcert.id },
-            }
-          : {
-              startDate_id: {
-                startDate: cursorConcert.startDate,
-                id: cursorConcert.id,
-              },
-            };
-    }
+    const buildCursorObj = (c: typeof cursorConcert) =>
+      sort === ConcertSort.ALPHABETICAL
+        ? { title_id: { title: c.title, id: c.id } }
+        : { startDate_id: { startDate: c.startDate, id: c.id } };
 
-    // 4. WHERE 조건
-    const where = { AND: [] };
-
-    if (status && !hasAll) {
-      where.AND.push({ status: { in: status } });
-    } else {
-      // ALL 또는 미입력 시 CANCELED 제외
-      where.AND.push({ status: { not: ConcertStatus.CANCELED } });
-    }
-
+    // 4. 공통 필터 (장르 + 키워드)
+    const baseAnd: any[] = [];
     if (genre && !genre.includes(ConcertGenre.ALL)) {
       const prismaGenres = genre.map(
         (g) => GenreType[g as keyof typeof GenreType],
       );
-      where.AND.push({
+      baseAnd.push({
         concertGenre: { some: { genre: { name: { in: prismaGenres } } } },
       });
     }
-
     if (keyword) {
-      where.AND.push({
+      baseAnd.push({
         OR: [
           { title: { contains: keyword } },
           { artist: { contains: keyword } },
@@ -139,21 +133,53 @@ export class SearchService {
       });
     }
 
-    // 5. 쿼리 실행
-    const [searchResults, totalCount] = await Promise.all([
-      this.prismaService.concert.findMany({
-        where,
-        orderBy,
-        skip: cursor ? 1 : 0,
-        cursor: cursorObj,
-        take: size,
-      }),
-      this.prismaService.concert.count({ where }),
-    ]);
+    // 5. Phase 결정: cursor가 CANCELED면 phase 2부터, 아니면 phase 1부터
+    const inPhase2 = cursorConcert?.status === ConcertStatus.CANCELED;
 
-    const last = searchResults[searchResults.length - 1];
+    // Phase 1: non-CANCELED
+    let phase1: Awaited<
+      ReturnType<typeof this.prismaService.concert.findMany>
+    > = [];
+    if (wantsNonCancelled && !inPhase2) {
+      const phase1Status = nonCancelledStatuses
+        ? { in: nonCancelledStatuses }
+        : { not: ConcertStatus.CANCELED };
+      phase1 = await this.prismaService.concert.findMany({
+        where: { AND: [...baseAnd, { status: phase1Status }] },
+        orderBy,
+        cursor: cursorConcert ? buildCursorObj(cursorConcert) : undefined,
+        skip: cursorConcert ? 1 : 0,
+        take: size,
+      });
+    }
+
+    // Phase 2: CANCELED (남은 자리만큼만 채움)
+    const remaining = size - phase1.length;
+    let phase2: typeof phase1 = [];
+    if (wantsCancelled && remaining > 0) {
+      const useCursor = inPhase2 && cursorConcert;
+      phase2 = await this.prismaService.concert.findMany({
+        where: { AND: [...baseAnd, { status: ConcertStatus.CANCELED }] },
+        orderBy,
+        cursor: useCursor ? buildCursorObj(cursorConcert) : undefined,
+        skip: useCursor ? 1 : 0,
+        take: remaining,
+      });
+    }
+
+    const merged = [...phase1, ...phase2];
+
+    // 6. 전체 count
+    const countStatusCondition = explicitStatuses
+      ? { status: { in: explicitStatuses } }
+      : { status: { not: ConcertStatus.CANCELED } };
+    const totalCount = await this.prismaService.concert.count({
+      where: { AND: [...baseAnd, countStatusCondition] },
+    });
+
+    const last = merged[merged.length - 1];
     return {
-      data: searchResults.map(
+      data: merged.map(
         (concert) =>
           new ConcertResponseDto(
             concert,
