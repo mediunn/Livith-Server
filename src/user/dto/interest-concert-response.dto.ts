@@ -2,31 +2,31 @@ import { Concert } from '@prisma/client';
 
 export class InterestConcertResponseDto {
   id: number;
-  code: string;
-  title: string;
+  code: string | null;
+  title: string | null;
   artist: string;
-  startDate: string;
-  endDate: string;
-  poster: string;
+  startDate: string | null;
+  endDate: string | null;
+  poster: string | null;
   status: Concert['status'];
-  daysLeft: number;
-  ticketSite: string;
-  ticketUrl: string;
-  venue: string;
+  daysLeft: number | null;
+  ticketSite: string | null;
+  ticketUrl: string | null;
+  venue: string | null;
   introduction: string;
-  label: string;
-  preSaleDate: string;
-  generalSaleDate: string;
+  label: string | null;
+  preSaleDate: string | null;
+  generalSaleDate: string | null;
 
-  private static formatDate(date: string): string {
+  private static formatDate(date: string | null): string | null {
     return date ? date.replaceAll('-', '.') : null;
   }
 
   constructor(
     concert: Concert,
-    preSaleDate: string,
-    generalSaleDate: string,
-    daysLeft?: number,
+    preSaleDate: string | null,
+    generalSaleDate: string | null,
+    daysLeft?: number | null,
   ) {
     this.id = concert.id;
     this.code = concert.code;
