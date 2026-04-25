@@ -7,7 +7,7 @@ import { ConcertGenre } from '../common/enums/concert-genre.enum';
 import { ConcertStatus } from '../common/enums/concert-status.enum';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getConcertDaysLeft } from '../common/utils/date.util';
-import { GenreType } from '@prisma/client';
+import { GenreType, Prisma } from '@prisma/client';
 import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
@@ -91,9 +91,7 @@ export class SearchService {
 
     // 2. 선택 상태 분류 (CANCELED는 항상 뒤로 보내야 하므로 분리)
     const explicitStatuses =
-      status && !hasAll
-        ? status.filter((s) => s !== ConcertStatus.ALL)
-        : null;
+      status && !hasAll ? status.filter((s) => s !== ConcertStatus.ALL) : null;
     const wantsCancelled = explicitStatuses
       ? explicitStatuses.includes(ConcertStatus.CANCELED)
       : false;
@@ -115,7 +113,7 @@ export class SearchService {
         : { startDate_id: { startDate: c.startDate, id: c.id } };
 
     // 4. 공통 필터 (장르 + 키워드)
-    const baseAnd: any[] = [];
+    const baseAnd: Prisma.ConcertWhereInput[] = [];
     if (genre && !genre.includes(ConcertGenre.ALL)) {
       const prismaGenres = genre.map(
         (g) => GenreType[g as keyof typeof GenreType],
@@ -136,46 +134,71 @@ export class SearchService {
     // 5. Phase 결정: cursor가 CANCELED면 phase 2부터, 아니면 phase 1부터
     const inPhase2 = cursorConcert?.status === ConcertStatus.CANCELED;
 
-    // Phase 1: non-CANCELED
-    let phase1: Awaited<
-      ReturnType<typeof this.prismaService.concert.findMany>
-    > = [];
-    if (wantsNonCancelled && !inPhase2) {
-      const phase1Status = nonCancelledStatuses
-        ? { in: nonCancelledStatuses }
-        : { not: ConcertStatus.CANCELED };
-      phase1 = await this.prismaService.concert.findMany({
-        where: { AND: [...baseAnd, { status: phase1Status }] },
-        orderBy,
-        cursor: cursorConcert ? buildCursorObj(cursorConcert) : undefined,
-        skip: cursorConcert ? 1 : 0,
-        take: size,
-      });
-    }
+    // 6. count용 status 조건
+    const countStatusCondition: Prisma.ConcertWhereInput = explicitStatuses
+      ? {
+          status: {
+            in: explicitStatuses as Prisma.EnumConcertStatusFilter['in'],
+          },
+        }
+      : {
+          status: {
+            not: ConcertStatus.CANCELED as Prisma.ConcertWhereInput['status'],
+          },
+        };
 
-    // Phase 2: CANCELED (남은 자리만큼만 채움)
-    const remaining = size - phase1.length;
-    let phase2: typeof phase1 = [];
-    if (wantsCancelled && remaining > 0) {
-      const useCursor = inPhase2 && cursorConcert;
-      phase2 = await this.prismaService.concert.findMany({
-        where: { AND: [...baseAnd, { status: ConcertStatus.CANCELED }] },
-        orderBy,
-        cursor: useCursor ? buildCursorObj(cursorConcert) : undefined,
-        skip: useCursor ? 1 : 0,
-        take: remaining,
-      });
-    }
+    // 7. 단일 트랜잭션 안에서 phase 1 → phase 2 → count 순차 실행 (스냅샷 일관성 보장)
+    const { merged, totalCount } = await this.prismaService.$transaction(
+      async (tx) => {
+        // Phase 1: non-CANCELED
+        let phase1: Awaited<ReturnType<typeof tx.concert.findMany>> = [];
+        if (wantsNonCancelled && !inPhase2) {
+          const phase1Status: Prisma.EnumConcertStatusFilter =
+            nonCancelledStatuses
+              ? {
+                  in: nonCancelledStatuses as Prisma.EnumConcertStatusFilter['in'],
+                }
+              : {
+                  not: ConcertStatus.CANCELED as Prisma.EnumConcertStatusFilter['not'],
+                };
+          phase1 = await tx.concert.findMany({
+            where: { AND: [...baseAnd, { status: phase1Status }] },
+            orderBy,
+            cursor: cursorConcert ? buildCursorObj(cursorConcert) : undefined,
+            skip: cursorConcert ? 1 : 0,
+            take: size,
+          });
+        }
 
-    const merged = [...phase1, ...phase2];
+        // Phase 2: CANCELED (남은 자리만큼만 채움)
+        const remaining = size - phase1.length;
+        let phase2: typeof phase1 = [];
+        if (wantsCancelled && remaining > 0) {
+          const useCursor = inPhase2 && cursorConcert;
+          phase2 = await tx.concert.findMany({
+            where: {
+              AND: [
+                ...baseAnd,
+                {
+                  status:
+                    ConcertStatus.CANCELED as Prisma.ConcertWhereInput['status'],
+                },
+              ],
+            },
+            orderBy,
+            cursor: useCursor ? buildCursorObj(cursorConcert) : undefined,
+            skip: useCursor ? 1 : 0,
+            take: remaining,
+          });
+        }
 
-    // 6. 전체 count
-    const countStatusCondition = explicitStatuses
-      ? { status: { in: explicitStatuses } }
-      : { status: { not: ConcertStatus.CANCELED } };
-    const totalCount = await this.prismaService.concert.count({
-      where: { AND: [...baseAnd, countStatusCondition] },
-    });
+        const totalCount = await tx.concert.count({
+          where: { AND: [...baseAnd, countStatusCondition] },
+        });
+
+        return { merged: [...phase1, ...phase2], totalCount };
+      },
+    );
 
     const last = merged[merged.length - 1];
     return {
