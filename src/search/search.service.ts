@@ -77,42 +77,27 @@ export class SearchService {
     const { genre, status, sort, keyword, cursor, size = 20 } = query;
 
     const hasAll = status?.includes(ConcertStatus.ALL) ?? false;
+    const explicitStatuses =
+      status && !hasAll ? status.filter((s) => s !== ConcertStatus.ALL) : null;
 
-    // 1. cursor 콘서트 조회 (status까지 가져와서 phase 판단에 사용)
+    // 1. cursor 콘서트 조회 (phase 판단에 사용)
     const cursorConcert = cursor
       ? await this.prismaService.concert.findUnique({
           where: { id: cursor },
-          select: { id: true, startDate: true, title: true, status: true },
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            title: true,
+            status: true,
+          },
         })
       : null;
     if (cursor && !cursorConcert) {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    // 2. 선택 상태 분류 (CANCELED는 항상 뒤로 보내야 하므로 분리)
-    const explicitStatuses =
-      status && !hasAll ? status.filter((s) => s !== ConcertStatus.ALL) : null;
-    const wantsCancelled = explicitStatuses
-      ? explicitStatuses.includes(ConcertStatus.CANCELED)
-      : false;
-    const nonCancelledStatuses = explicitStatuses
-      ? explicitStatuses.filter((s) => s !== ConcertStatus.CANCELED)
-      : null;
-    const wantsNonCancelled =
-      nonCancelledStatuses === null || nonCancelledStatuses.length > 0;
-
-    // 3. 정렬 조건
-    const orderBy =
-      sort === ConcertSort.ALPHABETICAL
-        ? [{ title: 'asc' as const }, { id: 'asc' as const }]
-        : [{ startDate: 'asc' as const }, { id: 'asc' as const }];
-
-    const buildCursorObj = (c: typeof cursorConcert) =>
-      sort === ConcertSort.ALPHABETICAL
-        ? { title_id: { title: c.title, id: c.id } }
-        : { startDate_id: { startDate: c.startDate, id: c.id } };
-
-    // 4. 공통 필터 (장르 + 키워드)
+    // 2. 공통 필터 (장르 + 키워드)
     const baseAnd: Prisma.ConcertWhereInput[] = [];
     if (genre && !genre.includes(ConcertGenre.ALL)) {
       const prismaGenres = genre.map(
@@ -131,72 +116,141 @@ export class SearchService {
       });
     }
 
-    // 5. Phase 결정: cursor가 CANCELED면 phase 2부터, 아니면 phase 1부터
-    const inPhase2 = cursorConcert?.status === ConcertStatus.CANCELED;
-
-    // 6. count용 status 조건
-    const countStatusCondition: Prisma.ConcertWhereInput = explicitStatuses
+    // 3. status 조건 (count + ALPHABETICAL 공용)
+    const statusCondition: Prisma.ConcertWhereInput = explicitStatuses
       ? {
           status: {
             in: explicitStatuses as Prisma.EnumConcertStatusFilter['in'],
           },
         }
-      : {
-          status: {
-            not: ConcertStatus.CANCELED as Prisma.ConcertWhereInput['status'],
-          },
-        };
+      : {};
 
-    // 7. 단일 트랜잭션 안에서 phase 1 → phase 2 → count 순차 실행 (스냅샷 일관성 보장)
-    const { merged, totalCount } = await this.prismaService.$transaction(
-      async (tx) => {
-        // Phase 1: non-CANCELED
-        let phase1: Awaited<ReturnType<typeof tx.concert.findMany>> = [];
-        if (wantsNonCancelled && !inPhase2) {
-          const phase1Status: Prisma.EnumConcertStatusFilter =
-            nonCancelledStatuses
+    // 4. ALPHABETICAL: 단일 phase, title asc
+    if (sort === ConcertSort.ALPHABETICAL) {
+      const { merged, totalCount } = await this.prismaService.$transaction(
+        async (tx) => {
+          const items = await tx.concert.findMany({
+            where: { AND: [...baseAnd, statusCondition] },
+            orderBy: [{ title: 'asc' as const }, { id: 'asc' as const }],
+            cursor: cursorConcert
               ? {
-                  in: nonCancelledStatuses as Prisma.EnumConcertStatusFilter['in'],
+                  title_id: {
+                    title: cursorConcert.title,
+                    id: cursorConcert.id,
+                  },
                 }
-              : {
-                  not: ConcertStatus.CANCELED as Prisma.EnumConcertStatusFilter['not'],
-                };
-          phase1 = await tx.concert.findMany({
-            where: { AND: [...baseAnd, { status: phase1Status }] },
-            orderBy,
-            cursor: cursorConcert ? buildCursorObj(cursorConcert) : undefined,
+              : undefined,
             skip: cursorConcert ? 1 : 0,
             take: size,
           });
-        }
 
-        // Phase 2: CANCELED (남은 자리만큼만 채움)
-        const remaining = size - phase1.length;
-        let phase2: typeof phase1 = [];
-        if (wantsCancelled && remaining > 0) {
-          const useCursor = inPhase2 && cursorConcert;
-          phase2 = await tx.concert.findMany({
+          const totalCount = await tx.concert.count({
+            where: { AND: [...baseAnd, statusCondition] },
+          });
+
+          return { merged: items, totalCount };
+        },
+      );
+
+      const last = merged[merged.length - 1];
+      return {
+        data: merged.map(
+          (concert) =>
+            new ConcertResponseDto(
+              concert,
+              getConcertDaysLeft(concert.startDate, concert.endDate),
+            ),
+        ),
+        cursor: last ? last.id : null,
+        totalCount,
+      };
+    }
+
+    // 5. LATEST: phase 순서 (ONGOING → UPCOMING → COMPLETED → CANCELED)
+    type PhaseDef = {
+      status: ConcertStatus;
+      orderBy: Prisma.ConcertOrderByWithRelationInput[];
+      cursorBuilder: (
+        c: NonNullable<typeof cursorConcert>,
+      ) => Prisma.ConcertWhereUniqueInput;
+    };
+
+    const ALL_PHASES: PhaseDef[] = [
+      {
+        status: ConcertStatus.ONGOING,
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        cursorBuilder: (c) => ({
+          startDate_id: { startDate: c.startDate, id: c.id },
+        }),
+      },
+      {
+        status: ConcertStatus.UPCOMING,
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        cursorBuilder: (c) => ({
+          startDate_id: { startDate: c.startDate, id: c.id },
+        }),
+      },
+      {
+        status: ConcertStatus.COMPLETED,
+        orderBy: [{ endDate: 'desc' }, { id: 'desc' }],
+        cursorBuilder: (c) => ({
+          endDate_id: { endDate: c.endDate, id: c.id },
+        }),
+      },
+      {
+        status: ConcertStatus.CANCELED,
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        cursorBuilder: (c) => ({
+          startDate_id: { startDate: c.startDate, id: c.id },
+        }),
+      },
+    ];
+
+    const allowedStatuses = explicitStatuses
+      ? new Set<string>(explicitStatuses)
+      : null;
+    const activePhases = allowedStatuses
+      ? ALL_PHASES.filter((p) => allowedStatuses.has(p.status))
+      : ALL_PHASES;
+
+    const cursorPhaseIdx = cursorConcert
+      ? activePhases.findIndex((p) => p.status === cursorConcert.status)
+      : -1;
+    const startIdx = cursorPhaseIdx >= 0 ? cursorPhaseIdx : 0;
+
+    const { merged, totalCount } = await this.prismaService.$transaction(
+      async (tx) => {
+        const collected: Awaited<ReturnType<typeof tx.concert.findMany>> = [];
+        let remaining = size;
+
+        for (let i = startIdx; i < activePhases.length && remaining > 0; i++) {
+          const phase = activePhases[i];
+          const useCursor = i === cursorPhaseIdx && !!cursorConcert;
+
+          const items = await tx.concert.findMany({
             where: {
               AND: [
                 ...baseAnd,
                 {
-                  status:
-                    ConcertStatus.CANCELED as Prisma.ConcertWhereInput['status'],
+                  status: phase.status as Prisma.ConcertWhereInput['status'],
                 },
               ],
             },
-            orderBy,
-            cursor: useCursor ? buildCursorObj(cursorConcert) : undefined,
+            orderBy: phase.orderBy,
+            cursor: useCursor ? phase.cursorBuilder(cursorConcert!) : undefined,
             skip: useCursor ? 1 : 0,
             take: remaining,
           });
+
+          collected.push(...items);
+          remaining -= items.length;
         }
 
         const totalCount = await tx.concert.count({
-          where: { AND: [...baseAnd, countStatusCondition] },
+          where: { AND: [...baseAnd, statusCondition] },
         });
 
-        return { merged: [...phase1, ...phase2], totalCount };
+        return { merged: collected, totalCount };
       },
     );
 
