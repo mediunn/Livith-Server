@@ -42,6 +42,7 @@ export class PushSenderService {
     targetId?: string;
     scheduleId?: number;
     userIds: number[];
+    skipUserFilter?: boolean;
   }): Promise<{
     sent: number;
     failed: number;
@@ -49,7 +50,7 @@ export class PushSenderService {
     finalTitle: string;
     finalContent: string;
   }> {
-    const { type, title, content, targetId, userIds } = params;
+    const { type, title, content, targetId, userIds, skipUserFilter } = params;
     if (userIds.length === 0)
       return {
         sent: 0,
@@ -65,7 +66,9 @@ export class PushSenderService {
       content,
     );
 
-    const availableUserIds = await this.getUserIdsForPush(type, userIds);
+    const availableUserIds = skipUserFilter
+      ? userIds
+      : await this.getUserIdsForPush(type, userIds);
     if (availableUserIds.length === 0)
       return {
         sent: 0,

@@ -99,6 +99,7 @@ export class NotificationService {
     targetId?: string;
     scheduleId?: number;
     userIds: number[];
+    skipUserFilter?: boolean;
   }): Promise<{ sent: number; failed: number }> {
     const result = await this.pushSenderService.sendPushNotification(params);
 
