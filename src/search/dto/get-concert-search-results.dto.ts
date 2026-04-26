@@ -32,7 +32,7 @@ export class GetConcertSearchResultsDto {
     enum: ConcertStatus,
     enumName: 'ConcertStatus',
     required: false,
-    example: 'ALL',
+    example: ['ALL'],
   })
   @IsEnum(ConcertStatus, {
     each: true,

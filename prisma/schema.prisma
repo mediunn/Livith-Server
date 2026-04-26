@@ -37,6 +37,7 @@ model Concert {
   userInterestConcerts  UserInterestConcert[]
 
   @@unique([startDate, id])
+  @@unique([endDate, id])
   @@unique([title, id])
   @@index([artistId], map: "concerts_artist_id_fkey")
   @@fulltext([title, artist])
