@@ -211,6 +211,7 @@ model Banner {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   content   String   @db.VarChar(100)
+  linkUrl  String?   @db.VarChar(2048) @map("link_url")
 
   @@map("banners")
 }
