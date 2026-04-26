@@ -38,10 +38,7 @@ export class RecommendationService {
 
   private toConcertResponseDtos(concerts: any[]): ConcertResponseDto[] {
     return concerts
-      .filter((concert) => {
-        const daysUntilEnd = getDaysUntil(concert.endDate);
-        return daysUntilEnd !== null && daysUntilEnd > 0;
-      })
+      .filter((concert) => getDaysUntil(concert.endDate) > 0)
       .map(
         (concert) =>
           new ConcertResponseDto(concert, getDaysUntil(concert.startDate)),
