@@ -199,7 +199,7 @@ export class SearchService {
       },
       {
         status: ConcertStatus.CANCELED,
-        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        orderBy: [{ startDate: 'desc' }, { id: 'desc' }],
         cursorBuilder: (c) => ({
           startDate_id: { startDate: c.startDate, id: c.id },
         }),
