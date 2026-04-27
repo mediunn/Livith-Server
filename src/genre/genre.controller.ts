@@ -1,9 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { GenreService } from './genre.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 
 @ApiTags('장르')
-@Controller('api/v5/genres')
+@Controller(`${API_PREFIX}/genres`)
 export class GenreController {
   constructor(private readonly genreService: GenreService) {}
 
