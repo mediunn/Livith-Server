@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { GenreService } from './genre.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_PREFIX } from 'src/common/constants/api-prefix';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 @ApiTags('장르')
 @Controller(`${API_PREFIX}/genres`)
