@@ -55,7 +55,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
     .setDescription('Livith API 문서입니다.')
-    .setVersion('5.0')
+    .setVersion('6.0')
     .addBearerAuth() // JWT 인증 추가
     .build();
 
