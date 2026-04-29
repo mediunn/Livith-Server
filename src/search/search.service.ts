@@ -282,27 +282,28 @@ export class SearchService {
       const offset = cursor ?? 0;
       const limit = size ?? 20;
 
-      const ids = await this.meilisearchService.search(keyword, offset, limit);
+      const { ids, totalCount } = await this.meilisearchService.search(
+        keyword,
+        offset,
+        limit,
+      );
 
       if (ids.length === 0) {
         return { data: [], cursor: null, totalCount: 0 };
       }
 
-      const searchResults =
-        await this.prismaService.representativeArtist.findMany({
-          where: { id: { in: ids } },
-          orderBy: [{ genreId: 'asc' }, { id: 'asc' }],
-        });
+      const rows = await this.prismaService.representativeArtist.findMany({
+        where: { id: { in: ids } },
+      });
+
+      const idOrder = new Map(ids.map((id, i) => [id, i]));
+      const data = rows
+        .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id))
+        .map((artist) => new RepresentativeArtistResponseDto(artist));
 
       const nextCursor = ids.length === limit ? offset + limit : null;
 
-      return {
-        data: searchResults.map(
-          (artist) => new RepresentativeArtistResponseDto(artist),
-        ),
-        cursor: nextCursor,
-        totalCount: searchResults.length,
-      };
+      return { data, cursor: nextCursor, totalCount };
     }
 
     const [searchResults, totalCount] = await this.prismaService.$transaction([

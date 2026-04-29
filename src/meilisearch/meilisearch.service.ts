@@ -55,8 +55,11 @@ export class MeilisearchService implements OnModuleInit {
     keyword: string,
     offset: number,
     limit: number,
-  ): Promise<number[]> {
+  ): Promise<{ ids: number[]; totalCount: number }> {
     const result = await this.index.search(keyword, { offset, limit });
-    return result.hits.map((hit) => hit.id);
+    return {
+      ids: result.hits.map((hit) => hit.id),
+      totalCount: result.estimatedTotalHits ?? result.hits.length,
+    };
   }
 }
