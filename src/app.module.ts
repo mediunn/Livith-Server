@@ -18,6 +18,7 @@ import { ArtistModule } from './artist/artist.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { LoggerModule } from './logger/logger.module';
+import { MeilisearchModule } from './meilisearch/meilisearch.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { LoggerModule } from './logger/logger.module';
     ArtistModule,
     MetricsModule,
     LoggerModule,
+    MeilisearchModule,
   ],
   controllers: [],
   providers: [
