@@ -13,7 +13,7 @@ export class MeilisearchController {
   @ApiOperation({
     summary: '아티스트 인덱스 수동 재색인',
     description:
-      'representative_artists 테이블 전체를 Meilisearch에 다시 push 합니다. 첫 배포 / 데이터 직접 수정 / 동기화 후 갱신 시 호출.',
+      'representative_artists 테이블 아티스트 이름을 Meilisearch에 push',
   })
   @Post('/reindex')
   async reindex() {
