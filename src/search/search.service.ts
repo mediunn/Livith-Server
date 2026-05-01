@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { MeilisearchService } from '../meilisearch/meilisearch.service';
 import { BannerResponseDto } from './dto/banner-response.dto';
 import { SearchSectionResponseDto } from './dto/search-section-response.dto';
 import { ConcertSort } from '../common/enums/concert-sort.enum';
@@ -15,7 +16,10 @@ import { RepresentativeArtistResponseDto } from './dto/representative-artist-res
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly meilisearchService: MeilisearchService,
+  ) {}
 
   // 배너 조회
   async getBanners() {
@@ -274,26 +278,44 @@ export class SearchService {
     size?: number,
     keyword?: string,
   ) {
-    const keywordCondition = keyword
-      ? {
-          artistName: { contains: keyword },
-        }
-      : {};
+    if (keyword) {
+      const offset = cursor ?? 0;
+      const limit = size ?? 20;
+
+      const { ids, totalCount } = await this.meilisearchService.search(
+        keyword,
+        offset,
+        limit,
+      );
+
+      if (ids.length === 0) {
+        return { data: [], cursor: null, totalCount: 0 };
+      }
+
+      const rows = await this.prismaService.representativeArtist.findMany({
+        where: { id: { in: ids } },
+      });
+
+      const idOrder = new Map(ids.map((id, i) => [id, i]));
+      const data = rows
+        .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id))
+        .map((artist) => new RepresentativeArtistResponseDto(artist));
+
+      const nextCursor = ids.length === limit ? offset + limit : null;
+
+      return { data, cursor: nextCursor, totalCount };
+    }
 
     const [searchResults, totalCount] = await this.prismaService.$transaction([
       this.prismaService.representativeArtist.findMany({
-        where: keywordCondition,
         orderBy: [{ genreId: 'asc' }, { id: 'asc' }],
         skip: cursor ? 1 : 0,
         cursor: cursor ? { id: cursor } : undefined,
         take: size,
       }),
-      this.prismaService.representativeArtist.count({
-        where: keywordCondition,
-      }),
+      this.prismaService.representativeArtist.count(),
     ]);
 
-    // 다음 커서 계산
     const last = searchResults[searchResults.length - 1];
     const nextCursor = last ? last.id : null;
 
