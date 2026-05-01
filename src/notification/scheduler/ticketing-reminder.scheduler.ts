@@ -85,7 +85,14 @@ export class TicketingReminderScheduler {
       include: { concert: { select: { id: true, title: true } } },
     });
 
+    let sent = 0;
     for (const schedule of schedules) {
+      const already = await this.historyService.existsByScheduleAndType(
+        schedule.id,
+        notificationType,
+      );
+      if (already) continue;
+
       const timeStr = formatKstHour(schedule.scheduledAt);
       await this.notificationService.sendNotificationByStrategy(
         notificationType,
@@ -97,9 +104,10 @@ export class TicketingReminderScheduler {
         },
         String(schedule.concert.id),
       );
+      sent++;
     }
 
-    return schedules.length;
+    return sent;
   }
 
   private async sendThirtyMinBefore(
