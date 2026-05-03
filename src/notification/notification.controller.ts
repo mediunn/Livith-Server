@@ -167,7 +167,7 @@ export class NotificationController {
       content: message.content,
       targetId: dto.concertId ? String(dto.concertId) : undefined,
       userIds,
-      skipUserFilter: true,
+      skipUserFilter: !dto.sendToAll,
     });
 
     return {
