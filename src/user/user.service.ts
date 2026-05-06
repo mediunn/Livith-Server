@@ -95,7 +95,7 @@ export class UserService {
     const {
       cursorDate,
       cursorId,
-      size = 20,
+      size,
       sort = InterestConcertSort.CONCERT,
     } = query ?? {};
 
@@ -124,6 +124,8 @@ export class UserService {
     cursorId?: number,
     size?: number,
   ) {
+    const hasSize = typeof size === 'number';
+
     const where: Prisma.UserInterestConcertWhereInput = {
       userId,
       concert: {
@@ -176,11 +178,11 @@ export class UserService {
         { concert: { startDate: { sort: 'asc', nulls: 'last' } } },
         { concertId: 'asc' },
       ],
-      take: size + 1,
+      ...(hasSize ? { take: size + 1 } : {}),
     });
 
-    const hasNext = items.length > size;
-    const pageItems = hasNext ? items.slice(0, size) : items;
+    const hasNext = hasSize ? items.length > size : false;
+    const pageItems = hasSize && hasNext ? items.slice(0, size) : items;
 
     const mappedItems = pageItems.map(
       (item) =>
@@ -197,7 +199,7 @@ export class UserService {
     return {
       data: mappedItems,
       cursor:
-        hasNext && lastItem
+        hasSize && hasNext && lastItem
           ? {
               date: lastItem.concert.startDate,
               id: lastItem.concertId,
@@ -220,6 +222,8 @@ export class UserService {
     cursorId?: number,
     size?: number,
   ) {
+    const hasSize = typeof size === 'number';
+
     let parsedCursorDate: Date | undefined;
     let cursorSortBucket: number | undefined;
 
@@ -327,12 +331,12 @@ export class UserService {
       sortDate IS NULL ASC,
       sortDate ASC,
       c.id ASC
-    LIMIT ${size + 1}
+    ${hasSize ? Prisma.sql`LIMIT ${size + 1}` : Prisma.empty}
   `,
     );
 
-    const hasNext = rows.length > size;
-    const pageRows = hasNext ? rows.slice(0, size) : rows;
+    const hasNext = hasSize ? rows.length > size : false;
+    const pageRows = hasSize && hasNext ? rows.slice(0, size) : rows;
 
     const concertIds = pageRows.map((row) => Number(row.concertId));
     if (concertIds.length === 0) {
@@ -378,7 +382,7 @@ export class UserService {
     return {
       data: mappedItems,
       cursor:
-        hasNext && lastRow
+        hasSize && hasNext && lastRow
           ? {
               date: lastRow.sortDate?.toISOString() ?? null,
               id: lastRow.concertId,
