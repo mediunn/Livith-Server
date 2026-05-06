@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -83,20 +84,28 @@ export class UserController {
     return this.userService.checkInterestConcert(userId, id);
   }
 
-  // 관심 콘서트 삭제
-  // @Delete('interest-concert')
-  // @UseGuards(JwtAuthGuard)
-  // @ApiBearerAuth()
-  // @ApiOperation({
-  //   summary: '유저의 관심 콘서트 삭제',
-  //   description: '유저의 관심 콘서트를 삭제합니다.',
-  // })
-  // async removeInterestConcert(@Req() req) {
-  //   const userId = req.user.userId;
-  //   return this.userService.removeInterestConcert(userId);
-  // }
+  // 유저의 관심 콘서트 단건 삭제
+  @Delete('interest-concerts/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 단건 삭제',
+    description: '유저의 관심 콘서트에서 특정 콘서트 1개를 삭제합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '삭제할 콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async removeInterestConcertById(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.removeInterestConcertById(userId, id);
+  }
 
-  // 유저 정보 조회
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
