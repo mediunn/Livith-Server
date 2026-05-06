@@ -75,12 +75,19 @@ describe('UserService', () => {
       representativeArtist: {
         findMany: jest.fn(),
       },
+      concert: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
       userArtist: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
       },
       userInterestConcert: {
         findFirst: jest.fn(),
+        findMany: jest.fn(),
+        createMany: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
 
@@ -421,6 +428,77 @@ describe('UserService', () => {
   });
 
   describe('interest concerts', () => {
+    describe('addInterestConcertById', () => {
+      it('관심 콘서트를 단건 추가해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 7;
+        const mockConcert = {
+          id: concertId,
+          code: 'C-001',
+          title: '콘서트 A',
+          artist: '아티스트 A',
+          startDate: '2026.01.01',
+          endDate: '2026.01.02',
+          poster: null,
+          status: 'UPCOMING',
+          ticketSite: null,
+          ticketUrl: null,
+          venue: '올림픽홀',
+          introduction: '소개',
+          label: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.concert.findUnique.mockResolvedValue(mockConcert);
+        mockPrismaService.userInterestConcert.createMany.mockResolvedValue({
+          count: 1,
+        });
+
+        // When
+        const result = await service.addInterestConcertById(userId, concertId);
+
+        // Then
+        expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+          where: { id: userId },
+        });
+        expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
+          where: { id: concertId },
+        });
+        expect(mockPrismaService.userInterestConcert.createMany).toHaveBeenCalledWith(
+          {
+            data: [
+              {
+                userId,
+                concertId: mockConcert.id,
+                concertTitle: mockConcert.title,
+                userNickname: mockUser.nickname,
+              },
+            ],
+            skipDuplicates: true,
+          },
+        );
+        expect(result.id).toBe(mockConcert.id);
+        expect(result.title).toBe(mockConcert.title);
+      });
+
+      it('존재하지 않는 콘서트면 실패해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 999;
+
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.concert.findUnique.mockResolvedValue(null);
+
+        // When & Then
+        await expect(
+          service.addInterestConcertById(userId, concertId),
+        ).rejects.toThrow(new NotFoundException(ErrorCode.CONCERT_NOT_FOUND));
+      });
+    });
+
     describe('getInterestConcerts', () => {
       it('sort=TICKETING이면 예매일 정렬 메서드를 호출해야 함', async () => {
         // Given
@@ -526,6 +604,74 @@ describe('UserService', () => {
 
         // Then
         expect(result).toEqual({ isInterested: false });
+      });
+    });
+
+    describe('removeInterestConcertById', () => {
+      it('관심 콘서트를 단건 삭제해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 13;
+        const mockConcert = {
+          id: concertId,
+          code: 'C-002',
+          title: '콘서트 B',
+          artist: '아티스트 B',
+          startDate: '2026.02.01',
+          endDate: '2026.02.02',
+          poster: null,
+          status: 'UPCOMING',
+          ticketSite: null,
+          ticketUrl: null,
+          venue: 'KSPO DOME',
+          introduction: '소개',
+          label: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.concert.findUnique.mockResolvedValue(mockConcert);
+        mockPrismaService.userInterestConcert.deleteMany.mockResolvedValue({
+          count: 1,
+        });
+
+        // When
+        const result = await service.removeInterestConcertById(
+          userId,
+          concertId,
+        );
+
+        // Then
+        expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+          where: { id: userId },
+        });
+        expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
+          where: { id: concertId },
+        });
+        expect(mockPrismaService.userInterestConcert.deleteMany).toHaveBeenCalledWith(
+          {
+            where: {
+              userId,
+              concertId,
+            },
+          },
+        );
+        expect(result).toBeUndefined();
+      });
+
+      it('존재하지 않는 콘서트면 삭제 실패해야 함', async () => {
+        // Given
+        const userId = 1;
+        const concertId = 999;
+
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.concert.findUnique.mockResolvedValue(null);
+
+        // When & Then
+        await expect(
+          service.removeInterestConcertById(userId, concertId),
+        ).rejects.toThrow(new NotFoundException(ErrorCode.CONCERT_NOT_FOUND));
       });
     });
   });
