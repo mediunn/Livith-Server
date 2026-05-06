@@ -108,7 +108,7 @@ export class UserController {
   }
 
   // 유저의 관심 콘서트 단건 삭제
-  @Delete('interest-concerts/:id')
+  @Delete('interest-concert/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({

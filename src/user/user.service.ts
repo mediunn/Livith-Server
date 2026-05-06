@@ -422,6 +422,14 @@ export class UserService {
   async removeInterestConcertById(userId: number, concertId: number) {
     await this.validateUser(userId);
 
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
+
+    if (!concert) {
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
+    }
+
     await this.prismaService.userInterestConcert.deleteMany({
       where: {
         userId,
