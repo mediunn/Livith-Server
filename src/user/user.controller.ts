@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Put,
   Query,
   Req,
@@ -44,6 +45,28 @@ export class UserController {
   async setInterestConcerts(@Req() req, @Body() dto: SetInterestConcertsDto) {
     const userId = req.user.userId;
     return this.userService.setInterestConcerts(dto.concertIds, userId);
+  }
+
+  //관심 콘서트 단건 추가
+  @Post('interest-concert/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 단건 추가',
+    description: '유저의 관심 콘서트에 특정 콘서트 1개를 추가합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '추가할 콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async addInterestConcertById(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.addInterestConcertById(userId, id);
   }
 
   //관심 콘서트 조회
