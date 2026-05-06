@@ -67,6 +67,33 @@ export class UserService {
     return concerts.map((concert) => new ConcertResponseDto(concert));
   }
 
+  //관심 콘서트 단건 추가
+  async addInterestConcertById(userId: number, concertId: number) {
+    const user = await this.validateUser(userId);
+
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
+
+    if (!concert) {
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
+    }
+
+    await this.prismaService.userInterestConcert.createMany({
+      data: [
+        {
+          userId,
+          concertId: concert.id,
+          concertTitle: concert.title,
+          userNickname: user.nickname,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
+  }
+
   // 유저의 관심 콘서트 여부 확인
   async checkInterestConcert(userId: number, concertId: number) {
     await this.validateUser(userId);
@@ -95,7 +122,7 @@ export class UserService {
     const {
       cursorDate,
       cursorId,
-      size = 20,
+      size,
       sort = InterestConcertSort.CONCERT,
     } = query ?? {};
 
@@ -124,6 +151,8 @@ export class UserService {
     cursorId?: number,
     size?: number,
   ) {
+    const hasSize = typeof size === 'number';
+
     const where: Prisma.UserInterestConcertWhereInput = {
       userId,
       concert: {
@@ -176,11 +205,11 @@ export class UserService {
         { concert: { startDate: { sort: 'asc', nulls: 'last' } } },
         { concertId: 'asc' },
       ],
-      take: size + 1,
+      ...(hasSize ? { take: size + 1 } : {}),
     });
 
-    const hasNext = items.length > size;
-    const pageItems = hasNext ? items.slice(0, size) : items;
+    const hasNext = hasSize ? items.length > size : false;
+    const pageItems = hasSize && hasNext ? items.slice(0, size) : items;
 
     const mappedItems = pageItems.map(
       (item) =>
@@ -197,7 +226,7 @@ export class UserService {
     return {
       data: mappedItems,
       cursor:
-        hasNext && lastItem
+        hasSize && hasNext && lastItem
           ? {
               date: lastItem.concert.startDate,
               id: lastItem.concertId,
@@ -220,6 +249,8 @@ export class UserService {
     cursorId?: number,
     size?: number,
   ) {
+    const hasSize = typeof size === 'number';
+
     let parsedCursorDate: Date | undefined;
     let cursorSortBucket: number | undefined;
 
@@ -327,12 +358,12 @@ export class UserService {
       sortDate IS NULL ASC,
       sortDate ASC,
       c.id ASC
-    LIMIT ${size + 1}
+    ${hasSize ? Prisma.sql`LIMIT ${size + 1}` : Prisma.empty}
   `,
     );
 
-    const hasNext = rows.length > size;
-    const pageRows = hasNext ? rows.slice(0, size) : rows;
+    const hasNext = hasSize ? rows.length > size : false;
+    const pageRows = hasSize && hasNext ? rows.slice(0, size) : rows;
 
     const concertIds = pageRows.map((row) => Number(row.concertId));
     if (concertIds.length === 0) {
@@ -378,7 +409,7 @@ export class UserService {
     return {
       data: mappedItems,
       cursor:
-        hasNext && lastRow
+        hasSize && hasNext && lastRow
           ? {
               date: lastRow.sortDate?.toISOString() ?? null,
               id: lastRow.concertId,
@@ -388,15 +419,26 @@ export class UserService {
   }
 
   // 관심 콘서트 삭제
-  // async removeInterestConcert(userId: number) {
-  //   await this.validateUser(userId);
+  async removeInterestConcertById(userId: number, concertId: number) {
+    await this.validateUser(userId);
 
-  //   await this.prismaService.userInterestConcert.deleteMany({
-  //     where: { userId },
-  //   });
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
 
-  //   return;
-  // }
+    if (!concert) {
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
+    }
+
+    await this.prismaService.userInterestConcert.deleteMany({
+      where: {
+        userId,
+        concertId,
+      },
+    });
+
+    return;
+  }
 
   // 유저 정보 조회
   async getUserInfo(userId: number) {

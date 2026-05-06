@@ -11,8 +11,10 @@ const mockUserService = {
   setUserArtistPreferences: jest.fn(),
   getUserArtistPreferences: jest.fn(),
   setInterestConcerts: jest.fn(),
+  addInterestConcertById: jest.fn(),
   getInterestConcerts: jest.fn(),
   checkInterestConcert: jest.fn(),
+  removeInterestConcertById: jest.fn(),
 };
 
 // Mock user for authentication
@@ -295,6 +297,26 @@ describe('UserController - Artist Preferences', () => {
       expect(userService.setInterestConcerts).toHaveBeenCalledTimes(1);
     });
 
+    it('유저 관심 콘서트를 단건 추가해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const concertId = 33;
+      const expectedResult = { id: 33, title: '콘서트 D' };
+
+      mockUserService.addInterestConcertById.mockResolvedValue(expectedResult);
+
+      // When
+      const result = await controller.addInterestConcertById(req, concertId);
+
+      // Then
+      expect(result).toEqual(expectedResult);
+      expect(userService.addInterestConcertById).toHaveBeenCalledWith(
+        mockUser.userId,
+        concertId,
+      );
+      expect(userService.addInterestConcertById).toHaveBeenCalledTimes(1);
+    });
+
     it('유저 관심 콘서트 목록을 조회해야 함', async () => {
       // Given
       const req = { user: mockUser };
@@ -341,6 +363,25 @@ describe('UserController - Artist Preferences', () => {
         concertId,
       );
       expect(userService.checkInterestConcert).toHaveBeenCalledTimes(1);
+    });
+
+    it('유저 관심 콘서트를 단건 삭제해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const concertId = 44;
+
+      mockUserService.removeInterestConcertById.mockResolvedValue(undefined);
+
+      // When
+      const result = await controller.removeInterestConcertById(req, concertId);
+
+      // Then
+      expect(result).toBeUndefined();
+      expect(userService.removeInterestConcertById).toHaveBeenCalledWith(
+        mockUser.userId,
+        concertId,
+      );
+      expect(userService.removeInterestConcertById).toHaveBeenCalledTimes(1);
     });
   });
 });

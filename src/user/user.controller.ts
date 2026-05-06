@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
+  Post,
   Put,
   Query,
   Req,
@@ -45,6 +47,28 @@ export class UserController {
     return this.userService.setInterestConcerts(dto.concertIds, userId);
   }
 
+  //관심 콘서트 단건 추가
+  @Post('interest-concert/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 단건 추가',
+    description: '유저의 관심 콘서트에 특정 콘서트 1개를 추가합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '추가할 콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async addInterestConcertById(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.addInterestConcertById(userId, id);
+  }
+
   //관심 콘서트 조회
   @Get('interest-concerts')
   @UseGuards(JwtAuthGuard)
@@ -83,20 +107,28 @@ export class UserController {
     return this.userService.checkInterestConcert(userId, id);
   }
 
-  // 관심 콘서트 삭제
-  // @Delete('interest-concert')
-  // @UseGuards(JwtAuthGuard)
-  // @ApiBearerAuth()
-  // @ApiOperation({
-  //   summary: '유저의 관심 콘서트 삭제',
-  //   description: '유저의 관심 콘서트를 삭제합니다.',
-  // })
-  // async removeInterestConcert(@Req() req) {
-  //   const userId = req.user.userId;
-  //   return this.userService.removeInterestConcert(userId);
-  // }
+  // 유저의 관심 콘서트 단건 삭제
+  @Delete('interest-concert/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '유저의 관심 콘서트 단건 삭제',
+    description: '유저의 관심 콘서트에서 특정 콘서트 1개를 삭제합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '삭제할 콘서트의 ID',
+    type: Number,
+    example: 1,
+  })
+  async removeInterestConcertById(
+    @Req() req,
+    @Param('id', ParsePositiveIntPipe) id: number,
+  ) {
+    const userId = req.user.userId;
+    return this.userService.removeInterestConcertById(userId, id);
+  }
 
-  // 유저 정보 조회
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
