@@ -91,7 +91,7 @@ export class UserService {
       skipDuplicates: true,
     });
 
-    return new ConcertResponseDto(concert);
+    return new ConcertResponseDto(concert, getDaysUntil(concert.startDate));
   }
 
   // 유저의 관심 콘서트 여부 확인
