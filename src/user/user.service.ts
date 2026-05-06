@@ -67,6 +67,33 @@ export class UserService {
     return concerts.map((concert) => new ConcertResponseDto(concert));
   }
 
+  //관심 콘서트 단건 추가
+  async addInterestConcertById(userId: number, concertId: number) {
+    const user = await this.validateUser(userId);
+
+    const concert = await this.prismaService.concert.findUnique({
+      where: { id: concertId },
+    });
+
+    if (!concert) {
+      throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
+    }
+
+    await this.prismaService.userInterestConcert.createMany({
+      data: [
+        {
+          userId,
+          concertId: concert.id,
+          concertTitle: concert.title,
+          userNickname: user.nickname,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    return new ConcertResponseDto(concert);
+  }
+
   // 유저의 관심 콘서트 여부 확인
   async checkInterestConcert(userId: number, concertId: number) {
     await this.validateUser(userId);
