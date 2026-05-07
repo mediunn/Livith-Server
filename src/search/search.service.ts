@@ -173,6 +173,7 @@ export class SearchService {
     // 5. LATEST: phase 순서 (ONGOING → UPCOMING → COMPLETED → CANCELED)
     type PhaseDef = {
       status: ConcertStatus;
+      extraWhere?: Prisma.ConcertWhereInput;
       orderBy: Prisma.ConcertOrderByWithRelationInput[];
       cursorBuilder: (
         c: NonNullable<typeof cursorConcert>,
@@ -189,6 +190,7 @@ export class SearchService {
       },
       {
         status: ConcertStatus.UPCOMING,
+        extraWhere: { startDate: { not: null } },
         orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
         cursorBuilder: (c) => ({
           startDate_id: { startDate: c.startDate, id: c.id },
@@ -208,6 +210,12 @@ export class SearchService {
           startDate_id: { startDate: c.startDate, id: c.id },
         }),
       },
+      {
+        status: ConcertStatus.UPCOMING,
+        extraWhere: { startDate: null },
+        orderBy: [{ id: 'desc' }],
+        cursorBuilder: (c) => ({ id: c.id }),
+      },
     ];
 
     const allowedStatuses = explicitStatuses
@@ -218,7 +226,17 @@ export class SearchService {
       : ALL_PHASES;
 
     const cursorPhaseIdx = cursorConcert
-      ? activePhases.findIndex((p) => p.status === cursorConcert.status)
+      ? activePhases.findIndex((p) => {
+          if (p.status !== cursorConcert.status) return false;
+          // UPCOMING은 두 phase로 분리되어 있어 startDate null 여부로 구분
+          if (p.status === ConcertStatus.UPCOMING) {
+            const isNoDatePhase = p.extraWhere?.startDate === null;
+            return isNoDatePhase
+              ? cursorConcert.startDate === null
+              : cursorConcert.startDate !== null;
+          }
+          return true;
+        })
       : -1;
     const startIdx = cursorPhaseIdx >= 0 ? cursorPhaseIdx : 0;
 
@@ -238,6 +256,7 @@ export class SearchService {
                 {
                   status: phase.status as Prisma.ConcertWhereInput['status'],
                 },
+                phase.extraWhere ?? {},
               ],
             },
             orderBy: phase.orderBy,
