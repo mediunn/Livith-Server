@@ -46,7 +46,7 @@ model Concert {
 
 model Artist {
   id           Int       @id @default(autoincrement())
-  artist       String    @db.VarChar(100)
+  artist       String    @unique @db.VarChar(100)
   category     String?   @db.VarChar(30)
   detail       String?   @db.Text
   instagramUrl String?   @map("instagram_url") @db.VarChar(2048)
@@ -112,6 +112,7 @@ model Schedule {
   type        ScheduleType?
   concert     Concert       @relation(fields: [concertId], references: [id])
 
+  @@unique([concertId, scheduledAt, category], map: "uk_schedule")
   @@map("schedule")
 }
 
@@ -212,7 +213,7 @@ model Banner {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   content   String   @db.VarChar(100)
-  linkUrl  String?   @db.VarChar(2048) @map("link_url")
+  linkUrl   String?  @map("link_url") @db.VarChar(2048)
 
   @@map("banners")
 }
@@ -497,6 +498,16 @@ model Resignation {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("resignations")
+}
+
+model CrawlHistory {
+  id            Int      @id @default(autoincrement())
+  account       String   @unique(map: "uk_account") @db.VarChar(100)
+  lastCrawledAt DateTime @default(now()) @map("last_crawled_at") @db.DateTime(3)
+  createdAt     DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@map("crawl_history")
 }
 
 enum ConcertStatus {
