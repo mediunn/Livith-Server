@@ -15,6 +15,7 @@ import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 import { GetInterestConcertsDto } from './dto/get-interest-concerts.dto';
 import { InterestConcertSort } from 'src/common/enums/interest-concert-sort.enum';
 import { InterestConcertResponseDto } from './dto/interest-concert-response.dto';
+import { ConcertStatus } from '../common/enums/concert-status.enum';
 
 @Injectable()
 export class UserService {
@@ -110,6 +111,61 @@ export class UserService {
     return {
       isInterested: Boolean(interestConcert),
     };
+  }
+
+  // 관심 콘서트 토스트 노출 여부 확인
+  async getInterestConcertToastStatus(
+    userId: number,
+  ): Promise<{ needsToShow: boolean }> {
+    await this.validateUser(userId);
+
+    const interestConcert =
+      await this.prismaService.userInterestConcert.findFirst({
+        where: {
+          userId,
+          toastShown: false,
+          concert: {
+            status: {
+              in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+    return { needsToShow: Boolean(interestConcert) };
+  }
+
+  // 관심 콘서트 토스트 노출 처리
+  async patchInterestConcertToastStatus(userId: number): Promise<void> {
+    await this.validateUser(userId);
+
+    const interestConcerts =
+      await this.prismaService.userInterestConcert.findMany({
+        where: {
+          userId,
+          toastShown: false,
+          concert: {
+            status: {
+              in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+    if (interestConcerts.length === 0) {
+      return;
+    }
+
+    await this.prismaService.userInterestConcert.updateMany({
+      where: {
+        id: { in: interestConcerts.map((item) => item.id) },
+      },
+      data: {
+        toastShown: true,
+      },
+    });
   }
 
   //관심 콘서트 목록 조회
