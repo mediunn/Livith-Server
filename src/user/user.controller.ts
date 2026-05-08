@@ -107,6 +107,38 @@ export class UserController {
     return this.userService.checkInterestConcert(userId, id);
   }
 
+  //관심 콘서트 토스트 노출 여부 조회
+  @Get('interest-concerts/toast')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '관심 콘서트 토스트 노출 여부 조회',
+    description:
+      '아직 토스트를 보여주지 않은 완료되었거나 취소된 관심 콘서트가 있으면 needsToShow를 true로 반환합니다.',
+  })
+  async getInterestConcertToastStatus(
+    @Req() req,
+  ): Promise<{ needsToShow: boolean }> {
+    const userId = req.user.userId;
+    return this.userService.getInterestConcertToastStatus(userId);
+  }
+
+  // 관심 콘서트 토스트 노출 처리
+  @Patch('interest-concerts/toast')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '관심 콘서트 토스트 노출 처리',
+    description: '관심 콘서트 토스트를 이미 보여줬다고 저장합니다.',
+  })
+  async patchInterestConcertToastStatus(
+    @Req() req,
+  ): Promise<{ success: true }> {
+    const userId = req.user.userId;
+    await this.userService.patchInterestConcertToastStatus(userId);
+    return { success: true };
+  }
+
   // 유저의 관심 콘서트 단건 삭제
   @Delete('interest-concert/:id')
   @UseGuards(JwtAuthGuard)

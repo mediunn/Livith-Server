@@ -6,6 +6,7 @@ import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { InterestConcertSort } from '../common/enums/interest-concert-sort.enum';
+import { ConcertStatus } from '../common/enums/concert-status.enum';
 
 describe('UserService', () => {
   let service: UserService;
@@ -88,6 +89,7 @@ describe('UserService', () => {
         findMany: jest.fn(),
         createMany: jest.fn(),
         deleteMany: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
 
@@ -467,19 +469,19 @@ describe('UserService', () => {
         expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
           where: { id: concertId },
         });
-        expect(mockPrismaService.userInterestConcert.createMany).toHaveBeenCalledWith(
-          {
-            data: [
-              {
-                userId,
-                concertId: mockConcert.id,
-                concertTitle: mockConcert.title,
-                userNickname: mockUser.nickname,
-              },
-            ],
-            skipDuplicates: true,
-          },
-        );
+        expect(
+          mockPrismaService.userInterestConcert.createMany,
+        ).toHaveBeenCalledWith({
+          data: [
+            {
+              userId,
+              concertId: mockConcert.id,
+              concertTitle: mockConcert.title,
+              userNickname: mockUser.nickname,
+            },
+          ],
+          skipDuplicates: true,
+        });
         expect(result.id).toBe(mockConcert.id);
         expect(result.title).toBe(mockConcert.title);
       });
@@ -607,6 +609,97 @@ describe('UserService', () => {
       });
     });
 
+    describe('getInterestConcertToastStatus', () => {
+      it('완료 또는 취소된 관심 콘서트가 있으면 needsToShow: true를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue({
+          id: 1,
+        });
+
+        // When
+        const result = await service.getInterestConcertToastStatus(userId);
+
+        // Then
+        expect(result).toEqual({ needsToShow: true });
+        expect(
+          mockPrismaService.userInterestConcert.findFirst,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            toastShown: false,
+            concert: {
+              status: {
+                in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+              },
+            },
+          },
+          select: { id: true },
+        });
+      });
+
+      it('완료 또는 취소된 관심 콘서트가 없으면 needsToShow: false를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue(null);
+
+        // When
+        const result = await service.getInterestConcertToastStatus(userId);
+
+        // Then
+        expect(result).toEqual({ needsToShow: false });
+      });
+    });
+
+    describe('patchInterestConcertToastStatus', () => {
+      it('노출되지 않은 완료/취소 관심 콘서트를 노출 처리해야 함', async () => {
+        // Given
+        const userId = 1;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findMany.mockResolvedValue([
+          { id: 1 },
+          { id: 2 },
+        ]);
+        mockPrismaService.userInterestConcert.updateMany.mockResolvedValue({
+          count: 2,
+        });
+
+        // When
+        await service.patchInterestConcertToastStatus(userId);
+
+        // Then
+        expect(
+          mockPrismaService.userInterestConcert.findMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            toastShown: false,
+            concert: {
+              status: {
+                in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+              },
+            },
+          },
+          select: { id: true },
+        });
+        expect(
+          mockPrismaService.userInterestConcert.updateMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            id: { in: [1, 2] },
+          },
+          data: {
+            toastShown: true,
+          },
+        });
+      });
+    });
+
     describe('removeInterestConcertById', () => {
       it('관심 콘서트를 단건 삭제해야 함', async () => {
         // Given
@@ -649,14 +742,14 @@ describe('UserService', () => {
         expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
           where: { id: concertId },
         });
-        expect(mockPrismaService.userInterestConcert.deleteMany).toHaveBeenCalledWith(
-          {
-            where: {
-              userId,
-              concertId,
-            },
+        expect(
+          mockPrismaService.userInterestConcert.deleteMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            concertId,
           },
-        );
+        });
         expect(result).toBeUndefined();
       });
 

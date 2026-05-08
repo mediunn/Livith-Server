@@ -14,6 +14,8 @@ const mockUserService = {
   addInterestConcertById: jest.fn(),
   getInterestConcerts: jest.fn(),
   checkInterestConcert: jest.fn(),
+  getInterestConcertToastStatus: jest.fn(),
+  patchInterestConcertToastStatus: jest.fn(),
   removeInterestConcertById: jest.fn(),
 };
 
@@ -365,6 +367,46 @@ describe('UserController - Artist Preferences', () => {
       expect(userService.checkInterestConcert).toHaveBeenCalledTimes(1);
     });
 
+    it('관심 콘서트 토스트 노출 여부를 조회해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      mockUserService.getInterestConcertToastStatus.mockResolvedValue({
+        needsToShow: true,
+      });
+
+      // When
+      const result = await controller.getInterestConcertToastStatus(req);
+
+      // Then
+      expect(result).toEqual({ needsToShow: true });
+      expect(userService.getInterestConcertToastStatus).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
+      expect(userService.getInterestConcertToastStatus).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('관심 콘서트 토스트를 노출 처리해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      mockUserService.patchInterestConcertToastStatus.mockResolvedValue(
+        undefined,
+      );
+
+      // When
+      const result = await controller.patchInterestConcertToastStatus(req);
+
+      // Then
+      expect(result).toEqual({ success: true });
+      expect(userService.patchInterestConcertToastStatus).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
+      expect(userService.patchInterestConcertToastStatus).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
     it('유저 관심 콘서트를 단건 삭제해야 함', async () => {
       // Given
       const req = { user: mockUser };
@@ -385,7 +427,6 @@ describe('UserController - Artist Preferences', () => {
     });
   });
 });
-
 describe('SetUserArtistPreferencesDto Validation', () => {
   it('유효한 아티스트 ID 배열을 허용해야 함', async () => {
     // Given
