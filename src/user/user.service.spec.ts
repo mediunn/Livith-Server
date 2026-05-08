@@ -469,19 +469,19 @@ describe('UserService', () => {
         expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
           where: { id: concertId },
         });
-        expect(mockPrismaService.userInterestConcert.createMany).toHaveBeenCalledWith(
-          {
-            data: [
-              {
-                userId,
-                concertId: mockConcert.id,
-                concertTitle: mockConcert.title,
-                userNickname: mockUser.nickname,
-              },
-            ],
-            skipDuplicates: true,
-          },
-        );
+        expect(
+          mockPrismaService.userInterestConcert.createMany,
+        ).toHaveBeenCalledWith({
+          data: [
+            {
+              userId,
+              concertId: mockConcert.id,
+              concertTitle: mockConcert.title,
+              userNickname: mockUser.nickname,
+            },
+          ],
+          skipDuplicates: true,
+        });
         expect(result.id).toBe(mockConcert.id);
         expect(result.title).toBe(mockConcert.title);
       });
@@ -609,8 +609,8 @@ describe('UserService', () => {
       });
     });
 
-    describe('hasInterestConcertToast', () => {
-      it('완료 또는 취소된 관심 콘서트가 있으면 true를 반환해야 함', async () => {
+    describe('getInterestConcertToastStatus', () => {
+      it('완료 또는 취소된 관심 콘서트가 있으면 needsToShow: true를 반환해야 함', async () => {
         // Given
         const userId = 1;
 
@@ -620,27 +620,27 @@ describe('UserService', () => {
         });
 
         // When
-        const result = await service.hasInterestConcertToast(userId);
+        const result = await service.getInterestConcertToastStatus(userId);
 
         // Then
-        expect(result).toBe(true);
-        expect(mockPrismaService.userInterestConcert.findFirst).toHaveBeenCalledWith(
-          {
-            where: {
-              userId,
-              toastShown: false,
-              concert: {
-                status: {
-                  in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
-                },
+        expect(result).toEqual({ needsToShow: true });
+        expect(
+          mockPrismaService.userInterestConcert.findFirst,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            toastShown: false,
+            concert: {
+              status: {
+                in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
               },
             },
-            select: { id: true },
           },
-        );
+          select: { id: true },
+        });
       });
 
-      it('완료 또는 취소된 관심 콘서트가 없으면 false를 반환해야 함', async () => {
+      it('완료 또는 취소된 관심 콘서트가 없으면 needsToShow: false를 반환해야 함', async () => {
         // Given
         const userId = 1;
 
@@ -648,14 +648,14 @@ describe('UserService', () => {
         mockPrismaService.userInterestConcert.findFirst.mockResolvedValue(null);
 
         // When
-        const result = await service.hasInterestConcertToast(userId);
+        const result = await service.getInterestConcertToastStatus(userId);
 
         // Then
-        expect(result).toBe(false);
+        expect(result).toEqual({ needsToShow: false });
       });
     });
 
-    describe('markInterestConcertToastAsShown', () => {
+    describe('patchInterestConcertToastStatus', () => {
       it('노출되지 않은 완료/취소 관심 콘서트를 노출 처리해야 함', async () => {
         // Given
         const userId = 1;
@@ -670,33 +670,33 @@ describe('UserService', () => {
         });
 
         // When
-        await service.markInterestConcertToastAsShown(userId);
+        await service.patchInterestConcertToastStatus(userId);
 
         // Then
-        expect(mockPrismaService.userInterestConcert.findMany).toHaveBeenCalledWith(
-          {
-            where: {
-              userId,
-              toastShown: false,
-              concert: {
-                status: {
-                  in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
-                },
+        expect(
+          mockPrismaService.userInterestConcert.findMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            toastShown: false,
+            concert: {
+              status: {
+                in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
               },
             },
-            select: { id: true },
           },
-        );
-        expect(mockPrismaService.userInterestConcert.updateMany).toHaveBeenCalledWith(
-          {
-            where: {
-              id: { in: [1, 2] },
-            },
-            data: {
-              toastShown: true,
-            },
+          select: { id: true },
+        });
+        expect(
+          mockPrismaService.userInterestConcert.updateMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            id: { in: [1, 2] },
           },
-        );
+          data: {
+            toastShown: true,
+          },
+        });
       });
     });
 
@@ -742,14 +742,14 @@ describe('UserService', () => {
         expect(mockPrismaService.concert.findUnique).toHaveBeenCalledWith({
           where: { id: concertId },
         });
-        expect(mockPrismaService.userInterestConcert.deleteMany).toHaveBeenCalledWith(
-          {
-            where: {
-              userId,
-              concertId,
-            },
+        expect(
+          mockPrismaService.userInterestConcert.deleteMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId,
+            concertId,
           },
-        );
+        });
         expect(result).toBeUndefined();
       });
 

@@ -404,7 +404,7 @@ describe('UserController - Artist Preferences', () => {
       );
       expect(userService.patchInterestConcertToastStatus).toHaveBeenCalledTimes(
         1,
-      
+      );
     });
 
     it('유저 관심 콘서트를 단건 삭제해야 함', async () => {
@@ -427,7 +427,6 @@ describe('UserController - Artist Preferences', () => {
     });
   });
 });
-
 describe('SetUserArtistPreferencesDto Validation', () => {
   it('유효한 아티스트 ID 배열을 허용해야 함', async () => {
     // Given
