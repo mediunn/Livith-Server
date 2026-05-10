@@ -114,26 +114,48 @@ export class UserService {
   }
 
   // 관심 콘서트 토스트 노출 여부 확인
-  async getInterestConcertToastStatus(
-    userId: number,
-  ): Promise<{ needsToShow: boolean }> {
+  async getInterestConcertToastStatus(userId: number): Promise<{
+    needsToShow: boolean;
+    type?: 'COMPLETED' | 'CANCELED' | 'BOTH';
+  }> {
     await this.validateUser(userId);
 
-    const interestConcert =
+    const completedConcert =
       await this.prismaService.userInterestConcert.findFirst({
         where: {
           userId,
           toastShown: false,
           concert: {
-            status: {
-              in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
-            },
+            status: ConcertStatus.COMPLETED,
           },
         },
         select: { id: true },
       });
 
-    return { needsToShow: Boolean(interestConcert) };
+    const canceledConcert =
+      await this.prismaService.userInterestConcert.findFirst({
+        where: {
+          userId,
+          toastShown: false,
+          concert: {
+            status: ConcertStatus.CANCELED,
+          },
+        },
+        select: { id: true },
+      });
+
+    if (!completedConcert && !canceledConcert) {
+      return { needsToShow: false };
+    }
+
+    if (completedConcert && canceledConcert) {
+      return { needsToShow: true, type: 'BOTH' };
+    }
+
+    return {
+      needsToShow: true,
+      type: completedConcert ? 'COMPLETED' : 'CANCELED',
+    };
   }
 
   // 관심 콘서트 토스트 노출 처리

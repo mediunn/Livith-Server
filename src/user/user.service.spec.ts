@@ -610,34 +610,64 @@ describe('UserService', () => {
     });
 
     describe('getInterestConcertToastStatus', () => {
-      it('완료 또는 취소된 관심 콘서트가 있으면 needsToShow: true를 반환해야 함', async () => {
+      it('COMPLETED 콘서트만 있으면 type: COMPLETED를 반환해야 함', async () => {
         // Given
         const userId = 1;
 
         jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
-        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue({
-          id: 1,
-        });
+        mockPrismaService.userInterestConcert.findFirst
+          .mockResolvedValueOnce({ id: 1 }) // COMPLETED
+          .mockResolvedValueOnce(null); // CANCELED
 
         // When
         const result = await service.getInterestConcertToastStatus(userId);
 
         // Then
-        expect(result).toEqual({ needsToShow: true });
+        expect(result).toEqual({ needsToShow: true, type: 'COMPLETED' });
         expect(
           mockPrismaService.userInterestConcert.findFirst,
-        ).toHaveBeenCalledWith({
+        ).toHaveBeenNthCalledWith(1, {
           where: {
             userId,
             toastShown: false,
             concert: {
-              status: {
-                in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
-              },
+              status: ConcertStatus.COMPLETED,
             },
           },
           select: { id: true },
         });
+      });
+
+      it('CANCELED 콘서트만 있으면 type: CANCELED를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst
+          .mockResolvedValueOnce(null) // COMPLETED
+          .mockResolvedValueOnce({ id: 2 }); // CANCELED
+
+        // When
+        const result = await service.getInterestConcertToastStatus(userId);
+
+        // Then
+        expect(result).toEqual({ needsToShow: true, type: 'CANCELED' });
+      });
+
+      it('COMPLETED와 CANCELED 둘 다 있으면 type: BOTH를 반환해야 함', async () => {
+        // Given
+        const userId = 1;
+
+        jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
+        mockPrismaService.userInterestConcert.findFirst
+          .mockResolvedValueOnce({ id: 1 }) // COMPLETED
+          .mockResolvedValueOnce({ id: 2 }); // CANCELED
+
+        // When
+        const result = await service.getInterestConcertToastStatus(userId);
+
+        // Then
+        expect(result).toEqual({ needsToShow: true, type: 'BOTH' });
       });
 
       it('완료 또는 취소된 관심 콘서트가 없으면 needsToShow: false를 반환해야 함', async () => {
@@ -645,7 +675,9 @@ describe('UserService', () => {
         const userId = 1;
 
         jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser as any);
-        mockPrismaService.userInterestConcert.findFirst.mockResolvedValue(null);
+        mockPrismaService.userInterestConcert.findFirst
+          .mockResolvedValueOnce(null) // COMPLETED
+          .mockResolvedValueOnce(null); // CANCELED
 
         // When
         const result = await service.getInterestConcertToastStatus(userId);
