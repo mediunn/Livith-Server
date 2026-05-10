@@ -114,11 +114,12 @@ export class UserController {
   @ApiOperation({
     summary: '관심 콘서트 토스트 노출 여부 조회',
     description:
-      '아직 토스트를 보여주지 않은 완료되었거나 취소된 관심 콘서트가 있으면 needsToShow를 true로 반환합니다.',
+      '아직 토스트를 보여주지 않은 완료되었거나 취소된 관심 콘서트가 있으면 needsToShow를 true로 반환합니다. type 필드로 COMPLETED, CANCELED, BOTH 중 하나를 반환합니다.',
   })
-  async getInterestConcertToastStatus(
-    @Req() req,
-  ): Promise<{ needsToShow: boolean }> {
+  async getInterestConcertToastStatus(@Req() req): Promise<{
+    needsToShow: boolean;
+    type?: 'COMPLETED' | 'CANCELED' | 'BOTH';
+  }> {
     const userId = req.user.userId;
     return this.userService.getInterestConcertToastStatus(userId);
   }
