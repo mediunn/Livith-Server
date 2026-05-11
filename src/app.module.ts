@@ -19,6 +19,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { LoggerModule } from './logger/logger.module';
 import { MeilisearchModule } from './meilisearch/meilisearch.module';
+import { ImageProxyModule } from './image-proxy/image-proxy.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { MeilisearchModule } from './meilisearch/meilisearch.module';
     MetricsModule,
     LoggerModule,
     MeilisearchModule,
+    ImageProxyModule,
   ],
   controllers: [],
   providers: [
