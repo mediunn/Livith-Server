@@ -10,12 +10,19 @@ import { SetlistModule } from './setlist/setlist.module';
 import { SongModule } from './song/song.module';
 import { CommentModule } from './comment/comment.module';
 import { UserModule } from './user/user.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecommendationModule } from './recommendation/recommendation.module';
+import { GenreModule } from './genre/genre.module';
+import { NotificationModule } from './notification/notification.module';
+import { ArtistModule } from './artist/artist.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
     }),
     AuthModule,
     ConcertModule,
@@ -25,12 +32,21 @@ import { UserModule } from './user/user.module';
     SongModule,
     CommentModule,
     UserModule,
+    RecommendationModule,
+    GenreModule,
+    NotificationModule,
+    ArtistModule,
+    MetricsModule,
   ],
   controllers: [],
   providers: [
     {
       provide: APP_INTERCEPTOR,
       useClass: GlobalResponseInterceptor, // 인터셉터 등록
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
     },
   ],
 })

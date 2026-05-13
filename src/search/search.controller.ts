@@ -1,12 +1,14 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { BadRequestException } from '../common/exceptions/business.exception';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
 import { ErrorCode } from '../common/enums/error-code.enum';
+import { BadRequestException } from '../common/exceptions/business.exception';
+import { GetArtistSearchResultsDto } from './dto/get-artist-search-results.dto';
+import { GetConcertSearchResultsDto } from './dto/get-concert-search-results.dto';
 import { SearchService } from './search.service';
-import { GetSearchResultsDto } from './dto/get-search-results.dto';
 
 @ApiTags('탐색')
-@Controller('api/v4/search')
+@Controller(`${API_PREFIX}/search`)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
   //배너 조회
@@ -49,12 +51,26 @@ export class SearchController {
   }
 
   //필터에 따른 검색 결과 콘서트 목록 조회
-  @Get()
+  @Get('/concerts')
   @ApiOperation({
     summary: '필터에 따른 검색 결과 콘서트 목록 조회',
     description: '필터에 따른 검색 결과 콘서트 목록을 조회합니다.',
   })
-  getSearchResults(@Query() query: GetSearchResultsDto) {
-    return this.searchService.getSearchResults(query);
+  getConcertSearchResults(@Query() query: GetConcertSearchResultsDto) {
+    return this.searchService.getConcertSearchResults(query);
+  }
+
+  //대표 아티스트 검색 결과 목록 조회
+  @Get('/artists')
+  @ApiOperation({
+    summary: '대표 아티스트 검색 결과 목록 조회',
+    description: '대표 아티스트 검색 결과 목록을 조회합니다.',
+  })
+  async getSearchArtists(@Query() query: GetArtistSearchResultsDto) {
+    return this.searchService.getArtistSearchResults(
+      query.cursor,
+      query.size,
+      query.keyword,
+    );
   }
 }

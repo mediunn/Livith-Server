@@ -9,11 +9,31 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
 import { getDaysUntil } from '../common/utils/date.util';
 import { UserResponseDto } from './dto/user-response.dto';
-import { Provider } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
+import { UserGenreResponseDto } from './dto/user-genre-response.dto';
+import { UserArtistResponseDto } from './dto/user-artist-response.dto';
 
 @Injectable()
 export class UserService {
   constructor(private readonly prismaService: PrismaService) {}
+
+  /**
+   * 유저 검증 (public 메서드)
+   */
+  async validateUser(userId: number): Promise<User> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+    if (user.deletedAt) {
+      throw new ForbiddenException(ErrorCode.USER_DELETED);
+    }
+
+    return user;
+  }
 
   //관심 콘서트 설정
   async setInterestConcert(concertId: number, userId: number) {
@@ -25,17 +45,7 @@ export class UserService {
       throw new NotFoundException(ErrorCode.CONCERT_NOT_FOUND);
     }
 
-    // 유저 ID가 유효한지 확인
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     // 관심 콘서트 설정
     await this.prismaService.user.update({
@@ -54,13 +64,8 @@ export class UserService {
       where: { id: userId },
       include: { concert: true },
     });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
 
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     if (!user.concert) {
       return null;
@@ -74,16 +79,8 @@ export class UserService {
 
   // 관심 콘서트 삭제
   async removeInterestConcert(userId: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: { concert: true },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
+
     await this.prismaService.user.update({
       where: { id: userId },
       data: { interestConcertId: { set: null } },
@@ -96,28 +93,18 @@ export class UserService {
   async getUserInfo(userId: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
+      include: {
+        userGenres: true,
+        userArtists: true,
+      },
     });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
     return new UserResponseDto(user);
   }
 
   //닉네임 변경
   async updateNickname(userId, nickname) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-    }
-
-    if (user.deletedAt) {
-      throw new ForbiddenException(ErrorCode.USER_DELETED);
-    }
+    await this.validateUser(userId);
 
     //닉네임 중복 확인
     const duplicate = await this.prismaService.user.findUnique({
@@ -165,5 +152,95 @@ export class UserService {
       message: '정상적인 유저입니다.',
       user: new UserResponseDto(user),
     };
+  }
+
+  //유저 취향 장르 조회
+  async getUserGenrePreferences(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { userGenres: { include: { genre: true } } },
+    });
+    await this.validateUser(userId);
+
+    return user.userGenres.map(
+      (ug) => new UserGenreResponseDto(ug.genre, userId),
+    );
+  }
+
+  //유저 취향 아티스트 조회
+  async getUserArtistPreferences(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { userArtists: { include: { artist: true } } },
+    });
+    await this.validateUser(userId);
+
+    return user.userArtists.map(
+      (ua) => new UserArtistResponseDto(ua.artist, userId),
+    );
+  }
+
+  //유저 취향 장르 설정
+  async setUserGenrePreferences(userId: number, genreIds: number[]) {
+    await this.validateUser(userId);
+
+    // 장르 존재 여부 확인
+    const genres = await this.prismaService.genre.findMany({
+      where: { id: { in: genreIds } },
+    });
+
+    if (genres.length !== genreIds.length) {
+      throw new NotFoundException(ErrorCode.GENRE_NOT_FOUND);
+    }
+
+    // 기존 취향 장르 삭제
+    await this.prismaService.userGenre.deleteMany({
+      where: { userId: userId },
+    });
+
+    // 새로운 취향 장르 생성
+    const createData = genres.map((genre) => ({
+      userId: userId,
+      genreId: genre.id,
+      genreName: genre.name,
+    }));
+
+    await this.prismaService.userGenre.createMany({
+      data: createData,
+    });
+
+    return genres.map((genre) => new UserGenreResponseDto(genre, userId));
+  }
+
+  //유저 취향 아티스트 설정
+  async setUserArtistPreferences(userId: number, artistIds: number[]) {
+    await this.validateUser(userId);
+
+    // 아티스트 존재 여부 확인
+    const artists = await this.prismaService.representativeArtist.findMany({
+      where: { id: { in: artistIds } },
+    });
+
+    if (artists.length !== artistIds.length) {
+      throw new NotFoundException(ErrorCode.ARTIST_NOT_FOUND);
+    }
+
+    // 기존 취향 아티스트 삭제
+    await this.prismaService.userArtist.deleteMany({
+      where: { userId: userId },
+    });
+
+    // 새로운 취향 아티스트 생성
+    const createData = artists.map((artist) => ({
+      userId: userId,
+      artistId: artist.id,
+      artistName: artist.artistName,
+    }));
+
+    await this.prismaService.userArtist.createMany({
+      data: createData,
+    });
+
+    return artists.map((artist) => new UserArtistResponseDto(artist, userId));
   }
 }
