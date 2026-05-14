@@ -1,11 +1,12 @@
 import { Concert, SearchConcertSection, SearchSection } from '@prisma/client';
-import { getConcertDaysLeft } from '../../common/utils/date.util';
+import { getConcertDaysLeft, getDaysUntil } from '../../common/utils/date.util';
 
 export class SearchSectionResponseDto {
   id: number;
   sectionTitle: string;
   sortedIndex: number;
-  concerts: (Concert & { sortedIndex: number; daysLeft: number | null })[];
+  concerts: (Concert & { sortedIndex: number })[];
+  daysLeft: number;
 
   constructor(
     section: SearchSection & {
