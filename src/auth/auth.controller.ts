@@ -31,6 +31,10 @@ import { CookieService } from '../common/utils/cookie.util';
 import { ConfigService } from '@nestjs/config';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
 
+export const LOGIN_PREFIX = (() => {
+  const p = (process.env.LOGIN_PREFIX ?? '').trim();
+  return p ? `/${p}` : '';
+})();
 @Controller()
 export class AuthController {
   constructor(
@@ -48,7 +52,7 @@ export class AuthController {
 
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/kakao/callback&state=${state}`;
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/kakao/callback&state=${state}`;
     return res.redirect(kakaoAuthUrl);
   }
 
@@ -58,7 +62,7 @@ export class AuthController {
     req.session.appleNonce = nonce;
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/apple/callback&state=${state}&scope=name email`;
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/apple/callback&state=${state}&scope=name email`;
     return res.redirect(appleAuthUrl);
   }
 

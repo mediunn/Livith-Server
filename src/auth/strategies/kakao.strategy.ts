@@ -2,6 +2,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-kakao';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { LOGIN_PREFIX } from '../auth.controller';
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
@@ -9,7 +10,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     super({
       clientID: configService.get<string>('KAKAO_CLIENT_ID'),
       clientSecret: configService.get<string>('KAKAO_CLIENT_SECRET'), // 선택 사항
-      callbackURL: `${configService.get<string>('SERVER_URL')}/auth/kakao/callback`,
+      callbackURL: `${configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/kakao/callback`,
       passReqToCallback: true, // req 객체를 콜백으로 전달
     });
   }
