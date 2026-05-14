@@ -1,0 +1,3 @@
+-- No-op migration.
+-- This migration was originally created to reconcile local drift and marked as applied.
+-- Intentionally left empty so fresh environments are not affected.
