@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-apple';
 import { ConfigService } from '@nestjs/config';
+import { LOGIN_PREFIX } from '../auth.controller';
 
 @Injectable()
 export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
@@ -11,7 +12,7 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
       teamID: configService.get<string>('APPLE_TEAM_ID'),
       keyID: configService.get<string>('APPLE_KEY_ID'),
       privateKeyString: configService.get<string>('APPLE_PRIVATE_KEY'),
-      callbackURL: `${configService.get<string>('SERVER_URL')}/auth/apple/callback`,
+      callbackURL: `${configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/apple/callback`,
       passReqToCallback: true,
       scope: ['name', 'email'],
     });

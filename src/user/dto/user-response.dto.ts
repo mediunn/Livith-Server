@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { User, UserArtist, UserGenre } from '@prisma/client';
 
 export class UserResponseDto {
   id: number;
@@ -9,8 +9,12 @@ export class UserResponseDto {
   email: string;
   nickname: string;
   marketingConsent: boolean;
+  preferredGenres: { id: number; name: string }[];
+  preferredArtists: { id: number; name: string }[];
 
-  constructor(user: User) {
+  constructor(
+    user: User & { userGenres?: UserGenre[]; userArtists?: UserArtist[] },
+  ) {
     this.id = user.id;
     this.interestConcertId = user.interestConcertId;
     this.provider = user.provider;
@@ -18,5 +22,13 @@ export class UserResponseDto {
     this.email = user.email;
     this.nickname = user.nickname;
     this.marketingConsent = user.marketingConsent;
+    this.preferredGenres = (user.userGenres || []).map((ug) => ({
+      id: ug.genreId,
+      name: ug.genreName,
+    }));
+    this.preferredArtists = (user.userArtists || []).map((ua) => ({
+      id: ua.artistId,
+      name: ua.artistName,
+    }));
   }
 }
