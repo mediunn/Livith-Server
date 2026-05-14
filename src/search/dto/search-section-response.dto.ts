@@ -1,5 +1,5 @@
 import { Concert, SearchConcertSection, SearchSection } from '@prisma/client';
-import { getDaysUntil } from '../../common/utils/date.util';
+import { getConcertDaysLeft, getDaysUntil } from '../../common/utils/date.util';
 
 export class SearchSectionResponseDto {
   id: number;
@@ -18,7 +18,7 @@ export class SearchSectionResponseDto {
     this.concerts = section.searchConcertSections.map((hcs) => ({
       ...hcs.concert,
       sortedIndex: hcs.sortedIndex,
-      daysLeft: getDaysUntil(hcs.concert.startDate),
+      daysLeft: getConcertDaysLeft(hcs.concert.startDate, hcs.concert.endDate),
     }));
   }
 }

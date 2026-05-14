@@ -1,27 +1,26 @@
-import { HttpException, HttpStatus } from "@nestjs/common";
-import { ErrorCode } from "../enums/error-code.enum";
-import { ErrorMessages } from "../constants/error-messages";
+import { HttpException, HttpStatus } from '@nestjs/common';
+import { ErrorCode } from '../enums/error-code.enum';
+import { ErrorMessages } from '../constants/error-messages';
 
-
-export class BusinessException extends HttpException{
-    constructor(
-        public readonly errorCode: ErrorCode,
-        statusCode: HttpStatus = HttpStatus.BAD_REQUEST
-    ){
-        super(
-            {
-                statusCode,
-                message: ErrorMessages[errorCode],
-            },
-            statusCode
-        );
-    }
+export class BusinessException extends HttpException {
+  constructor(
+    public readonly errorCode: ErrorCode,
+    statusCode: HttpStatus = HttpStatus.BAD_REQUEST,
+  ) {
+    super(
+      {
+        statusCode,
+        message: ErrorMessages[errorCode],
+      },
+      statusCode,
+    );
+  }
 }
 
-export class NotFoundException extends BusinessException{
-    constructor(errorCode: ErrorCode){
-        super(errorCode, HttpStatus.NOT_FOUND);
-    }
+export class NotFoundException extends BusinessException {
+  constructor(errorCode: ErrorCode) {
+    super(errorCode, HttpStatus.NOT_FOUND);
+  }
 }
 
 export class BadRequestException extends BusinessException {

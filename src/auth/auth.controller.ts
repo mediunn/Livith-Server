@@ -29,6 +29,12 @@ import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 import { AppleMobileLoginDto } from './dto/apple-mobile-login.dto';
 import { CookieService } from '../common/utils/cookie.util';
 import { ConfigService } from '@nestjs/config';
+import { API_PREFIX } from 'src/common/constants/api-prefix';
+
+export const LOGIN_PREFIX = (() => {
+  const p = (process.env.LOGIN_PREFIX ?? '').trim();
+  return p ? `/${p}` : '';
+})();
 
 @Controller()
 export class AuthController {
@@ -38,7 +44,7 @@ export class AuthController {
     private configService: ConfigService,
   ) {}
 
-  @Get('api/v4/auth/kakao/web')
+  @Get(`${API_PREFIX}/auth/kakao/web`)
   async kakaoLoginWeb(@Req() req, @Res() res: Response) {
     // 카카오 로그인 페이지로 리다이렉트
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -47,17 +53,17 @@ export class AuthController {
 
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/kakao/callback&state=${state}`;
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/kakao/callback&state=${state}`;
     return res.redirect(kakaoAuthUrl);
   }
 
-  @Get('api/v4/auth/apple/web')
+  @Get(`${API_PREFIX}/auth/apple/web`)
   async appleLoginWeb(@Req() req, @Res() res: Response) {
     const nonce = crypto.randomBytes(16).toString('hex');
     req.session.appleNonce = nonce;
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
-    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}/auth/apple/callback&state=${state}&scope=name email`;
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/apple/callback&state=${state}&scope=name email`;
     return res.redirect(appleAuthUrl);
   }
 
@@ -138,7 +144,7 @@ export class AuthController {
     }
   }
 
-  @Post('api/v4/auth/kakao/mobile')
+  @Post(`${API_PREFIX}/auth/kakao/mobile`)
   @ApiOperation({ summary: '카카오 모바일 로그인' })
   @ApiBody({ type: KakaoMobileLoginDto })
   async kakaoLoginMobile(@Body() dto: KakaoMobileLoginDto) {
@@ -159,7 +165,7 @@ export class AuthController {
     });
   }
 
-  @Post('api/v4/auth/apple/mobile')
+  @Post(`${API_PREFIX}/auth/apple/mobile`)
   @ApiOperation({
     summary: '애플 모바일 로그인',
   })
@@ -175,7 +181,7 @@ export class AuthController {
   }
 
   //토큰 재발급
-  @Post('api/v4/auth/refresh')
+  @Post(`${API_PREFIX}/auth/refresh`)
   @ApiOperation({
     summary: '토큰 재발급',
     description: '리프레시 토큰으로 새로운 토큰을 발급합니다.',
@@ -205,7 +211,7 @@ export class AuthController {
   }
 
   //로그아웃
-  @Post('api/v4/auth/logout')
+  @Post(`${API_PREFIX}/auth/logout`)
   @ApiOperation({
     summary: '로그아웃',
     description: '리프레시 토큰을 무효화하고 로그아웃합니다.',
@@ -231,7 +237,7 @@ export class AuthController {
   }
 
   //회원가입
-  @Post('api/v4/auth/signup')
+  @Post(`${API_PREFIX}/auth/signup`)
   @ApiOperation({
     summary: '회원가입',
     description: '간편 로그인 이후 닉네임, 이메일 등 추가 정보를 저장합니다.',
@@ -250,6 +256,8 @@ export class AuthController {
       body.marketingConsent,
       body.nickname,
       client,
+      body.preferredGenreIds,
+      body.preferredArtistIds,
     );
     if (client === 'web') {
       // 리프레시 토큰은 httpOnly 쿠키로 저장
@@ -260,7 +268,7 @@ export class AuthController {
   }
 
   //회원 탈퇴
-  @Post('api/v4/auth/withdraw')
+  @Post(`${API_PREFIX}/auth/withdraw`)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
