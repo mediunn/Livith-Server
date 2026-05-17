@@ -45,7 +45,7 @@ export class NotificationDispatchService {
     await this.prisma.$executeRaw(Prisma.sql`
       UPDATE notification_dispatch
         SET status = 'SENT', completed_at = NOW(3)
-      WHERE schedule_id = ${scheduleId} AND type = ${type}
+      WHERE schedule_id = ${scheduleId} AND type = ${type} AND claimed_by = ${this.claimedBy}
     `);
   }
 
@@ -53,7 +53,7 @@ export class NotificationDispatchService {
     await this.prisma.$executeRaw(Prisma.sql`
       UPDATE notification_dispatch
         SET status = 'FAILED'
-      WHERE schedule_id = ${scheduleId} AND type = ${type}
+      WHERE schedule_id = ${scheduleId} AND type = ${type} AND claimed_by = ${this.claimedBy}
     `);
   }
 }
