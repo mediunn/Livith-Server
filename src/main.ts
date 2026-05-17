@@ -1,3 +1,7 @@
+import { webcrypto } from 'crypto';
+
+(global as any).crypto = webcrypto;
+
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
