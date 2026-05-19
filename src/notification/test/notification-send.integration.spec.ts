@@ -157,6 +157,7 @@ describe('Notification send integration (FCM mock)', () => {
       '셋리스트가 등록이 됐어요!',
       'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
       '50',
+      null,
     );
   });
 

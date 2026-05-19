@@ -98,6 +98,7 @@ describe('NotificationService (푸시 발송)', () => {
         '제목',
         '내용',
         '123',
+        null,
       );
     });
 
