@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   BadRequestException,
@@ -18,8 +18,12 @@ import { Provider } from '@prisma/client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
+const DISCORD_EMBED_COLOR = 0x58b9ff;
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -307,6 +311,11 @@ export class AuthService {
       return { user: updatedUser, accessToken, refreshToken };
     });
 
+    // 트랜잭션 커밋 후 Discord 알림 (실패해도 가입에는 영향 없음)
+    this.sendDiscordSignupNotification(result.user).catch((e) =>
+      this.logger.warn(`Discord 가입 알림 실패:`, e),
+    );
+
     if (client === 'web') {
       return {
         user: new UserResponseDto(result.user),
@@ -319,6 +328,44 @@ export class AuthService {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     };
+  }
+
+  // 신규 회원가입 Discord 웹후크 알림
+  private async sendDiscordSignupNotification(user: {
+    id: number;
+    nickname: string;
+    provider: string;
+  }) {
+    const webhookUrl = this.configService.get<string>(
+      'DISCORD_SIGNUP_WEBHOOK_URL',
+    );
+    if (!webhookUrl) return;
+
+    const signupOrder = user.id;
+
+    await axios.post(
+      webhookUrl,
+      {
+        username: 'Livith 가입 알림',
+        embeds: [
+          {
+            title: '🎉 신규 회원가입',
+            color: DISCORD_EMBED_COLOR,
+            fields: [
+              { name: '닉네임', value: user.nickname, inline: true },
+              { name: 'Provider', value: user.provider, inline: true },
+              {
+                name: '누적 가입자',
+                value: `${signupOrder}번째`,
+                inline: false,
+              },
+            ],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { timeout: 3000 },
+    );
   }
 
   //회원 탈퇴
