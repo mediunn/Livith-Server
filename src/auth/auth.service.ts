@@ -18,6 +18,8 @@ import { Provider } from '@prisma/client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
+const DISCORD_EMBED_COLOR = 0x58b9ff;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -311,7 +313,7 @@ export class AuthService {
 
     // 트랜잭션 커밋 후 Discord 알림 (실패해도 가입에는 영향 없음)
     this.sendDiscordSignupNotification(result.user).catch((e) =>
-      this.logger.warn(`Discord 가입 알림 실패: ${e?.message ?? e}`),
+      this.logger.warn(`Discord 가입 알림 실패:`, e),
     );
 
     if (client === 'web') {
@@ -337,10 +339,9 @@ export class AuthService {
     const webhookUrl = this.configService.get<string>(
       'DISCORD_SIGNUP_WEBHOOK_URL',
     );
-    if (!webhookUrl) return; // URL 없으면 조용히 스킵 (로컬 등)
+    if (!webhookUrl) return;
 
-    // 누적 가입자 수 = 가입한 순번 (방금 생성된 유저 포함, 소프트 삭제 포함 전체)
-    const signupOrder = await this.prisma.user.count();
+    const signupOrder = user.id;
 
     await axios.post(
       webhookUrl,
@@ -349,15 +350,14 @@ export class AuthService {
         embeds: [
           {
             title: '🎉 신규 회원가입',
-            color: 5814783,
+            color: DISCORD_EMBED_COLOR,
             fields: [
               { name: '닉네임', value: user.nickname, inline: true },
               { name: 'Provider', value: user.provider, inline: true },
-              { name: 'User ID', value: String(user.id), inline: true },
               {
-                name: '가입 순번',
+                name: '누적 가입자',
                 value: `${signupOrder}번째`,
-                inline: true,
+                inline: false,
               },
             ],
             timestamp: new Date().toISOString(),

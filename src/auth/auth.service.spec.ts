@@ -16,7 +16,6 @@ const mockPrismaService = {
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    count: jest.fn(),
   },
   genre: {
     findMany: jest.fn(),
@@ -324,7 +323,6 @@ describe('AuthService', () => {
     beforeEach(() => {
       (axios.post as jest.Mock).mockResolvedValue({ status: 204 });
       jwtService.sign.mockReturnValue('mock-token');
-      prismaService.user.count.mockResolvedValue(150);
       prismaService.user.findUnique.mockResolvedValue(null);
       prismaService.$transaction.mockImplementation(async (callback) => {
         const mockTx = {
@@ -359,10 +357,12 @@ describe('AuthService', () => {
         expect.arrayContaining([
           { name: '닉네임', value: '디코유저', inline: true },
           { name: 'Provider', value: Provider.kakao, inline: true },
-          { name: 'User ID', value: '42', inline: true },
-          { name: '가입 순번', value: '150번째', inline: true },
+          { name: '누적 가입자', value: '42번째', inline: false },
         ]),
       );
+
+      const fieldNames = fields.map((f: any) => f.name);
+      expect(fieldNames).not.toContain('User ID');
     });
 
     it('이메일은 알림에 포함되지 않는다', async () => {
