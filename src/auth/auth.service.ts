@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   BadRequestException,
@@ -20,6 +20,8 @@ const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -307,6 +309,11 @@ export class AuthService {
       return { user: updatedUser, accessToken, refreshToken };
     });
 
+    // 트랜잭션 커밋 후 Discord 알림 (실패해도 가입에는 영향 없음)
+    this.sendDiscordSignupNotification(result.user).catch((e) =>
+      this.logger.warn(`Discord 가입 알림 실패: ${e?.message ?? e}`),
+    );
+
     if (client === 'web') {
       return {
         user: new UserResponseDto(result.user),
@@ -319,6 +326,46 @@ export class AuthService {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     };
+  }
+
+  // 신규 회원가입 Discord 웹후크 알림
+  private async sendDiscordSignupNotification(user: {
+    id: number;
+    nickname: string;
+    provider: string;
+  }) {
+    const webhookUrl = this.configService.get<string>(
+      'DISCORD_SIGNUP_WEBHOOK_URL',
+    );
+    if (!webhookUrl) return; // URL 없으면 조용히 스킵 (로컬 등)
+
+    // 누적 가입자 수 = 가입한 순번 (방금 생성된 유저 포함, 소프트 삭제 포함 전체)
+    const signupOrder = await this.prisma.user.count();
+
+    await axios.post(
+      webhookUrl,
+      {
+        username: 'Livith 가입 알림',
+        embeds: [
+          {
+            title: '🎉 신규 회원가입',
+            color: 5814783,
+            fields: [
+              { name: '닉네임', value: user.nickname, inline: true },
+              { name: 'Provider', value: user.provider, inline: true },
+              { name: 'User ID', value: String(user.id), inline: true },
+              {
+                name: '가입 순번',
+                value: `${signupOrder}번째`,
+                inline: true,
+              },
+            ],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      },
+      { timeout: 3000 },
+    );
   }
 
   //회원 탈퇴
