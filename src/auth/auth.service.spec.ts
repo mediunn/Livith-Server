@@ -6,6 +6,9 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { Provider } from '@prisma/client';
+import axios from 'axios';
+
+jest.mock('axios');
 
 const mockPrismaService = {
   user: {
@@ -286,6 +289,123 @@ describe('AuthService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.user).toBeDefined();
+    });
+  });
+
+  describe('회원가입 Discord 알림', () => {
+    const webhookUrl = 'https://discord.com/api/webhooks/123/abc';
+
+    const createdUser = {
+      id: 42,
+      provider: Provider.kakao,
+      providerId: 'discord-test',
+      email: 'someone@example.com',
+      nickname: '디코유저',
+      marketingConsent: true,
+      userGenres: [],
+      userArtists: [],
+    };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    const callSignup = () =>
+      service.signup(
+        Provider.kakao,
+        'discord-test',
+        'someone@example.com',
+        true,
+        '디코유저',
+        'web',
+        [],
+        [],
+      );
+
+    beforeEach(() => {
+      (axios.post as jest.Mock).mockResolvedValue({ status: 204 });
+      jwtService.sign.mockReturnValue('mock-token');
+      prismaService.user.findUnique.mockResolvedValue(null);
+      prismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          user: {
+            create: jest.fn().mockResolvedValue({ id: 42 }),
+            update: jest.fn().mockResolvedValue(createdUser),
+          },
+          genre: { findMany: jest.fn() },
+          representativeArtist: { findMany: jest.fn() },
+          userGenre: { createMany: jest.fn() },
+          userArtist: { createMany: jest.fn() },
+        };
+        return callback(mockTx as any);
+      });
+    });
+
+    it('웹후크 URL이 설정돼 있으면 회원가입 후 Discord로 POST한다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+
+      await callSignup();
+      await flush();
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      const [url, body, options] = (axios.post as jest.Mock).mock.calls[0];
+      expect(url).toBe(webhookUrl);
+      expect(options).toEqual({ timeout: 3000 });
+
+      const fields = body.embeds[0].fields;
+      expect(fields).toEqual(
+        expect.arrayContaining([
+          { name: '닉네임', value: '디코유저', inline: true },
+          { name: 'Provider', value: Provider.kakao, inline: true },
+          { name: '누적 가입자', value: '42번째', inline: false },
+        ]),
+      );
+
+      const fieldNames = fields.map((f: any) => f.name);
+      expect(fieldNames).not.toContain('User ID');
+    });
+
+    it('이메일은 알림에 포함되지 않는다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+
+      await callSignup();
+      await flush();
+
+      const body = (axios.post as jest.Mock).mock.calls[0][1];
+      const fieldNames = body.embeds[0].fields.map((f: any) => f.name);
+      expect(fieldNames).not.toContain('이메일');
+      expect(JSON.stringify(body)).not.toContain('someone@example.com');
+    });
+
+    it('웹후크 URL이 없으면 Discord 호출을 건너뛴다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? undefined : 'test-secret',
+      );
+
+      const result = await callSignup();
+      await flush();
+
+      expect(result.user).toBeDefined();
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    it('Discord 호출이 실패해도 회원가입은 성공한다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+      (axios.post as jest.Mock).mockRejectedValue(new Error('discord down'));
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const result = await callSignup();
+      await flush();
+
+      expect(result.user).toBeDefined();
+      expect(result.accessToken).toBe('mock-token');
+      expect(warnSpy).toHaveBeenCalled();
     });
   });
 
