@@ -1,7 +1,11 @@
 import { Readable, Writable } from 'stream';
 import { ImageProxyService } from './image-proxy.service';
 
-function makeFetchMock(ok = true, headers: Record<string, string> = {}, body?: Buffer | string) {
+function makeFetchMock(
+  ok = true,
+  headers: Record<string, string> = {},
+  body?: Buffer | string,
+) {
   return jest.fn().mockResolvedValue({
     ok,
     status: ok ? 200 : 404,
@@ -61,12 +65,19 @@ describe('ImageProxyService', () => {
 
   it('streams body and sets headers when ok', async () => {
     const buf = Buffer.from([1, 2, 3]);
-    (global as any).fetch = makeFetchMock(true, { 'content-type': 'image/png', 'content-length': '3' }, buf);
+    (global as any).fetch = makeFetchMock(
+      true,
+      { 'content-type': 'image/png', 'content-length': '3' },
+      buf,
+    );
 
     await svc.proxyToResponse('https://cdninstagram.com/img.jpg', res);
 
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/png');
-    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=86400');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'public, max-age=86400',
+    );
 
     const collected = Buffer.concat(res.__chunks || []);
     expect(collected).toEqual(buf);
