@@ -87,9 +87,9 @@ describe('InstrumentJob', () => {
       const descriptor: PropertyDescriptor = { value: original };
       InstrumentJob('job_b')({}, 'job', descriptor);
 
-      await expect(
-        descriptor.value.call({ schedulerMetrics }),
-      ).rejects.toThrow('boom');
+      await expect(descriptor.value.call({ schedulerMetrics })).rejects.toThrow(
+        'boom',
+      );
 
       expect(schedulerMetrics.failureCounter.inc).toHaveBeenCalledWith({
         job_name: 'job_b',

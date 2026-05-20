@@ -220,7 +220,12 @@ describe('NotificationQueueScheduler', () => {
       notificationService.sendArtistConcertOpenNotification as jest.Mock
     ).mockRejectedValueOnce(new Error('boom'));
     mockPrisma.concertNotificationQueue.findMany.mockResolvedValue([
-      { id: 9, concertId: 90, eventType: 'ARTIST_CONCERT_OPEN', processed: false },
+      {
+        id: 9,
+        concertId: 90,
+        eventType: 'ARTIST_CONCERT_OPEN',
+        processed: false,
+      },
     ]);
 
     await scheduler.processQueue();

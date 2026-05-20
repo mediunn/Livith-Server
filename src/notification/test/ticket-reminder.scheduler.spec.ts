@@ -5,6 +5,7 @@ import { NotificationHistoryService } from '../service/notification-history.serv
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationType, ScheduleType } from '@prisma/client';
 import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
+import { KST_OFFSET_MS } from 'src/common/utils/date.util';
 
 describe('TicketingReminderScheduler', () => {
   let scheduler: TicketingReminderScheduler;
@@ -221,9 +222,13 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
-      // 29분 ~ 31분 윈도우 검증 (실행 시간 오차 고려)
-      expect(gte.getTime()).toBeGreaterThanOrEqual(before + 29 * 60 * 1000);
-      expect(lte.getTime()).toBeLessThanOrEqual(before + 31 * 60 * 1000 + 1000);
+      // 29분 ~ 31분 윈도우 검증 (KST 리터럴 매칭을 위해 +9h 시프트)
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before + 29 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 31 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
     });
   });
 
@@ -288,8 +293,10 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
-      expect(gte.getTime()).toBeGreaterThanOrEqual(before - 5 * 60 * 1000);
-      expect(lte.getTime()).toBeLessThanOrEqual(before + 1000);
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before - 5 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(before + 1000 + KST_OFFSET_MS);
     });
 
     it('dedup 체크를 각 schedule 마다 호출', async () => {
