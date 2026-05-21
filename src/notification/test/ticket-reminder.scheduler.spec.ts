@@ -283,7 +283,7 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
-    it('과거 5분 ~ 현재 윈도우로 조회한다', async () => {
+    it('9~11분 윈도우로 조회한다 (오픈 10분 전)', async () => {
       mockPrisma.schedule.findMany.mockResolvedValue([]);
 
       const before = Date.now();
@@ -292,11 +292,13 @@ describe('TicketingReminderScheduler', () => {
       const firstCallWhere =
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
-
+      
       expect(gte.getTime()).toBeGreaterThanOrEqual(
-        before - 5 * 60 * 1000 + KST_OFFSET_MS,
+        before + 9 * 60 * 1000 + KST_OFFSET_MS,
       );
-      expect(lte.getTime()).toBeLessThanOrEqual(before + 1000 + KST_OFFSET_MS);
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 11 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
     });
 
     it('dedup 체크를 각 schedule 마다 호출', async () => {
