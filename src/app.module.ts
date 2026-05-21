@@ -20,6 +20,7 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { LoggerModule } from './logger/logger.module';
 import { MeilisearchModule } from './meilisearch/meilisearch.module';
 import { ImageProxyModule } from './image-proxy/image-proxy.module';
+import { AppleReviewModule } from './apple-review/apple-review.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ImageProxyModule } from './image-proxy/image-proxy.module';
     LoggerModule,
     MeilisearchModule,
     ImageProxyModule,
+    AppleReviewModule,
   ],
   controllers: [],
   providers: [
