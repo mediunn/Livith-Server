@@ -8,6 +8,12 @@ on:
       - legacy
   workflow_dispatch:
 
+# 같은 브랜치 배포가 겹쳐 돌면 서버 빌드(dist)가 꼬여 MODULE_NOT_FOUND 로 죽을 수 있으므로
+# 한 번에 하나씩만 실행 (진행 중 배포는 취소하지 않고 큐잉)
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -81,6 +87,11 @@ jobs:
       - name: Build project
         run: |
           ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm run build"
+
+      - name: Verify build output
+        run: |
+          ssh ${{ env.TARGET }} "test -f ${{ env.APP_DIR }}/dist/src/main.js" \
+            || { echo '::error::빌드 산출물 dist/src/main.js 누락 — 재시작 중단 (기존 프로세스 유지)'; exit 1; }
 
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'

@@ -27,11 +27,11 @@ describe('TicketReminderStrategy.buildMessage', () => {
     [
       {
         type: NotificationType.PRE_TICKETING_OPEN,
-        expectTitleIncludes: '선예매 오픈',
+        expectTitleIncludes: '선예매 10분 전',
       },
       {
         type: NotificationType.GENERAL_TICKETING_OPEN,
-        expectTitleIncludes: '일반 예매 오픈',
+        expectTitleIncludes: '일반 예매 10분 전',
       },
       {
         type: NotificationType.PRE_TICKETING_1D,
