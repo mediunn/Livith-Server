@@ -5,7 +5,7 @@ import { Response } from 'express';
 @Injectable()
 export class CookieService {
   private readonly REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
-  private readonly REFRESH_TOKEN_MAX_AGE = 4 * 24 * 60 * 60 * 1000; // 4일
+  private readonly REFRESH_TOKEN_MAX_AGE = 14 * 24 * 60 * 60 * 1000; // 14일
 
   constructor(private readonly configService: ConfigService) {}
 
