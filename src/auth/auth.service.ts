@@ -167,7 +167,9 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
     } catch (e) {
-      this.logger.warn(`refresh 토큰 검증 실패: ${e?.message ?? e}`);
+      this.logger.warn(
+        `refresh 토큰 검증 실패: ${e instanceof Error ? e.message : String(e)}`,
+      );
       throw new UnauthorizedException(
         ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
       );
