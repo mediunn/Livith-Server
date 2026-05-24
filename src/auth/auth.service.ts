@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   BadRequestException,
@@ -18,33 +18,49 @@ import { Provider } from '@prisma/client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
+// refresh 토큰 잔여 수명이 이 값보다 많이 남아있으면 회전(재발급)하지 않고 같은 토큰을 돌려준다.
+// 평상시 갱신마다 토큰을 바꾸면, 앱이 동시에 여러 번 /auth/refresh 호출할 때
+// 한 요청만 성공하고 나머지는 무효화돼 401 -> 강제 로그아웃
+const REFRESH_TOKEN_REISSUE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
 
-  // JWT 토큰 생성
-  private getTokens(userId: number, email: string) {
-    const accessToken = this.jwtService.sign(
+  // access 토큰 생성
+  private signAccessToken(userId: number, email: string) {
+    return this.jwtService.sign(
       { userId, email },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES'),
       },
     );
+  }
 
-    const refreshToken = this.jwtService.sign(
+  // refresh 토큰 생성
+  private signRefreshToken(userId: number, email: string) {
+    return this.jwtService.sign(
       { userId, email },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES'),
       },
     );
+  }
 
-    return { accessToken, refreshToken };
+  // JWT 토큰 생성 (access + refresh)
+  private getTokens(userId: number, email: string) {
+    return {
+      accessToken: this.signAccessToken(userId, email),
+      refreshToken: this.signRefreshToken(userId, email),
+    };
   }
 
   // iOS에서 전달된 identityToken 검증
@@ -144,46 +160,62 @@ export class AuthService {
 
   // 리프레시 토큰으로 새로운 토큰 발급
   async refreshToken(oldRefreshToken: string) {
+    // 1) JWT 서명/만료 검증 (실패 사유를 구체 에러코드로 구분)
+    let payload: { userId: number; email: string };
     try {
-      const payload = this.jwtService.verify(oldRefreshToken, {
+      payload = this.jwtService.verify(oldRefreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.userId },
-      });
-
-      if (!user || user.refreshToken !== oldRefreshToken) {
-        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
-      }
-
-      // 토큰 absolute 만료 체크
-      if (
-        !user.refreshTokenExpiresAt ||
-        new Date() > user.refreshTokenExpiresAt
-      ) {
-        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
-      }
-
-      const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
-
-      // 새 리프레시 토큰 DB 저장
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          refreshToken,
-          refreshTokenExpiresAt: new Date(
-            Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
-          ),
-        },
-      });
-
-      return { accessToken, refreshToken };
     } catch (e) {
+      this.logger.warn(`refresh 토큰 검증 실패: ${e?.message ?? e}`);
       throw new UnauthorizedException(
         ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
       );
     }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    // 2) DB 토큰 불일치 = 회전 직후 옛 토큰으로 들어온 동시 요청이거나 무효 토큰
+    if (!user || user.refreshToken !== oldRefreshToken) {
+      this.logger.warn(
+        `refresh 토큰 불일치 (userId=${payload.userId}) - 회전 경쟁 또는 무효 토큰`,
+      );
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
+    }
+
+    // 3) absolute 만료 체크
+    if (
+      !user.refreshTokenExpiresAt ||
+      new Date() > user.refreshTokenExpiresAt
+    ) {
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+    }
+
+    // access 토큰은 항상 새로 발급
+    const accessToken = this.signAccessToken(user.id, user.email);
+
+    // 4) 잔여 수명이 충분하면 refresh 토큰을 회전하지 않고 그대로 재사용
+    // -> 동시 갱신 요청이 겹쳐도 토큰이 바뀌지 않아 강제 로그아웃x
+    const remainingMs = user.refreshTokenExpiresAt.getTime() - Date.now();
+    if (remainingMs > REFRESH_TOKEN_REISSUE_THRESHOLD_MS) {
+      return { accessToken, refreshToken: oldRefreshToken };
+    }
+
+    // 5) 만료 임박 시에만 새 refresh 토큰으로 회전 (슬라이딩 윈도우 연장)
+    const refreshToken = this.signRefreshToken(user.id, user.email);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken,
+        refreshTokenExpiresAt: new Date(
+          Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
+        ),
+      },
+    });
+
+    return { accessToken, refreshToken };
   }
 
   // 로그아웃 처리 (리프레시 토큰 삭제)
