@@ -1,6 +1,12 @@
 import { webcrypto } from 'crypto';
 
-(global as any).crypto = webcrypto;
+if (!globalThis.crypto) {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    configurable: true,
+    writable: true,
+  });
+}
 import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
