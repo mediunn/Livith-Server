@@ -457,6 +457,20 @@ describe('AuthService', () => {
       );
     });
 
+    it('잔여 수명이 충분하면 refresh 토큰을 회전하지 않고 그대로 반환한다', async () => {
+      // 만료까지 10일 남음 → 임계치(3일)보다 충분 → 회전 X
+      prismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        refreshTokenExpiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+
+      const result = await service.refreshToken('old-refresh-token');
+
+      // refresh 토큰은 그대로, DB update 호출 없음 (동시 갱신 경쟁 방지)
+      expect(result.refreshToken).toBe('old-refresh-token');
+      expect(prismaService.user.update).not.toHaveBeenCalled();
+    });
+
     it('만료된 refreshTokenExpiresAt이면 에러 발생', async () => {
       prismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
