@@ -1,15 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppleReviewService } from './apple-review.service';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { of } from 'rxjs';
 import * as fs from 'fs';
 
-jest.mock('axios');
 jest.mock('fs');
 
 describe('AppleReviewService', () => {
   let service: AppleReviewService;
-  const mockedAxios = axios as jest.Mocked<typeof axios>;
+  const httpService = {
+    get: jest.fn(),
+    post: jest.fn(),
+  };
   const mockedFs = fs as jest.Mocked<typeof fs>;
 
   beforeEach(async () => {
@@ -22,6 +25,7 @@ describe('AppleReviewService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppleReviewService,
+        { provide: HttpService, useValue: httpService },
         {
           provide: ConfigService,
           useValue: {
@@ -47,7 +51,7 @@ describe('AppleReviewService', () => {
 
   it('sends the latest review when there is no saved id', async () => {
     // mock RSS response with app metadata first + two reviews (mostRecent first)
-    mockedAxios.get.mockResolvedValue({
+    httpService.get.mockReturnValue(of({
       data: {
         feed: {
           entry: [
@@ -71,17 +75,17 @@ describe('AppleReviewService', () => {
           ],
         },
       },
-    } as any);
+    } as any));
 
     // no saved id -> send all reviews (chronological order)
     jest.spyOn(service as any, 'getLastReviewId').mockReturnValue(null);
-    mockedAxios.post.mockResolvedValue({ status: 204 } as any);
+    httpService.post.mockReturnValue(of({ status: 204 } as any));
 
     await service.checkReviews();
 
-    expect(mockedAxios.post).toHaveBeenCalledTimes(2);
-    const firstPayload = mockedAxios.post.mock.calls[0][1] as any;
-    const secondPayload = mockedAxios.post.mock.calls[1][1] as any;
+    expect(httpService.post).toHaveBeenCalledTimes(2);
+    const firstPayload = httpService.post.mock.calls[0][1] as any;
+    const secondPayload = httpService.post.mock.calls[1][1] as any;
 
     const firstFields = firstPayload.embeds[0].fields as any[];
     const secondFields = secondPayload.embeds[0].fields as any[];
@@ -92,7 +96,7 @@ describe('AppleReviewService', () => {
   });
 
   it('sends all unread reviews after the saved id in chronological order', async () => {
-    mockedAxios.get.mockResolvedValue({
+    httpService.get.mockReturnValue(of({
       data: {
         feed: {
           entry: [
@@ -132,16 +136,16 @@ describe('AppleReviewService', () => {
           ],
         },
       },
-    } as any);
+    } as any));
 
     jest.spyOn(service as any, 'getLastReviewId').mockReturnValue('r2');
-    mockedAxios.post.mockResolvedValue({ status: 204 } as any);
+    httpService.post.mockReturnValue(of({ status: 204 } as any));
 
     await service.checkReviews();
 
-    expect(mockedAxios.post).toHaveBeenCalledTimes(2);
-    const firstPayload = mockedAxios.post.mock.calls[0][1] as any;
-    const secondPayload = mockedAxios.post.mock.calls[1][1] as any;
+    expect(httpService.post).toHaveBeenCalledTimes(2);
+    const firstPayload = httpService.post.mock.calls[0][1] as any;
+    const secondPayload = httpService.post.mock.calls[1][1] as any;
 
     const firstFields = firstPayload.embeds[0].fields as any[];
     const secondFields = secondPayload.embeds[0].fields as any[];
