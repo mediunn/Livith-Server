@@ -3,6 +3,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 export enum YoutubeApiErrorType {
   QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
@@ -22,6 +24,8 @@ export class YoutubeApiService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    @InjectMetric('youtube_quota_exceeded_total')
+    private readonly quotaCounter: Counter<string>,
   ) {
     this.apiKey = this.configService.get<string>('YOUTUBE_API_KEY');
 
@@ -51,6 +55,7 @@ export class YoutubeApiService {
       return { imgUrl: thumbnails?.high?.url || null };
     } catch (error) {
       if (this.isQuotaExceeded(error)) {
+        this.quotaCounter.inc();
         return { imgUrl: null, errorType: YoutubeApiErrorType.QUOTA_EXCEEDED };
       }
       return { imgUrl: null };
