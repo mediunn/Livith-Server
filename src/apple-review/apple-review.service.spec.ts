@@ -51,31 +51,33 @@ describe('AppleReviewService', () => {
 
   it('sends the latest review when there is no saved id', async () => {
     // mock RSS response with app metadata first + two reviews (mostRecent first)
-    httpService.get.mockReturnValue(of({
-      data: {
-        feed: {
-          entry: [
-            { id: { label: 'app' } },
-            {
-              id: { label: 'r2' },
-              author: { name: { label: 'user2' } },
-              'im:rating': { label: '4' },
-              'im:version': { label: '1.1' },
-              title: { label: 't2' },
-              content: { label: 'c2' },
-            },
-            {
-              id: { label: 'r1' },
-              author: { name: { label: 'user1' } },
-              'im:rating': { label: '5' },
-              'im:version': { label: '1.0' },
-              title: { label: 't1' },
-              content: { label: 'c1' },
-            },
-          ],
+    httpService.get.mockReturnValue(
+      of({
+        data: {
+          feed: {
+            entry: [
+              { id: { label: 'app' } },
+              {
+                id: { label: 'r2' },
+                author: { name: { label: 'user2' } },
+                'im:rating': { label: '4' },
+                'im:version': { label: '1.1' },
+                title: { label: 't2' },
+                content: { label: 'c2' },
+              },
+              {
+                id: { label: 'r1' },
+                author: { name: { label: 'user1' } },
+                'im:rating': { label: '5' },
+                'im:version': { label: '1.0' },
+                title: { label: 't1' },
+                content: { label: 'c1' },
+              },
+            ],
+          },
         },
-      },
-    } as any));
+      } as any),
+    );
 
     // no saved id -> send all reviews (chronological order)
     jest.spyOn(service as any, 'getLastReviewId').mockReturnValue(null);
@@ -96,47 +98,49 @@ describe('AppleReviewService', () => {
   });
 
   it('sends all unread reviews after the saved id in chronological order', async () => {
-    httpService.get.mockReturnValue(of({
-      data: {
-        feed: {
-          entry: [
-            { id: { label: 'app' } },
-            {
-              id: { label: 'r4' },
-              author: { name: { label: 'user4' } },
-              'im:rating': { label: '5' },
-              'im:version': { label: '1.4' },
-              title: { label: 't4' },
-              content: { label: 'c4' },
-            },
-            {
-              id: { label: 'r3' },
-              author: { name: { label: 'user3' } },
-              'im:rating': { label: '4' },
-              'im:version': { label: '1.3' },
-              title: { label: 't3' },
-              content: { label: 'c3' },
-            },
-            {
-              id: { label: 'r2' },
-              author: { name: { label: 'user2' } },
-              'im:rating': { label: '3' },
-              'im:version': { label: '1.2' },
-              title: { label: 't2' },
-              content: { label: 'c2' },
-            },
-            {
-              id: { label: 'r1' },
-              author: { name: { label: 'user1' } },
-              'im:rating': { label: '2' },
-              'im:version': { label: '1.1' },
-              title: { label: 't1' },
-              content: { label: 'c1' },
-            },
-          ],
+    httpService.get.mockReturnValue(
+      of({
+        data: {
+          feed: {
+            entry: [
+              { id: { label: 'app' } },
+              {
+                id: { label: 'r4' },
+                author: { name: { label: 'user4' } },
+                'im:rating': { label: '5' },
+                'im:version': { label: '1.4' },
+                title: { label: 't4' },
+                content: { label: 'c4' },
+              },
+              {
+                id: { label: 'r3' },
+                author: { name: { label: 'user3' } },
+                'im:rating': { label: '4' },
+                'im:version': { label: '1.3' },
+                title: { label: 't3' },
+                content: { label: 'c3' },
+              },
+              {
+                id: { label: 'r2' },
+                author: { name: { label: 'user2' } },
+                'im:rating': { label: '3' },
+                'im:version': { label: '1.2' },
+                title: { label: 't2' },
+                content: { label: 'c2' },
+              },
+              {
+                id: { label: 'r1' },
+                author: { name: { label: 'user1' } },
+                'im:rating': { label: '2' },
+                'im:version': { label: '1.1' },
+                title: { label: 't1' },
+                content: { label: 'c1' },
+              },
+            ],
+          },
         },
-      },
-    } as any));
+      } as any),
+    );
 
     jest.spyOn(service as any, 'getLastReviewId').mockReturnValue('r2');
     httpService.post.mockReturnValue(of({ status: 204 } as any));
