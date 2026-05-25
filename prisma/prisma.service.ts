@@ -36,7 +36,7 @@ export class PrismaService
         const duration = (Date.now() - start) / 1000;
         const successLabel = String(success);
 
-        this.queryDuration.observe({ operation, model, success: successLabel }, duration);
+        this.queryDuration.observe({ operation }, duration);
         this.queryCounter.inc({ operation, model, success: successLabel });
 
         if (success && duration > PrismaService.SLOW_QUERY_THRESHOLD_SECONDS) {
