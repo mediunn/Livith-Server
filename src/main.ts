@@ -16,11 +16,6 @@ import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { webcrypto } from 'node:crypto';
-
-if (!globalThis.crypto) {
-  (globalThis as { crypto?: Crypto }).crypto = webcrypto as Crypto;
-}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
