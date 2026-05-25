@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -9,7 +10,7 @@ import { CookieService } from '../common/utils/cookie.util';
 import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
-  imports: [JwtModule.register({}), PrismaModule],
+  imports: [JwtModule.register({}), PrismaModule, HttpModule],
   controllers: [AuthController],
   providers: [
     AuthService,

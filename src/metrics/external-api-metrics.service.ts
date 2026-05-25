@@ -62,7 +62,7 @@ export class ExternalApiMetricsService {
   }
 
   private fullUrl(config: InternalAxiosRequestConfig): string | undefined {
-    if (config.baseURL && config.url && !/^https?:\/\//.test(config.url)) {
+    if (config.baseURL && config.url && !/^https?:\/\//i.test(config.url)) {
       return (
         config.baseURL.replace(/\/$/, '') + '/' + config.url.replace(/^\//, '')
       );

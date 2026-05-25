@@ -6,9 +6,13 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { Provider } from '@prisma/client';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { of, throwError } from 'rxjs';
 
-jest.mock('axios');
+const mockHttpService = {
+  get: jest.fn(),
+  post: jest.fn(),
+};
 
 const mockPrismaService = {
   user: {
@@ -54,6 +58,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: HttpService, useValue: mockHttpService },
       ],
     }).compile();
 
@@ -321,7 +326,7 @@ describe('AuthService', () => {
       );
 
     beforeEach(() => {
-      (axios.post as jest.Mock).mockResolvedValue({ status: 204 });
+      mockHttpService.post.mockReturnValue(of({ status: 204 }));
       jwtService.sign.mockReturnValue('mock-token');
       prismaService.user.findUnique.mockResolvedValue(null);
       prismaService.$transaction.mockImplementation(async (callback) => {
@@ -347,8 +352,8 @@ describe('AuthService', () => {
       await callSignup();
       await flush();
 
-      expect(axios.post).toHaveBeenCalledTimes(1);
-      const [url, body, options] = (axios.post as jest.Mock).mock.calls[0];
+      expect(mockHttpService.post).toHaveBeenCalledTimes(1);
+      const [url, body, options] = mockHttpService.post.mock.calls[0];
       expect(url).toBe(webhookUrl);
       expect(options).toEqual({ timeout: 3000 });
 
@@ -373,7 +378,7 @@ describe('AuthService', () => {
       await callSignup();
       await flush();
 
-      const body = (axios.post as jest.Mock).mock.calls[0][1];
+      const body = mockHttpService.post.mock.calls[0][1];
       const fieldNames = body.embeds[0].fields.map((f: any) => f.name);
       expect(fieldNames).not.toContain('이메일');
       expect(JSON.stringify(body)).not.toContain('someone@example.com');
@@ -388,14 +393,16 @@ describe('AuthService', () => {
       await flush();
 
       expect(result.user).toBeDefined();
-      expect(axios.post).not.toHaveBeenCalled();
+      expect(mockHttpService.post).not.toHaveBeenCalled();
     });
 
     it('Discord 호출이 실패해도 회원가입은 성공한다', async () => {
       configService.get.mockImplementation((key: string) =>
         key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
       );
-      (axios.post as jest.Mock).mockRejectedValue(new Error('discord down'));
+      mockHttpService.post.mockReturnValue(
+        throwError(() => new Error('discord down')),
+      );
       const warnSpy = jest
         .spyOn((service as any).logger, 'warn')
         .mockImplementation(() => undefined);

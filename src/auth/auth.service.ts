@@ -10,7 +10,8 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
@@ -33,6 +34,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {}
 
   // access 토큰 생성
@@ -68,7 +70,9 @@ export class AuthService {
   // iOS에서 전달된 identityToken 검증
   async verifyAppleIdentity(identityToken: string) {
     // Apple 공개 키 가져오기
-    const appleKeysRes = await axios.get('https://appleid.apple.com/auth/keys');
+    const appleKeysRes = await firstValueFrom(
+      this.httpService.get('https://appleid.apple.com/auth/keys'),
+    );
     const appleKeys = appleKeysRes.data.keys;
 
     // JWT header에서 kid 확인
@@ -373,28 +377,30 @@ export class AuthService {
 
     const signupOrder = user.id;
 
-    await axios.post(
-      webhookUrl,
-      {
-        username: 'Livith 가입 알림',
-        embeds: [
-          {
-            title: '🎉 신규 회원가입',
-            color: DISCORD_EMBED_COLOR,
-            fields: [
-              { name: '닉네임', value: user.nickname, inline: true },
-              { name: 'Provider', value: user.provider, inline: true },
-              {
-                name: '누적 가입자',
-                value: `${signupOrder}번째`,
-                inline: false,
-              },
-            ],
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      },
-      { timeout: 3000 },
+    await firstValueFrom(
+      this.httpService.post(
+        webhookUrl,
+        {
+          username: 'Livith 가입 알림',
+          embeds: [
+            {
+              title: '🎉 신규 회원가입',
+              color: DISCORD_EMBED_COLOR,
+              fields: [
+                { name: '닉네임', value: user.nickname, inline: true },
+                { name: 'Provider', value: user.provider, inline: true },
+                {
+                  name: '누적 가입자',
+                  value: `${signupOrder}번째`,
+                  inline: false,
+                },
+              ],
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        },
+        { timeout: 3000 },
+      ),
     );
   }
 
