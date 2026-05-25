@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { LastfmApiService } from '../integrations/lastfm/last-fm.api.service';
+import { externalApiMetricMocks } from './metric-mocks';
 
 const mockSimilarResponse = (artists: string[], delayMs = 0) =>
   new Observable((subscriber) => {
@@ -38,6 +39,7 @@ describe('LastfmApiService 벤치마크', () => {
         LastfmApiService,
         { provide: HttpService, useValue: { get: mockGet } },
         { provide: ConfigService, useValue: { get: () => 'fake-key' } },
+        ...externalApiMetricMocks,
       ],
     }).compile();
 

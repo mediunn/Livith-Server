@@ -188,7 +188,10 @@ export class AuthService {
     }
 
     // 3) absolute 만료 체크
-    if (!user.refreshTokenExpiresAt || new Date() > user.refreshTokenExpiresAt) {
+    if (
+      !user.refreshTokenExpiresAt ||
+      new Date() > user.refreshTokenExpiresAt
+    ) {
       throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
@@ -208,7 +211,9 @@ export class AuthService {
       where: { id: user.id },
       data: {
         refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS),
+        refreshTokenExpiresAt: new Date(
+          Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
+        ),
       },
     });
 
