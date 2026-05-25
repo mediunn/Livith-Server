@@ -128,7 +128,8 @@ export class AppleReviewService {
   private async fetchFeedWithFallback(url: string) {
     let resp = await axios.get(url);
 
-    const hasEntries = resp?.data?.feed && resp.data.feed.entry;
+    const entry = resp?.data?.feed?.entry;
+    const hasEntries = Array.isArray(entry) ? entry.length > 0 : Boolean(entry);
     if (hasEntries) return resp;
 
     try {
