@@ -13,12 +13,12 @@ const httpMetricProviders: Provider[] = [
   makeCounterProvider({
     name: 'http_request_total',
     help: '총 HTTP 요청 수',
-    labelNames: ['method', 'route', 'status_code'],
+    labelNames: ['method', 'route', 'status_class'],
   }),
   makeHistogramProvider({
     name: 'http_request_duration_seconds',
     help: '요청 처리 시간 (초)',
-    labelNames: ['method', 'route', 'status_code'],
+    labelNames: ['method', 'route'],
     buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
   }),
   makeGaugeProvider({
@@ -32,7 +32,7 @@ const dbMetricProviders: Provider[] = [
   makeHistogramProvider({
     name: 'db_query_duration_seconds',
     help: '쿼리 실행 시간 (초)',
-    labelNames: ['operation', 'model', 'success'],
+    labelNames: ['operation'],
     buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
   }),
   makeCounterProvider({
@@ -174,7 +174,7 @@ const allMetricProviders: Provider[] = [
     PrometheusModule.register({
       path: '/metrics', // 매트릭 엔드포인트
       defaultMetrics: {
-        enabled: true, // Node.js 기본 메트릭 활성화
+        enabled: false, // Node.js 기본 메트릭 비활성화
       },
     }),
   ],

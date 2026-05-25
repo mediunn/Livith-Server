@@ -44,18 +44,26 @@ export class HttpMetricsInterceptor implements NestInterceptor {
       tap({
         next: () => {
           const response = context.switchToHttp().getResponse<Response>();
-          const statusCode = String(response.statusCode);
-          this.requestCounter.inc({ method, route, status_code: statusCode });
-          endTimer({ status_code: statusCode });
+          const statusClass = this.getStatusClass(response.statusCode);
+          this.requestCounter.inc({ method, route, status_class: statusClass });
+          endTimer();
         },
         error: (error) => {
-          const statusCode = String(error.status ?? 500);
-          this.requestCounter.inc({ method, route, status_code: statusCode });
-          endTimer({ status_code: statusCode });
+          const statusClass = this.getStatusClass(error.status ?? 500);
+          this.requestCounter.inc({ method, route, status_class: statusClass });
+          endTimer();
         },
       }),
       finalize(() => this.requestsInFlight.dec({ method, route })),
     );
+  }
+
+  private getStatusClass(statusCode: number): string {
+    if (statusCode >= 200 && statusCode < 300) return '2xx';
+    if (statusCode >= 300 && statusCode < 400) return '3xx';
+    if (statusCode >= 400 && statusCode < 500) return '4xx';
+    if (statusCode >= 500 && statusCode < 600) return '5xx';
+    return 'other';
   }
 
   private getRoutePattern(context: ExecutionContext): string {
