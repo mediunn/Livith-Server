@@ -3,7 +3,12 @@ import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType, ScheduleType } from '@prisma/client';
-import { formatKstHour, getKstDayRange } from 'src/common/utils/date.util';
+import {
+  formatKstHour,
+  getKstDayRange,
+  kstLiteralToUtc,
+  utcToKstLiteral,
+} from 'src/common/utils/date.util';
 import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
 import { InstrumentJob } from '../../metrics/instrument-job.decorator';
 import { NotificationDispatchService } from '../service/notification-dispatch.service';
@@ -73,7 +78,7 @@ export class TicketingReminderScheduler {
   }
 
   /**
-   * 오픈 시점: 1분마다 과거 5분 ~ 현재 윈도우 스캔
+   * 오픈 10분 전: 1분마다 9~11분 윈도우 스캔
    * PRE_TICKETING_OPEN / GENERAL_TICKETING_OPEN
    */
   @InstrumentJob('ticketing_reminder_open')
@@ -144,7 +149,10 @@ export class TicketingReminderScheduler {
     const schedules = await this.prisma.schedule.findMany({
       where: {
         type: scheduleType,
-        scheduledAt: { gte: start, lte: end },
+        scheduledAt: {
+          gte: utcToKstLiteral(start),
+          lte: utcToKstLiteral(end),
+        },
       },
       include: { concert: { select: { id: true, title: true } } },
     });
@@ -155,7 +163,7 @@ export class TicketingReminderScheduler {
         schedule,
         notificationType,
         1,
-        schedule.scheduledAt,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
       if (ok) sent++;
     }
@@ -168,8 +176,8 @@ export class TicketingReminderScheduler {
     notificationType: NotificationType,
   ): Promise<number> {
     const now = new Date();
-    const start = new Date(now.getTime() + 29 * 60 * 1000);
-    const end = new Date(now.getTime() + 31 * 60 * 1000);
+    const start = utcToKstLiteral(new Date(now.getTime() + 29 * 60 * 1000));
+    const end = utcToKstLiteral(new Date(now.getTime() + 31 * 60 * 1000));
 
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -185,7 +193,7 @@ export class TicketingReminderScheduler {
         schedule,
         notificationType,
         0,
-        schedule.scheduledAt,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
       if (ok) sent++;
     }
@@ -198,8 +206,8 @@ export class TicketingReminderScheduler {
     notificationType: NotificationType,
   ): Promise<number> {
     const now = new Date();
-    const start = new Date(now.getTime() - 5 * 60 * 1000);
-    const end = now;
+    const start = utcToKstLiteral(new Date(now.getTime() + 9 * 60 * 1000));
+    const end = utcToKstLiteral(new Date(now.getTime() + 11 * 60 * 1000));
 
     const schedules = await this.prisma.schedule.findMany({
       where: {
@@ -215,7 +223,7 @@ export class TicketingReminderScheduler {
         schedule,
         notificationType,
         0,
-        schedule.scheduledAt,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
       if (ok) sent++;
     }

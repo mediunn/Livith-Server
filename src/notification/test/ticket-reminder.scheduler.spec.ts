@@ -5,6 +5,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { NotificationType, ScheduleType } from '@prisma/client';
 import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
 import { NotificationDispatchService } from '../service/notification-dispatch.service';
+import { KST_OFFSET_MS } from 'src/common/utils/date.util';
 
 describe('TicketingReminderScheduler', () => {
   let scheduler: TicketingReminderScheduler;
@@ -259,9 +260,13 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
-      // 29분 ~ 31분 윈도우 검증 (실행 시간 오차 고려)
-      expect(gte.getTime()).toBeGreaterThanOrEqual(before + 29 * 60 * 1000);
-      expect(lte.getTime()).toBeLessThanOrEqual(before + 31 * 60 * 1000 + 1000);
+      // 29분 ~ 31분 윈도우 검증 (KST 벽시계 보정 +9h 포함, 실행 시간 오차 고려)
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before + 29 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 31 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
     });
   });
 
@@ -315,7 +320,7 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
-    it('과거 5분 ~ 현재 윈도우로 조회한다', async () => {
+    it('오픈 10분 전 (9~11분) 윈도우로 조회한다', async () => {
       mockPrisma.schedule.findMany.mockResolvedValue([]);
 
       const before = Date.now();
@@ -325,8 +330,13 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
-      expect(gte.getTime()).toBeGreaterThanOrEqual(before - 5 * 60 * 1000);
-      expect(lte.getTime()).toBeLessThanOrEqual(before + 1000);
+      // 9분 ~ 11분 미래 윈도우 (KST 벽시계 보정 +9h 포함)
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before + 9 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 11 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
     });
 
     it('claim을  각 schedule 마다 호출', async () => {

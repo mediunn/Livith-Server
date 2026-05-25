@@ -29,9 +29,7 @@ export class NotificationQueueScheduler {
   @Cron('*/1 * * * *', { timeZone: 'Asia/Seoul' })
   async processQueue(): Promise<number> {
     if (this.isRunning) {
-      this.logger.warn(
-        'NotificationQueue: 이전 실행 진행 중 → 이번 틱 skip',
-      );
+      this.logger.warn('NotificationQueue: 이전 실행 진행 중 → 이번 틱 skip');
       return 0;
     }
     this.isRunning = true;
@@ -89,9 +87,7 @@ export class NotificationQueueScheduler {
     concertId: number;
     eventType: string;
   }): Promise<void> {
-    if (
-      row.eventType === CONCERT_NOTIFICATION_EVENT_TYPE.ARTIST_CONCERT_OPEN
-    ) {
+    if (row.eventType === CONCERT_NOTIFICATION_EVENT_TYPE.ARTIST_CONCERT_OPEN) {
       await this.notificationService.sendArtistConcertOpenNotification(
         row.concertId,
       );
