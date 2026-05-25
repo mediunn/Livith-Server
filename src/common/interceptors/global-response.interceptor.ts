@@ -30,13 +30,16 @@ export class GlobalResponseInterceptor implements NestInterceptor {
         };
 
         // GET 요청에 ETag 캐싱 적용
-        if (request.method === 'GET') {
+        if (request.method === 'GET' && !response.headersSent) {
           // ETag 생성 (응답 데이터의 해시값)
           const responseString = JSON.stringify(responseData);
           const etag = crypto
             .createHash('md5')
             .update(responseString)
             .digest('hex');
+
+          // 캐시 정책 명시: 개인 캐시에만 저장하되 재사용 전 항상 재검증
+          response.setHeader('Cache-Control', 'private, no-cache');
 
           // ETag 헤더 설정
           response.setHeader('ETag', `"${etag}"`);
