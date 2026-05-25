@@ -20,9 +20,11 @@ describe('AppleReviewService', () => {
             get: (key: string) => {
               const map: Record<string, string> = {
                 APPLE_APP_ID: '6745769826',
-                DISCORD_APP_STORE_REVIEW_WEBHOOK_URL: 'https://example.test/webhook',
+                DISCORD_APP_STORE_REVIEW_WEBHOOK_URL:
+                  'https://example.test/webhook',
                 DISCORD_APP_STORE_REVIEW_WEBHOOK_USERNAME: 'TestBot',
-                DISCORD_APP_STORE_REVIEW_WEBHOOK_AVATAR_URL: 'https://example.test/avatar.png',
+                DISCORD_APP_STORE_REVIEW_WEBHOOK_AVATAR_URL:
+                  'https://example.test/avatar.png',
               };
               return map[key];
             },
