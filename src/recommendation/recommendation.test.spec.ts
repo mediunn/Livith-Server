@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { LastfmApiService } from './integrations/lastfm/last-fm.api.service';
 import { ConcertStatus, Provider } from '@prisma/client';
+import { externalApiMetricMocks } from './test/metric-mocks';
 
 // Log
 function logConcerts(
@@ -56,6 +57,7 @@ describe('RecommendationService Integration Test', () => {
           provide: 'PROM_METRIC_DB_SLOW_QUERY_TOTAL',
           useValue: { inc: jest.fn() },
         },
+        ...externalApiMetricMocks,
       ],
     }).compile();
 

@@ -9,6 +9,8 @@ export interface BottleneckOptions {
   retryDelay: number;
   /** 재시도 가능한 에러인지 판단. 미제공 시 모든 에러 재시도 */
   isRetryable?: (err: unknown) => boolean;
+  /** 재시도 직전 호출되는 콜백 (관측용) */
+  onRetry?: (attempt: number) => void;
 }
 
 interface QueueItem {
@@ -81,6 +83,7 @@ export class Bottleneck {
         : true;
       if (!retryable || attempt >= this.options.maxRetries) throw err;
       const delay = this.options.retryDelay * Math.pow(2, attempt);
+      this.options.onRetry?.(attempt);
       await new Promise((r) => setTimeout(r, delay));
       return this.runWithRetry(fn, attempt + 1);
     }

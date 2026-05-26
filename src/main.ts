@@ -1,6 +1,8 @@
 import { webcrypto } from 'crypto';
 
-(global as any).crypto = webcrypto;
+if (!(global as any).crypto) {
+  (global as any).crypto = webcrypto;
+}
 import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
@@ -10,9 +12,13 @@ import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ExternalApiMetricsService } from './metrics/external-api-metrics.service';
+import { HttpService } from '@nestjs/axios';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const apiMetrics = app.get(ExternalApiMetricsService);
+  apiMetrics.attach(app.get(HttpService).axiosRef);
 
   // Winston을 NestJS 기본 로거로 교체
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
