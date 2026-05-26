@@ -292,7 +292,7 @@ describe('TicketingReminderScheduler', () => {
       const firstCallWhere =
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
-      
+
       expect(gte.getTime()).toBeGreaterThanOrEqual(
         before + 9 * 60 * 1000 + KST_OFFSET_MS,
       );

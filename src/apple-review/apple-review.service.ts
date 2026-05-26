@@ -1,14 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import * as fs from 'fs';
 
 const DISCORD_EMBED_COLOR = 0x58b9ff;
 
 @Injectable()
 export class AppleReviewService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private readonly httpService: HttpService,
+  ) {}
 
   private readonly logger = new Logger(AppleReviewService.name);
 
@@ -59,26 +63,28 @@ export class AppleReviewService {
         const version = review['im:version'].label;
 
         // 디코 전송 (embed)
-        await axios.post(
-          this.webhookUrl,
-          {
-            username: 'Livith 앱 리뷰 알림',
-            embeds: [
-              {
-                title: `⭐ 새로운 App Store 리뷰`,
-                color: DISCORD_EMBED_COLOR,
-                fields: [
-                  { name: '작성자', value: author, inline: true },
-                  { name: '평점', value: rating, inline: true },
-                  { name: '버전', value: version, inline: true },
-                  { name: '제목', value: title, inline: false },
-                  { name: '내용', value: content, inline: false },
-                ],
-                timestamp: new Date().toISOString(),
-              },
-            ],
-          },
-          { timeout: 3000 },
+        await firstValueFrom(
+          this.httpService.post(
+            this.webhookUrl,
+            {
+              username: 'Livith 앱 리뷰 알림',
+              embeds: [
+                {
+                  title: `⭐ 새로운 App Store 리뷰`,
+                  color: DISCORD_EMBED_COLOR,
+                  fields: [
+                    { name: '작성자', value: author, inline: true },
+                    { name: '평점', value: rating, inline: true },
+                    { name: '버전', value: version, inline: true },
+                    { name: '제목', value: title, inline: false },
+                    { name: '내용', value: content, inline: false },
+                  ],
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            },
+            { timeout: 3000 },
+          ),
         );
       }
 
@@ -126,19 +132,21 @@ export class AppleReviewService {
   }
 
   private async fetchFeedWithFallback(url: string) {
-    let resp = await axios.get(url);
+    let resp = await firstValueFrom(this.httpService.get(url));
 
     const entry = resp?.data?.feed?.entry;
     const hasEntries = Array.isArray(entry) ? entry.length > 0 : Boolean(entry);
     if (hasEntries) return resp;
 
     try {
-      resp = await axios.get(url, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-        },
-      });
+      resp = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+          },
+        }),
+      );
     } catch (e) {
       return resp;
     }

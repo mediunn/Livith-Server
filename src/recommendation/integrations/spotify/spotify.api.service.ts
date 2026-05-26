@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 @Injectable()
 export class SpotifyApiService {
@@ -15,6 +17,8 @@ export class SpotifyApiService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    @InjectMetric('spotify_error_total')
+    private readonly spotifyErrorCounter: Counter<string>,
   ) {
     this.clientId = this.configService.get<string>('SPOTIFY_CLIENT_ID');
     this.clientSecret = this.configService.get<string>('SPOTIFY_CLIENT_SECRET');
@@ -44,7 +48,10 @@ export class SpotifyApiService {
           },
         },
       ),
-    );
+    ).catch((error) => {
+      this.spotifyErrorCounter.inc({ kind: 'token_failure' });
+      throw error;
+    });
 
     this.accessToken = response.data.access_token;
     this.tokenExpiresAt = Date.now() + (response.data.expires_in - 60) * 1000;
@@ -94,6 +101,9 @@ export class SpotifyApiService {
         .slice(0, limit)
         .map(({ name, imgUrl }) => ({ name, imgUrl }));
     } catch (error) {
+      if (error.response?.status === 404) {
+        this.spotifyErrorCounter.inc({ kind: 'not_found' });
+      }
       this.logger.warn(
         `Spotify getTopArtistsByGenre failed for ${genre}: ${error.message}`,
         error.response?.data ?? error.stack,
