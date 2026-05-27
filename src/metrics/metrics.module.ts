@@ -63,6 +63,11 @@ const fcmMetricProviders: Provider[] = [
     help: '발송 실패 수',
     labelNames: ['notification_type'],
   }),
+  makeCounterProvider({
+    name: 'fcm_skip_total',
+    help: 'FCM 발송이 시도 전에 slient drop 된 횟수',
+    labelNames: ['reason'],
+  }),
   makeHistogramProvider({
     name: 'fcm_send_duration_seconds',
     help: 'FCM 발송 소요 시간',
