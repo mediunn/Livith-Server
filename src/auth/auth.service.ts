@@ -16,6 +16,8 @@ import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from '@prisma/client';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -35,6 +37,8 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private readonly httpService: HttpService,
+    @InjectMetric('auth_failure_total')
+    private readonly authFailureCounter: Counter<string>,
   ) {}
 
   // access 토큰 생성
@@ -82,7 +86,13 @@ export class AuthService {
 
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
 
-    if (!key) throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    if (!key) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_key_not_found',
+      });
+      throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    }
     const pem = jwkToPem(key);
     // JWT 검증
     const payload: any = jwt.verify(identityToken, pem, {
