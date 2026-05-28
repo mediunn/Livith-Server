@@ -95,9 +95,18 @@ export class AuthService {
     }
     const pem = jwkToPem(key);
     // JWT 검증
-    const payload: any = jwt.verify(identityToken, pem, {
-      algorithms: ['RS256'],
-    });
+    let payload: any;
+    try {
+      payload = jwt.verify(identityToken, pem, {
+        algorithms: ['RS256'],
+      });
+    } catch (err) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_token_verification_failed',
+      });
+      throw err;
+    }
     return {
       provider: 'apple',
       providerId: payload.sub,

@@ -18,6 +18,10 @@ type ReindexFailureReason = 'timeout' | 'http_error' | 'unknown';
 function classifyReindexError(err: unknown): ReindexFailureReason {
   if (err instanceof Error) {
     if (/timeout/i.test(err.message)) return 'timeout';
+    const status = (err as { httpStatus?: unknown }).httpStatus;
+    if (typeof status === 'number' && status >= 400 && status < 600) {
+      return 'http_error';
+    }
     if (/\b[45]\d{2}\b/.test(err.message)) return 'http_error';
   }
   return 'unknown';
