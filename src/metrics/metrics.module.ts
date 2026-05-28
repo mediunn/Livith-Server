@@ -165,6 +165,14 @@ const recommendationMetricProviders: Provider[] = [
   }),
 ];
 
+const authMetricProviders: Provider[] = [
+  makeCounterProvider({
+    name: 'auth_failure_total',
+    help: '인증 단계에서 거절된 횟수',
+    labelNames: ['provider', 'reason'],
+  }),
+];
+
 const allMetricProviders: Provider[] = [
   ...httpMetricProviders,
   ...dbMetricProviders,
@@ -172,6 +180,7 @@ const allMetricProviders: Provider[] = [
   ...schedulerMetricProviders,
   ...externalApiMetricProviders,
   ...recommendationMetricProviders,
+  ...authMetricProviders,
 ];
 
 @Module({
