@@ -8,6 +8,7 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { Provider } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
+import { getToken } from '@willsoto/nestjs-prometheus';
 
 const mockHttpService = {
   get: jest.fn(),
@@ -59,6 +60,10 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: HttpService, useValue: mockHttpService },
+        {
+          provide: getToken('auth_failure_total'),
+          useValue: { inc: jest.fn() },
+        },
       ],
     }).compile();
 
