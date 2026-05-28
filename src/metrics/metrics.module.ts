@@ -1,4 +1,4 @@
-import { Module, Provider } from '@nestjs/common';
+import { Module, OnModuleDestroy, Provider } from '@nestjs/common';
 import {
   makeCounterProvider,
   makeGaugeProvider,
@@ -255,4 +255,8 @@ const allMetricProviders: Provider[] = [
     ...allMetricProviders,
   ],
 })
-export class MetricsModule {}
+export class MetricsModule implements OnModuleDestroy {
+  onModuleDestroy() {
+    elHistogram.disable();
+  }
+}
