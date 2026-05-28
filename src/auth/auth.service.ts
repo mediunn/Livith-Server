@@ -184,6 +184,10 @@ export class AuthService {
       });
     } catch (e) {
       this.logger.warn(`refresh 토큰 검증 실패: ${e?.message ?? e}`);
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_verification_failed',
+      });
       throw new UnauthorizedException(
         ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
       );
@@ -198,6 +202,10 @@ export class AuthService {
       this.logger.warn(
         `refresh 토큰 불일치 (userId=${payload.userId}) - 회전 경쟁 또는 무효 토큰`,
       );
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_invalid',
+      });
       throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
     }
 
@@ -206,6 +214,10 @@ export class AuthService {
       !user.refreshTokenExpiresAt ||
       new Date() > user.refreshTokenExpiresAt
     ) {
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_expired',
+      });
       throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
