@@ -8,6 +8,10 @@ import {
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
 import { SchedulerMetricsService } from './scheduler-metrics.service';
 import { ExternalApiMetricsService } from './external-api-metrics.service';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+
+const elHistogram = monitorEventLoopDelay({ resolution: 20 });
+elHistogram.enable();
 
 const httpMetricProviders: Provider[] = [
   makeCounterProvider({
@@ -173,6 +177,49 @@ const authMetricProviders: Provider[] = [
   }),
 ];
 
+const processMetricProviders: Provider[] = [
+  makeGaugeProvider({
+    name: 'app_process_resident_memory_bytes',
+    help: 'V8 + 네이티브 RSS (OS가 본 프로세스 메모리)',
+    collect() {
+      this.set(process.memoryUsage().rss);
+    },
+  }),
+  makeGaugeProvider({
+    name: 'app_process_heap_used_bytes',
+    help: 'V8 heap used (실제 사용 중인 JS 객체 메모리)',
+    collect() {
+      this.set(process.memoryUsage().heapUsed);
+    },
+  }),
+  makeGaugeProvider({
+    name: 'app_eventloop_lag_p99_seconds',
+    help: 'Event loop p99 lag (지난 scrape 이후 누적 분포의 p99)',
+    collect() {
+      this.set(elHistogram.percentile(99) / 1e9);
+      elHistogram.reset();
+    },
+  }),
+];
+
+const searchMetricProviders: Provider[] = [
+  makeHistogramProvider({
+    name: 'meilisearch_search_duration_seconds',
+    help: 'Meilisearch search() 호출 지연',
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  }),
+  makeCounterProvider({
+    name: 'search_result_total',
+    help: '검색 호출 + 결과 유무 분포',
+    labelNames: ['has_result'], // 'yes' | 'no'
+  }),
+  makeCounterProvider({
+    name: 'meilisearch_reindex_failure_total',
+    help: 'bulkUpsertAll 실패',
+    labelNames: ['reason'], // 'timeout' | 'http_error' | 'unknown'
+  }),
+];
+
 const allMetricProviders: Provider[] = [
   ...httpMetricProviders,
   ...dbMetricProviders,
@@ -181,6 +228,8 @@ const allMetricProviders: Provider[] = [
   ...externalApiMetricProviders,
   ...recommendationMetricProviders,
   ...authMetricProviders,
+  ...processMetricProviders,
+  ...searchMetricProviders,
 ];
 
 @Module({
