@@ -2,10 +2,11 @@ import { Global, Module } from '@nestjs/common';
 import { MeilisearchService } from './meilisearch.service';
 import { MeilisearchController } from './meilisearch.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Global()
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, MetricsModule],
   controllers: [MeilisearchController],
   providers: [MeilisearchService],
   exports: [MeilisearchService],

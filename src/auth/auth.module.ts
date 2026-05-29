@@ -8,9 +8,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';
 import { CookieService } from '../common/utils/cookie.util';
 import { PrismaModule } from 'prisma/prisma.module';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
-  imports: [JwtModule.register({}), PrismaModule, HttpModule],
+  imports: [JwtModule.register({}), PrismaModule, HttpModule, MetricsModule],
   controllers: [AuthController],
   providers: [
     AuthService,

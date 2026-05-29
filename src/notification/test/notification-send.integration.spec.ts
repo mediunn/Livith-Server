@@ -81,6 +81,10 @@ describe('Notification send integration (FCM mock)', () => {
           provide: 'PROM_METRIC_FCM_BATCH_SIZE',
           useValue: { observe: jest.fn() },
         },
+        {
+          provide: 'PROM_METRIC_FCM_SKIP_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
       ],
     }).compile();
 

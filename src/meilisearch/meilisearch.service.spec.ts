@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'prisma/prisma.service';
 import { MeilisearchService } from './meilisearch.service';
+import { getToken } from '@willsoto/nestjs-prometheus';
 
 const mockIndex = {
   updateSettings: jest.fn(),
@@ -40,6 +41,18 @@ describe('MeilisearchService', () => {
         MeilisearchService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: getToken('meilisearch_search_duration_seconds'),
+          useValue: { startTimer: jest.fn(() => jest.fn()) },
+        },
+        {
+          provide: getToken('search_result_total'),
+          useValue: { inc: jest.fn() },
+        },
+        {
+          provide: getToken('meilisearch_reindex_failure_total'),
+          useValue: { inc: jest.fn() },
+        },
       ],
     }).compile();
 

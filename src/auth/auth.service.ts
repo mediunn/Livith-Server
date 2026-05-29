@@ -16,6 +16,8 @@ import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from '@prisma/client';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -35,6 +37,8 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private readonly httpService: HttpService,
+    @InjectMetric('auth_failure_total')
+    private readonly authFailureCounter: Counter<string>,
   ) {}
 
   // access 토큰 생성
@@ -82,12 +86,27 @@ export class AuthService {
 
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
 
-    if (!key) throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    if (!key) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_key_not_found',
+      });
+      throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    }
     const pem = jwkToPem(key);
     // JWT 검증
-    const payload: any = jwt.verify(identityToken, pem, {
-      algorithms: ['RS256'],
-    });
+    let payload: any;
+    try {
+      payload = jwt.verify(identityToken, pem, {
+        algorithms: ['RS256'],
+      });
+    } catch (err) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_token_verification_failed',
+      });
+      throw err;
+    }
     return {
       provider: 'apple',
       providerId: payload.sub,
@@ -174,6 +193,10 @@ export class AuthService {
       });
     } catch (e) {
       this.logger.warn(`refresh 토큰 검증 실패: ${e?.message ?? e}`);
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_verification_failed',
+      });
       throw new UnauthorizedException(
         ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
       );
@@ -188,6 +211,10 @@ export class AuthService {
       this.logger.warn(
         `refresh 토큰 불일치 (userId=${payload.userId}) - 회전 경쟁 또는 무효 토큰`,
       );
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_invalid',
+      });
       throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
     }
 
@@ -196,6 +223,10 @@ export class AuthService {
       !user.refreshTokenExpiresAt ||
       new Date() > user.refreshTokenExpiresAt
     ) {
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_expired',
+      });
       throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
