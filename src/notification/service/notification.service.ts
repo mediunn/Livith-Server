@@ -5,9 +5,11 @@ import { NotificationConsentResponseDto } from '../dto/response/notification-con
 import { NotificationSettingResponseDto } from '../dto/response/notification-set-response.dto';
 import { NotificationResponseDto } from '../dto/response/notification-response.dto';
 import { ConcertInfoUpdateType } from '../enums/concert-info-update-type.enum';
-import { UPDATE_TYPE_TO_NOTIFICATION_TYPE } from '../constants/notification.constants';
+import {
+  NOTIFICATION_BATCH_SIZE,
+  UPDATE_TYPE_TO_NOTIFICATION_TYPE,
+} from '../constants/notification.constants';
 import { BatchProcessor } from '../../common/utils/batch-processor.util';
-import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 import { NotificationSettingsService } from './notification-settings.service';
 import { FcmTokenService } from './fcm-token.service';
 import { NotificationHistoryService } from './notification-history.service';
@@ -164,6 +166,49 @@ export class NotificationService {
     );
 
     return { sent: totalSent, failed: totalFailed };
+  }
+
+  /**
+   * 마케팅 동의자 일괄 발송 (1회성)
+   * - benefitAlert=true 인 유저만 추출 → RECOMMEND 타입으로 발송
+   */
+  async sendMarketingBroadcast(params: {
+    title: string;
+    content: string;
+    targetId: string;
+  }): Promise<{ sent: number; failed: number; targetUserCount: number }> {
+    const { title, content, targetId } = params;
+
+    const userIds = await this.settingsService.getMarketingConsenterUserIds();
+
+    if (userIds.length === 0) {
+      return { sent: 0, failed: 0, targetUserCount: 0 };
+    }
+
+    let totalSent = 0;
+    let totalFailed = 0;
+    await BatchProcessor.processInChunks(
+      userIds,
+      NOTIFICATION_BATCH_SIZE,
+      async (batchUserIds) => {
+        const result = await this.sendPushNotification({
+          type: NotificationType.RECOMMEND,
+          title,
+          content,
+          targetId,
+          userIds: batchUserIds,
+          skipUserFilter: true,
+        });
+        totalSent += result.sent;
+        totalFailed += result.failed;
+      },
+    );
+
+    return {
+      sent: totalSent,
+      failed: totalFailed,
+      targetUserCount: userIds.length,
+    };
   }
 
   /**
