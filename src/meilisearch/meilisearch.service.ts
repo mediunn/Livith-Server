@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Index, MeiliSearch } from 'meilisearch';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter, Histogram } from 'prom-client';
 
 export interface ArtistDocument {
   id: number;
@@ -10,6 +12,20 @@ export interface ArtistDocument {
 }
 
 const INDEX_NAME = 'artists';
+
+type ReindexFailureReason = 'timeout' | 'http_error' | 'unknown';
+
+function classifyReindexError(err: unknown): ReindexFailureReason {
+  if (err instanceof Error) {
+    if (/timeout/i.test(err.message)) return 'timeout';
+    const status = (err as { httpStatus?: unknown }).httpStatus;
+    if (typeof status === 'number' && status >= 400 && status < 600) {
+      return 'http_error';
+    }
+    if (/\b[45]\d{2}\b/.test(err.message)) return 'http_error';
+  }
+  return 'unknown';
+}
 
 @Injectable()
 export class MeilisearchService implements OnModuleInit {
@@ -20,6 +36,12 @@ export class MeilisearchService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    @InjectMetric('meilisearch_search_duration_seconds')
+    private readonly searchDuration: Histogram<string>,
+    @InjectMetric('search_result_total')
+    private readonly searchResultCounter: Counter<string>,
+    @InjectMetric('meilisearch_reindex_failure_total')
+    private readonly reindexFailureCounter: Counter<string>,
   ) {
     this.client = new MeiliSearch({
       host: this.configService.get<string>('MEILISEARCH_HOST'),
@@ -52,9 +74,15 @@ export class MeilisearchService implements OnModuleInit {
       return 0;
     }
 
-    await this.index.addDocuments(artists, { primaryKey: 'id' });
-    this.logger.log(`Meilisearch reindex enqueued: ${artists.length}건`);
-    return artists.length;
+    try {
+      await this.index.addDocuments(artists, { primaryKey: 'id' });
+      this.logger.log(`Meilisearch reindex enqueued: ${artists.length}건`);
+      return artists.length;
+    } catch (err) {
+      const reason = classifyReindexError(err);
+      this.reindexFailureCounter.inc({ reason });
+      throw err;
+    }
   }
 
   async search(
@@ -62,10 +90,17 @@ export class MeilisearchService implements OnModuleInit {
     offset: number,
     limit: number,
   ): Promise<{ ids: number[]; totalCount: number }> {
-    const result = await this.index.search(keyword, { offset, limit });
-    return {
-      ids: result.hits.map((hit) => hit.id),
-      totalCount: result.estimatedTotalHits ?? result.hits.length,
-    };
+    const endTimer = this.searchDuration.startTimer();
+    try {
+      const result = await this.index.search(keyword, { offset, limit });
+      const ids = result.hits.map((hit) => hit.id);
+      const totalCount = result.estimatedTotalHits ?? result.hits.length;
+      this.searchResultCounter.inc({
+        has_result: totalCount > 0 ? 'yes' : 'no',
+      });
+      return { ids, totalCount };
+    } finally {
+      endTimer();
+    }
   }
 }

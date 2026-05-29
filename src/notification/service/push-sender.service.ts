@@ -30,6 +30,8 @@ export class PushSenderService {
     private readonly sendDuration: Histogram<string>,
     @InjectMetric('fcm_batch_size')
     private readonly batchSizeHistogram: Histogram<string>,
+    @InjectMetric('fcm_skip_total')
+    private readonly skipCounter: Counter<string>,
   ) {}
 
   /**
@@ -51,7 +53,8 @@ export class PushSenderService {
     finalContent: string;
   }> {
     const { type, title, content, targetId, userIds, skipUserFilter } = params;
-    if (userIds.length === 0)
+    if (userIds.length === 0) {
+      this.skipCounter.inc({ reason: 'no_target_users' });
       return {
         sent: 0,
         failed: 0,
@@ -59,6 +62,7 @@ export class PushSenderService {
         finalTitle: title,
         finalContent: content,
       };
+    }
 
     const { title: finalTitle, content: finalContent } = this.promotionalFormat(
       type,
@@ -69,7 +73,8 @@ export class PushSenderService {
     const availableUserIds = skipUserFilter
       ? userIds
       : await this.getUserIdsForPush(type, userIds);
-    if (availableUserIds.length === 0)
+    if (availableUserIds.length === 0) {
+      this.skipCounter.inc({ reason: 'all_users_filtered' });
       return {
         sent: 0,
         failed: 0,
@@ -77,12 +82,14 @@ export class PushSenderService {
         finalTitle,
         finalContent,
       };
+    }
 
     const tokensWithUserId = await this.prisma.fcmToken.findMany({
       where: { userId: { in: availableUserIds } },
       select: { token: true, userId: true },
     });
-    if (tokensWithUserId.length === 0)
+    if (tokensWithUserId.length === 0) {
+      this.skipCounter.inc({ reason: 'no_fcm_tokens' });
       return {
         sent: 0,
         failed: 0,
@@ -90,6 +97,7 @@ export class PushSenderService {
         finalTitle,
         finalContent,
       };
+    }
 
     const tokens = tokensWithUserId.map((t) => t.token);
     const userIdsByIndex = tokensWithUserId.map((t) => t.userId);
