@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationController } from './notification.controller';
+import { InterviewBroadcastController } from './interview-broadcast.controller';
 import { NotificationService } from './service/notification.service';
 import { FirebaseInitService } from './fcm/firebase-init.service';
 import { NotificationQueueScheduler } from './scheduler/notification-queue.scheduler';
@@ -31,7 +32,7 @@ import { PrismaModule } from 'prisma/prisma.module';
     MetricsModule,
     PrismaModule,
   ],
-  controllers: [NotificationController],
+  controllers: [NotificationController, InterviewBroadcastController],
   providers: [
     NotificationService,
     NotificationSettingsService,

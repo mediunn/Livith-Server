@@ -37,6 +37,21 @@ export class NotificationSettingsService {
   }
 
   /**
+   * 마케팅 동의자 userId 목록 조회
+   * - benefitAlert=true 이면서 탈퇴하지 않은 유저
+   */
+  async getMarketingConsenterUserIds(): Promise<number[]> {
+    const rows = await this.prisma.notificationSet.findMany({
+      where: {
+        benefitAlert: true,
+        user: { deletedAt: null },
+      },
+      select: { userId: true },
+    });
+    return rows.map((r) => r.userId);
+  }
+
+  /**
    * 마케팅 동의 + 홍보성 알림 자동 활성화
    */
   async agreeMarketingConsent(
