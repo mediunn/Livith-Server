@@ -511,11 +511,30 @@ model CrawlHistory {
   @@map("crawl_history")
 }
 
+model NotificationDispatch {
+  id          Int              @id @default(autoincrement())
+  scheduleId  Int              @map("schedule_id")
+  type        NotificationType
+  status      DispatchStatus   @default(SENDING)
+  claimedBy   String?          @map("claimed_by") @db.VarChar(100)
+  claimedAt   DateTime         @default(now()) @map("claimed_at")
+  completedAt DateTime?        @map("completed_at")
+
+  @@unique([scheduleId, type])
+  @@map("notification_dispatch")
+}
+
 enum ConcertStatus {
   ONGOING
   UPCOMING
   COMPLETED
   CANCELED
+}
+
+enum DispatchStatus {
+  SENDING
+  SENT
+  FAILED
 }
 
 enum SetlistType {

@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TicketingReminderScheduler } from '../scheduler/ticketing-reminder.scheduler';
 import { NotificationService } from '../service/notification.service';
-import { NotificationHistoryService } from '../service/notification-history.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationType, ScheduleType } from '@prisma/client';
 import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
+import { NotificationDispatchService } from '../service/notification-dispatch.service';
 import { KST_OFFSET_MS } from 'src/common/utils/date.util';
 
 describe('TicketingReminderScheduler', () => {
   let scheduler: TicketingReminderScheduler;
   let notificationService: NotificationService;
-  let historyService: NotificationHistoryService;
+  let dispatchService: NotificationDispatchService;
 
   const mockPrisma = {
     schedule: { findMany: jest.fn() },
@@ -22,8 +22,10 @@ describe('TicketingReminderScheduler', () => {
       .mockResolvedValue({ sent: 1, failed: 0 }),
   };
 
-  const mockHistoryService = {
-    existsByScheduleAndType: jest.fn(),
+  const mockDispatchService = {
+    tryClaim: jest.fn(),
+    markSent: jest.fn(),
+    markFailed: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -32,7 +34,7 @@ describe('TicketingReminderScheduler', () => {
         TicketingReminderScheduler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: NotificationService, useValue: mockNotificationService },
-        { provide: NotificationHistoryService, useValue: mockHistoryService },
+        { provide: NotificationDispatchService, useValue: mockDispatchService },
         {
           provide: SchedulerMetricsService,
           useValue: {
@@ -51,8 +53,17 @@ describe('TicketingReminderScheduler', () => {
 
     scheduler = module.get(TicketingReminderScheduler);
     notificationService = module.get(NotificationService);
-    historyService = module.get(NotificationHistoryService);
+    dispatchService = module.get(NotificationDispatchService);
     jest.clearAllMocks();
+
+    // 기본값: claim 성공. 마감 no-op (dedup 테스트에서만 override)
+    mockDispatchService.tryClaim.mockResolvedValue(true);
+    mockDispatchService.markSent.mockResolvedValue(undefined);
+    mockDispatchService.markFailed.mockResolvedValue(undefined);
+    mockNotificationService.sendNotificationByStrategy.mockResolvedValue({
+      sent: 1,
+      failed: 0,
+    });
   });
 
   describe('oneDayBeforeNotification', () => {
@@ -80,6 +91,10 @@ describe('TicketingReminderScheduler', () => {
           daysUntil: 1,
         }),
         '1',
+      );
+      expect(dispatchService.markSent).toHaveBeenCalledWith(
+        10,
+        NotificationType.PRE_TICKETING_1D,
       );
     });
 
@@ -162,7 +177,7 @@ describe('TicketingReminderScheduler', () => {
   });
 
   describe('thirtyMinBeforeNotifications', () => {
-    it('이미 발송된 schedule 은 건너뛴다 (dedup)', async () => {
+    it('claim 실패한 schedule 은 건너뛴다 (dedup)', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([
           {
@@ -173,7 +188,7 @@ describe('TicketingReminderScheduler', () => {
           },
         ])
         .mockResolvedValueOnce([]);
-      mockHistoryService.existsByScheduleAndType.mockResolvedValue(true);
+      mockDispatchService.tryClaim.mockResolvedValue(false);
 
       const count = await scheduler.thirtyMinBeforeNotifications();
 
@@ -183,7 +198,7 @@ describe('TicketingReminderScheduler', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('발송 이력 없으면 PRE_TICKETING_30MIN 으로 발송', async () => {
+    it('claim 성공하면 PRE_TICKETING_30MIN 으로 발송', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([
           {
@@ -194,7 +209,6 @@ describe('TicketingReminderScheduler', () => {
           },
         ])
         .mockResolvedValueOnce([]);
-      mockHistoryService.existsByScheduleAndType.mockResolvedValue(false);
 
       const count = await scheduler.thirtyMinBeforeNotifications();
 
@@ -212,6 +226,30 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
+    it('발송 중 예외면 markFailed 호출하고 count 미증가', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 102,
+            concertId: 7,
+            concert: { id: 7, title: '실패' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockNotificationService.sendNotificationByStrategy.mockRejectedValueOnce(
+        new Error('FCM down'),
+      );
+
+      const count = await scheduler.thirtyMinBeforeNotifications();
+
+      expect(count).toBe(0);
+      expect(dispatchService.markFailed).toHaveBeenCalledWith(
+        102,
+        NotificationType.PRE_TICKETING_30MIN,
+      );
+    });
+
     it('29~31분 윈도우로 조회한다', async () => {
       mockPrisma.schedule.findMany.mockResolvedValue([]);
 
@@ -222,7 +260,7 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
-      // 29분 ~ 31분 윈도우 검증 (KST 리터럴 매칭을 위해 +9h 시프트)
+      // 29분 ~ 31분 윈도우 검증 (KST 벽시계 보정 +9h 포함, 실행 시간 오차 고려)
       expect(gte.getTime()).toBeGreaterThanOrEqual(
         before + 29 * 60 * 1000 + KST_OFFSET_MS,
       );
@@ -244,7 +282,7 @@ describe('TicketingReminderScheduler', () => {
           },
         ])
         .mockResolvedValueOnce([]);
-      mockHistoryService.existsByScheduleAndType.mockResolvedValue(true);
+      mockDispatchService.tryClaim.mockResolvedValue(false);
 
       const count = await scheduler.openTimeNotifications();
 
@@ -254,7 +292,7 @@ describe('TicketingReminderScheduler', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('발송 이력 없으면 GENERAL_TICKETING_OPEN 으로 발송', async () => {
+    it('claim 성공하면 GENERAL_TICKETING_OPEN 으로 발송', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -265,7 +303,6 @@ describe('TicketingReminderScheduler', () => {
             scheduledAt: new Date(),
           },
         ]);
-      mockHistoryService.existsByScheduleAndType.mockResolvedValue(false);
 
       const count = await scheduler.openTimeNotifications();
 
@@ -283,7 +320,7 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
-    it('9~11분 윈도우로 조회한다 (오픈 10분 전)', async () => {
+    it('오픈 10분 전 (9~11분) 윈도우로 조회한다', async () => {
       mockPrisma.schedule.findMany.mockResolvedValue([]);
 
       const before = Date.now();
@@ -293,6 +330,7 @@ describe('TicketingReminderScheduler', () => {
         mockPrisma.schedule.findMany.mock.calls[0][0].where;
       const { gte, lte } = firstCallWhere.scheduledAt;
 
+      // 9분 ~ 11분 미래 윈도우 (KST 벽시계 보정 +9h 포함)
       expect(gte.getTime()).toBeGreaterThanOrEqual(
         before + 9 * 60 * 1000 + KST_OFFSET_MS,
       );
@@ -301,7 +339,7 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
-    it('dedup 체크를 각 schedule 마다 호출', async () => {
+    it('claim을  각 schedule 마다 호출', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([
           {
@@ -318,15 +356,14 @@ describe('TicketingReminderScheduler', () => {
           },
         ])
         .mockResolvedValueOnce([]);
-      mockHistoryService.existsByScheduleAndType.mockResolvedValue(false);
 
       await scheduler.openTimeNotifications();
 
-      expect(historyService.existsByScheduleAndType).toHaveBeenCalledWith(
+      expect(dispatchService.tryClaim).toHaveBeenCalledWith(
         301,
         NotificationType.PRE_TICKETING_OPEN,
       );
-      expect(historyService.existsByScheduleAndType).toHaveBeenCalledWith(
+      expect(dispatchService.tryClaim).toHaveBeenCalledWith(
         302,
         NotificationType.PRE_TICKETING_OPEN,
       );

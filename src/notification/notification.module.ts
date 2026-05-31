@@ -22,6 +22,7 @@ import { InterestConcertNotificationScheduler } from './scheduler/interest-conce
 import { RecommendationNotificationScheduler } from './scheduler/recommendation-notification.scheduler';
 import { MetricsModule } from '../metrics/metrics.module';
 import { PrismaModule } from 'prisma/prisma.module';
+import { NotificationDispatchService } from './service/notification-dispatch.service';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PrismaModule } from 'prisma/prisma.module';
     FcmTokenService,
     NotificationHistoryService,
     PushSenderService,
+    NotificationDispatchService,
     ArtistConcertOpenStrategy,
     ConcertInfoUpdateStrategy,
     InterestConcertStrategy,
