@@ -80,6 +80,10 @@ export class NotificationService {
     return this.historyService.markAsRead(userId, notificationId);
   }
 
+  async markAllAsRead(userId: number): Promise<number> {
+    return this.historyService.markAllAsRead(userId);
+  }
+
   async deleteNotification(
     userId: number,
     notificationId: number,
