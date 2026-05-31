@@ -75,6 +75,20 @@ export class NotificationHistoryService {
   }
 
   /**
+   * 알림 전체 읽음 처리
+   */
+  async markAllAsRead(userId: number): Promise<number> {
+    await this.userService.validateUser(userId);
+
+    const { count } = await this.prisma.notificationHistories.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
+
+    return count;
+  }
+
+  /**
    * 알림 삭제
    */
   async deleteNotification(

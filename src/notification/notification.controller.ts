@@ -93,6 +93,21 @@ export class NotificationController {
     return { unreadCount };
   }
 
+  @Patch('read-all')
+  @ApiOperation({ summary: '알림 전체 읽음 처리' })
+  async markAllAsRead(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ success: boolean; message: string; updatedCount: number }> {
+    const updatedCount = await this.notificationService.markAllAsRead(
+      user.userId,
+    );
+    return {
+      success: true,
+      message: '알림을 전체 읽음 처리했습니다.',
+      updatedCount,
+    };
+  }
+
   @Patch(':id/read')
   @ApiOperation({ summary: '알림 읽음 처리' })
   async markAsRead(
