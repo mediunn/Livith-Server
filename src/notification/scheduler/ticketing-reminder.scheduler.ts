@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { NotificationService } from '../service/notification.service';
 import { Cron } from '@nestjs/schedule';
@@ -11,14 +11,20 @@ import {
 } from 'src/common/utils/date.util';
 import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
 import { InstrumentJob } from '../../metrics/instrument-job.decorator';
-import { NotificationHistoryService } from '../service/notification-history.service';
+import { NotificationDispatchService } from '../service/notification-dispatch.service';
 
 @Injectable()
 export class TicketingReminderScheduler {
+  private readonly logger = new Logger(TicketingReminderScheduler.name);
+
+  private running1d = false;
+  private running30min = false;
+  private runningOpen = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
-    private readonly historyService: NotificationHistoryService,
+    private readonly dispatchService: NotificationDispatchService,
     readonly schedulerMetrics: SchedulerMetricsService,
   ) {}
 
@@ -29,15 +35,21 @@ export class TicketingReminderScheduler {
   @InstrumentJob('ticketing_reminder_1d')
   @Cron('0 10 * * *', { timeZone: 'Asia/Seoul' })
   async oneDayBeforeNotification(): Promise<number> {
-    const pre = await this.sendOneDayBefore(
-      ScheduleType.PRE_TICKETING,
-      NotificationType.PRE_TICKETING_1D,
-    );
-    const general = await this.sendOneDayBefore(
-      ScheduleType.GENERAL_TICKETING,
-      NotificationType.GENERAL_TICKETING_1D,
-    );
-    return pre + general;
+    if (this.running1d) return 0;
+    this.running1d = true;
+    try {
+      const pre = await this.sendOneDayBefore(
+        ScheduleType.PRE_TICKETING,
+        NotificationType.PRE_TICKETING_1D,
+      );
+      const general = await this.sendOneDayBefore(
+        ScheduleType.GENERAL_TICKETING,
+        NotificationType.GENERAL_TICKETING_1D,
+      );
+      return pre + general;
+    } finally {
+      this.running1d = false;
+    }
   }
 
   /**
@@ -47,16 +59,22 @@ export class TicketingReminderScheduler {
   @InstrumentJob('ticketing_reminder_30min')
   @Cron('* * * * *', { timeZone: 'Asia/Seoul' })
   async thirtyMinBeforeNotifications(): Promise<number> {
-    const pre = await this.sendThirtyMinBefore(
-      ScheduleType.PRE_TICKETING,
-      NotificationType.PRE_TICKETING_30MIN,
-    );
+    if (this.running30min) return 0;
+    this.running30min = true;
+    try {
+      const pre = await this.sendThirtyMinBefore(
+        ScheduleType.PRE_TICKETING,
+        NotificationType.PRE_TICKETING_30MIN,
+      );
 
-    const general = await this.sendThirtyMinBefore(
-      ScheduleType.GENERAL_TICKETING,
-      NotificationType.GENERAL_TICKETING_30MIN,
-    );
-    return pre + general;
+      const general = await this.sendThirtyMinBefore(
+        ScheduleType.GENERAL_TICKETING,
+        NotificationType.GENERAL_TICKETING_30MIN,
+      );
+      return pre + general;
+    } finally {
+      this.running30min = false;
+    }
   }
 
   /**
@@ -66,15 +84,61 @@ export class TicketingReminderScheduler {
   @InstrumentJob('ticketing_reminder_open')
   @Cron('* * * * *', { timeZone: 'Asia/Seoul' })
   async openTimeNotifications(): Promise<number> {
-    const pre = await this.sendOpenTime(
-      ScheduleType.PRE_TICKETING,
-      NotificationType.PRE_TICKETING_OPEN,
+    if (this.runningOpen) return 0;
+    this.runningOpen = true;
+    try {
+      const pre = await this.sendOpenTime(
+        ScheduleType.PRE_TICKETING,
+        NotificationType.PRE_TICKETING_OPEN,
+      );
+      const general = await this.sendOpenTime(
+        ScheduleType.GENERAL_TICKETING,
+        NotificationType.GENERAL_TICKETING_OPEN,
+      );
+      return pre + general;
+    } finally {
+      this.runningOpen = false;
+    }
+  }
+
+  /**
+   * 단건 발송: claim 성공 시에만 발송하고 결과로 ledger 마감
+   */
+  private async dispatch(
+    schedule: { id: number; concert: { id: number; title: string | null } },
+    notificationType: NotificationType,
+    daysUntil: number,
+    scheduledAt: Date,
+  ): Promise<boolean> {
+    const claimed = await this.dispatchService.tryClaim(
+      schedule.id,
+      notificationType,
     );
-    const general = await this.sendOpenTime(
-      ScheduleType.GENERAL_TICKETING,
-      NotificationType.GENERAL_TICKETING_OPEN,
-    );
-    return pre + general;
+
+    if (!claimed) return false;
+
+    try {
+      const timeStr = formatKstHour(scheduledAt);
+      await this.notificationService.sendNotificationByStrategy(
+        notificationType,
+        {
+          scheduleId: schedule.id,
+          concertTitle: schedule.concert.title,
+          timeStr,
+          daysUntil,
+        },
+        String(schedule.concert.id),
+      );
+      await this.dispatchService.markSent(schedule.id, notificationType);
+      return true;
+    } catch (err) {
+      await this.dispatchService.markFailed(schedule.id, notificationType);
+      this.logger.error(
+        `티켓팅 알림 발송 실패 scheduleId=${schedule.id} type=${notificationType}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      return false;
+    }
   }
 
   private async sendOneDayBefore(
@@ -95,25 +159,13 @@ export class TicketingReminderScheduler {
 
     let sent = 0;
     for (const schedule of schedules) {
-      const already = await this.historyService.existsByScheduleAndType(
-        schedule.id,
+      const ok = await this.dispatch(
+        schedule,
         notificationType,
+        1,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
-      if (already) continue;
-
-      const scheduledAtUtc = kstLiteralToUtc(schedule.scheduledAt);
-      const timeStr = formatKstHour(scheduledAtUtc);
-      await this.notificationService.sendNotificationByStrategy(
-        notificationType,
-        {
-          scheduleId: schedule.id,
-          concertTitle: schedule.concert.title,
-          timeStr,
-          daysUntil: 1,
-        },
-        String(schedule.concert.id),
-      );
-      sent++;
+      if (ok) sent++;
     }
 
     return sent;
@@ -137,25 +189,13 @@ export class TicketingReminderScheduler {
 
     let sent = 0;
     for (const schedule of schedules) {
-      const already = await this.historyService.existsByScheduleAndType(
-        schedule.id,
+      const ok = await this.dispatch(
+        schedule,
         notificationType,
+        0,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
-      if (already) continue;
-
-      const scheduledAtUtc = kstLiteralToUtc(schedule.scheduledAt);
-      const timeStr = formatKstHour(scheduledAtUtc);
-      await this.notificationService.sendNotificationByStrategy(
-        notificationType,
-        {
-          scheduleId: schedule.id,
-          concertTitle: schedule.concert.title,
-          timeStr,
-          daysUntil: 0,
-        },
-        String(schedule.concert.id),
-      );
-      sent++;
+      if (ok) sent++;
     }
 
     return sent;
@@ -179,25 +219,13 @@ export class TicketingReminderScheduler {
 
     let sent = 0;
     for (const schedule of schedules) {
-      const already = await this.historyService.existsByScheduleAndType(
-        schedule.id,
+      const ok = await this.dispatch(
+        schedule,
         notificationType,
+        0,
+        kstLiteralToUtc(schedule.scheduledAt),
       );
-      if (already) continue;
-
-      const scheduledAtUtc = kstLiteralToUtc(schedule.scheduledAt);
-      const timeStr = formatKstHour(scheduledAtUtc);
-      await this.notificationService.sendNotificationByStrategy(
-        notificationType,
-        {
-          scheduleId: schedule.id,
-          concertTitle: schedule.concert.title,
-          timeStr,
-          daysUntil: 0,
-        },
-        String(schedule.concert.id),
-      );
-      sent++;
+      if (ok) sent++;
     }
 
     return sent;
