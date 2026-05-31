@@ -38,13 +38,21 @@ export class TicketingReminderScheduler {
     if (this.running1d) return 0;
     this.running1d = true;
     try {
-      const pre = await this.sendOneDayBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_1D,
+      const pre = await this.safeSend(
+        () =>
+          this.sendOneDayBefore(
+            ScheduleType.PRE_TICKETING,
+            NotificationType.PRE_TICKETING_1D,
+          ),
+        '선예매 1일 전',
       );
-      const general = await this.sendOneDayBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_1D,
+      const general = await this.safeSend(
+        () =>
+          this.sendOneDayBefore(
+            ScheduleType.GENERAL_TICKETING,
+            NotificationType.GENERAL_TICKETING_1D,
+          ),
+        '일반예매 1일 전',
       );
       return pre + general;
     } finally {
@@ -62,14 +70,21 @@ export class TicketingReminderScheduler {
     if (this.running30min) return 0;
     this.running30min = true;
     try {
-      const pre = await this.sendThirtyMinBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_30MIN,
+      const pre = await this.safeSend(
+        () =>
+          this.sendThirtyMinBefore(
+            ScheduleType.PRE_TICKETING,
+            NotificationType.PRE_TICKETING_30MIN,
+          ),
+        '선예매 30분 전',
       );
-
-      const general = await this.sendThirtyMinBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_30MIN,
+      const general = await this.safeSend(
+        () =>
+          this.sendThirtyMinBefore(
+            ScheduleType.GENERAL_TICKETING,
+            NotificationType.GENERAL_TICKETING_30MIN,
+          ),
+        '일반예매 30분 전',
       );
       return pre + general;
     } finally {
@@ -87,17 +102,43 @@ export class TicketingReminderScheduler {
     if (this.runningOpen) return 0;
     this.runningOpen = true;
     try {
-      const pre = await this.sendOpenTime(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_OPEN,
+      const pre = await this.safeSend(
+        () =>
+          this.sendOpenTime(
+            ScheduleType.PRE_TICKETING,
+            NotificationType.PRE_TICKETING_OPEN,
+          ),
+        '선예매 오픈',
       );
-      const general = await this.sendOpenTime(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_OPEN,
+      const general = await this.safeSend(
+        () =>
+          this.sendOpenTime(
+            ScheduleType.GENERAL_TICKETING,
+            NotificationType.GENERAL_TICKETING_OPEN,
+          ),
+        '일반예매 오픈',
       );
       return pre + general;
     } finally {
       this.runningOpen = false;
+    }
+  }
+
+  /**
+   * PRE/GENERAL 등 독립 발송을 감싸 한쪽 실패가 다른 쪽을 막지 x.
+   */
+  private async safeSend(
+    fn: () => Promise<number>,
+    label: string,
+  ): Promise<number> {
+    try {
+      return await fn();
+    } catch (err) {
+      this.logger.error(
+        `${label} 티켓팅 알림 발송 중 오류`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      return 0;
     }
   }
 
