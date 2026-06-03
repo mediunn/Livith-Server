@@ -34,6 +34,14 @@ export class PushSenderService {
     private readonly skipCounter: Counter<string>,
   ) {}
 
+  onModuleInit() {
+    for (const type of Object.values(NotificationType)) {
+      this.sentCounter.inc({ notification_type: type }, 0);
+      this.successCounter.inc({ notification_type: type }, 0);
+      this.failureCounter.inc({ notification_type: type }, 0);
+    }
+  }
+
   /**
    * 푸시 알림 일괄 전송
    */
