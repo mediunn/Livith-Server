@@ -46,7 +46,11 @@ export class TicketingReminderScheduler {
         ScheduleType.GENERAL_TICKETING,
         NotificationType.GENERAL_TICKETING_1D,
       );
-      return pre + general;
+      const additional = await this.sendOneDayBefore(
+        ScheduleType.ADD_TICKETING,
+        NotificationType.ADD_TICKETING_1D,
+      );
+      return pre + general + additional;
     } finally {
       this.running1d = false;
     }
@@ -66,12 +70,15 @@ export class TicketingReminderScheduler {
         ScheduleType.PRE_TICKETING,
         NotificationType.PRE_TICKETING_30MIN,
       );
-
       const general = await this.sendThirtyMinBefore(
         ScheduleType.GENERAL_TICKETING,
         NotificationType.GENERAL_TICKETING_30MIN,
       );
-      return pre + general;
+      const additional = await this.sendThirtyMinBefore(
+        ScheduleType.ADD_TICKETING,
+        NotificationType.ADD_TICKETING_30MIN,
+      );
+      return pre + general + additional;
     } finally {
       this.running30min = false;
     }
@@ -79,7 +86,7 @@ export class TicketingReminderScheduler {
 
   /**
    * 오픈 10분 전: 1분마다 9~11분 윈도우 스캔
-   * PRE_TICKETING_OPEN / GENERAL_TICKETING_OPEN
+   * PRE_TICKETING_10MIN / GENERAL_TICKETING_10MIN
    */
   @InstrumentJob('ticketing_reminder_open')
   @Cron('* * * * *', { timeZone: 'Asia/Seoul' })
@@ -89,13 +96,17 @@ export class TicketingReminderScheduler {
     try {
       const pre = await this.sendOpenTime(
         ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_OPEN,
+        NotificationType.PRE_TICKETING_10MIN,
       );
       const general = await this.sendOpenTime(
         ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_OPEN,
+        NotificationType.GENERAL_TICKETING_10MIN,
       );
-      return pre + general;
+      const additional = await this.sendOpenTime(
+        ScheduleType.ADD_TICKETING,
+        NotificationType.ADD_TICKETING_10MIN,
+      );
+      return pre + general + additional;
     } finally {
       this.runningOpen = false;
     }
