@@ -26,11 +26,11 @@ describe('TicketReminderStrategy.buildMessage', () => {
   const cases: Array<{ type: NotificationType; expectTitleIncludes: string }> =
     [
       {
-        type: NotificationType.PRE_TICKETING_OPEN,
+        type: NotificationType.PRE_TICKETING_10MIN,
         expectTitleIncludes: '선예매 10분 전',
       },
       {
-        type: NotificationType.GENERAL_TICKETING_OPEN,
+        type: NotificationType.GENERAL_TICKETING_10MIN,
         expectTitleIncludes: '일반 예매 10분 전',
       },
       {
@@ -48,6 +48,18 @@ describe('TicketReminderStrategy.buildMessage', () => {
       {
         type: NotificationType.GENERAL_TICKETING_30MIN,
         expectTitleIncludes: '일반 예매 30분전',
+      },
+      {
+        type: NotificationType.ADD_TICKETING_1D,
+        expectTitleIncludes: '추가 예매 1일전',
+      },
+      {
+        type: NotificationType.ADD_TICKETING_30MIN,
+        expectTitleIncludes: '추가 예매가 30분전',
+      },
+      {
+        type: NotificationType.ADD_TICKETING_10MIN,
+        expectTitleIncludes: '추가 예매 10분 전',
       },
     ];
 
@@ -67,7 +79,7 @@ describe('TicketReminderStrategy.buildMessage', () => {
 
   it('concertTitle 이 없으면 기본값 "콘서트" 로 대체된다', async () => {
     const message = await strategy.buildMessage({
-      notificationType: NotificationType.PRE_TICKETING_OPEN,
+      notificationType: NotificationType.PRE_TICKETING_10MIN,
     });
 
     expect(message.content).toContain('콘서트');
