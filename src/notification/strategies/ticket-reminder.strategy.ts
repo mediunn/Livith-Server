@@ -77,13 +77,13 @@ export class TicketReminderStrategy implements NotificationStrategy {
       case NotificationType.PRE_TICKETING_30MIN:
         return {
           title: `콘서트 선예매 30분전이에요!`,
-          content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작해요.`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작돼요.`,
         };
 
       case NotificationType.GENERAL_TICKETING_30MIN:
         return {
           title: `콘서트 일반 예매 30분전이에요!`,
-          content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작해요.`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작돼요.`,
         };
 
       case NotificationType.ADD_TICKETING_30MIN:

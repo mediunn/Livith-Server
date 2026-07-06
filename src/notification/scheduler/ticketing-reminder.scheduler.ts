@@ -38,18 +38,20 @@ export class TicketingReminderScheduler {
     if (this.running1d) return 0;
     this.running1d = true;
     try {
-      const pre = await this.sendOneDayBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_1D,
-      );
-      const general = await this.sendOneDayBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_1D,
-      );
-      const additional = await this.sendOneDayBefore(
-        ScheduleType.ADD_TICKETING,
-        NotificationType.ADD_TICKETING_1D,
-      );
+      const [pre, general, additional] = await Promise.all([
+        this.sendOneDayBefore(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_1D,
+        ),
+        this.sendOneDayBefore(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_1D,
+        ),
+        this.sendOneDayBefore(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_1D,
+        ),
+      ]);
       return pre + general + additional;
     } finally {
       this.running1d = false;
@@ -66,18 +68,20 @@ export class TicketingReminderScheduler {
     if (this.running30min) return 0;
     this.running30min = true;
     try {
-      const pre = await this.sendThirtyMinBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_30MIN,
-      );
-      const general = await this.sendThirtyMinBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_30MIN,
-      );
-      const additional = await this.sendThirtyMinBefore(
-        ScheduleType.ADD_TICKETING,
-        NotificationType.ADD_TICKETING_30MIN,
-      );
+      const [pre, general, additional] = await Promise.all([
+        this.sendThirtyMinBefore(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_30MIN,
+        ),
+        this.sendThirtyMinBefore(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_30MIN,
+        ),
+        this.sendThirtyMinBefore(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_30MIN,
+        ),
+      ]);
       return pre + general + additional;
     } finally {
       this.running30min = false;
@@ -94,18 +98,20 @@ export class TicketingReminderScheduler {
     if (this.runningOpen) return 0;
     this.runningOpen = true;
     try {
-      const pre = await this.sendOpenTime(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_10MIN,
-      );
-      const general = await this.sendOpenTime(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_10MIN,
-      );
-      const additional = await this.sendOpenTime(
-        ScheduleType.ADD_TICKETING,
-        NotificationType.ADD_TICKETING_10MIN,
-      );
+      const [pre, general, additional] = await Promise.all([
+        this.sendOpenTime(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_10MIN,
+        ),
+        this.sendOpenTime(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_10MIN,
+        ),
+        this.sendOpenTime(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_10MIN,
+        ),
+      ]);
       return pre + general + additional;
     } finally {
       this.runningOpen = false;
