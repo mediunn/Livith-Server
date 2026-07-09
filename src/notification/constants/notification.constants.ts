@@ -98,12 +98,15 @@ export const NOTIFICATION_TYPE_TO_SET_FIELD: Record<
   NotificationField
 > = {
   [NotificationType.INTEREST_CONCERT]: NotificationField.INTEREST_ALERT,
-  [NotificationType.PRE_TICKETING_OPEN]: NotificationField.TICKET_ALERT,
-  [NotificationType.GENERAL_TICKETING_OPEN]: NotificationField.TICKET_ALERT,
+  [NotificationType.PRE_TICKETING_10MIN]: NotificationField.TICKET_ALERT,
+  [NotificationType.GENERAL_TICKETING_10MIN]: NotificationField.TICKET_ALERT,
+  [NotificationType.ADD_TICKETING_10MIN]: NotificationField.TICKET_ALERT,
   [NotificationType.PRE_TICKETING_1D]: NotificationField.TICKET_ALERT,
   [NotificationType.GENERAL_TICKETING_1D]: NotificationField.TICKET_ALERT,
+  [NotificationType.ADD_TICKETING_1D]: NotificationField.TICKET_ALERT,
   [NotificationType.PRE_TICKETING_30MIN]: NotificationField.TICKET_ALERT,
   [NotificationType.GENERAL_TICKETING_30MIN]: NotificationField.TICKET_ALERT,
+  [NotificationType.ADD_TICKETING_30MIN]: NotificationField.TICKET_ALERT,
   [NotificationType.CONCERT_INFO_UPDATE_SETLIST]: NotificationField.INFO_ALERT,
   [NotificationType.CONCERT_INFO_UPDATE_MD]: NotificationField.INFO_ALERT,
   [NotificationType.CONCERT_INFO_UPDATE_DETAIL]: NotificationField.INFO_ALERT,

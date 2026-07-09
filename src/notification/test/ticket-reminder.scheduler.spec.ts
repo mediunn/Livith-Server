@@ -56,6 +56,10 @@ describe('TicketingReminderScheduler', () => {
     dispatchService = module.get(NotificationDispatchService);
     jest.clearAllMocks();
 
+    // 기본값: 조회 없음. 각 메서드가 PRE/GENERAL/ADD 3번 findMany 호출하므로
+    // 명시 안 한 호출은 빈 배열로 폴백시킨다.
+    mockPrisma.schedule.findMany.mockResolvedValue([]);
+
     // 기본값: claim 성공. 마감 no-op (dedup 테스트에서만 override)
     mockDispatchService.tryClaim.mockResolvedValue(true);
     mockDispatchService.markSent.mockResolvedValue(undefined);
@@ -122,6 +126,51 @@ describe('TicketingReminderScheduler', () => {
           daysUntil: 1,
         }),
         '2',
+      );
+    });
+
+    it('ADD_TICKETING schedule 이 있으면 ADD_TICKETING_1D 로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 30,
+            concertId: 3,
+            concert: { id: 3, title: '추가예매콘서트' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      await scheduler.oneDayBeforeNotification();
+
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.ADD_TICKETING_1D,
+        expect.objectContaining({
+          scheduleId: 30,
+          concertTitle: '추가예매콘서트',
+          daysUntil: 1,
+        }),
+        '3',
+      );
+      expect(dispatchService.markSent).toHaveBeenCalledWith(
+        30,
+        NotificationType.ADD_TICKETING_1D,
+      );
+    });
+
+    it('ADD_TICKETING ScheduleType 으로도 조회한다', async () => {
+      await scheduler.oneDayBeforeNotification();
+
+      expect(mockPrisma.schedule.findMany).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: ScheduleType.ADD_TICKETING,
+          }),
+        }),
       );
     });
 
@@ -226,6 +275,31 @@ describe('TicketingReminderScheduler', () => {
       );
     });
 
+    it('ADD_TICKETING schedule 이면 ADD_TICKETING_30MIN 으로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 103,
+            concertId: 8,
+            concert: { id: 8, title: '추가30분' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      const count = await scheduler.thirtyMinBeforeNotifications();
+
+      expect(count).toBe(1);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.ADD_TICKETING_30MIN,
+        expect.objectContaining({ scheduleId: 103, daysUntil: 0 }),
+        '8',
+      );
+    });
+
     it('발송 중 예외면 markFailed 호출하고 count 미증가', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([
@@ -292,7 +366,7 @@ describe('TicketingReminderScheduler', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('claim 성공하면 GENERAL_TICKETING_OPEN 으로 발송', async () => {
+    it('claim 성공하면 GENERAL_TICKETING_10MIN 으로 발송', async () => {
       mockPrisma.schedule.findMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -310,13 +384,38 @@ describe('TicketingReminderScheduler', () => {
       expect(
         notificationService.sendNotificationByStrategy,
       ).toHaveBeenCalledWith(
-        NotificationType.GENERAL_TICKETING_OPEN,
+        NotificationType.GENERAL_TICKETING_10MIN,
         expect.objectContaining({
           scheduleId: 201,
           concertTitle: '오픈신규',
           daysUntil: 0,
         }),
         '10',
+      );
+    });
+
+    it('ADD_TICKETING schedule 이면 ADD_TICKETING_10MIN 으로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 202,
+            concertId: 13,
+            concert: { id: 13, title: '추가오픈' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      const count = await scheduler.openTimeNotifications();
+
+      expect(count).toBe(1);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.ADD_TICKETING_10MIN,
+        expect.objectContaining({ scheduleId: 202, daysUntil: 0 }),
+        '13',
       );
     });
 
@@ -361,11 +460,11 @@ describe('TicketingReminderScheduler', () => {
 
       expect(dispatchService.tryClaim).toHaveBeenCalledWith(
         301,
-        NotificationType.PRE_TICKETING_OPEN,
+        NotificationType.PRE_TICKETING_10MIN,
       );
       expect(dispatchService.tryClaim).toHaveBeenCalledWith(
         302,
-        NotificationType.PRE_TICKETING_OPEN,
+        NotificationType.PRE_TICKETING_10MIN,
       );
     });
   });
