@@ -109,7 +109,7 @@ describe('Notification send integration (FCM mock)', () => {
     mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
-      type: NotificationType.PRE_TICKETING_OPEN,
+      type: NotificationType.PRE_TICKETING_10MIN,
       title: '선호 아티스트의 선예매 오픈🔥',
       content:
         "관심 콘서트로 선택하신 '테스트콘서트', 선예매 일정 소식이 도착했어요.",
@@ -121,7 +121,7 @@ describe('Notification send integration (FCM mock)', () => {
     const [message] = mockSendEachForMulticast.mock.calls[0];
     expect(message.notification?.title).toBe('선호 아티스트의 선예매 오픈🔥');
     expect(message.notification?.body).toContain('관심 콘서트');
-    expect(message.data?.notificationType).toBe('PRE_TICKETING_OPEN');
+    expect(message.data?.notificationType).toBe('PRE_TICKETING_10MIN');
     expect(message.data?.targetId).toBe('100');
     expect(message.tokens).toEqual(['test-fcm-token-1']);
   });

@@ -38,15 +38,21 @@ export class TicketingReminderScheduler {
     if (this.running1d) return 0;
     this.running1d = true;
     try {
-      const pre = await this.sendOneDayBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_1D,
-      );
-      const general = await this.sendOneDayBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_1D,
-      );
-      return pre + general;
+      const [pre, general, additional] = await Promise.all([
+        this.sendOneDayBefore(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_1D,
+        ),
+        this.sendOneDayBefore(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_1D,
+        ),
+        this.sendOneDayBefore(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_1D,
+        ),
+      ]);
+      return pre + general + additional;
     } finally {
       this.running1d = false;
     }
@@ -62,16 +68,21 @@ export class TicketingReminderScheduler {
     if (this.running30min) return 0;
     this.running30min = true;
     try {
-      const pre = await this.sendThirtyMinBefore(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_30MIN,
-      );
-
-      const general = await this.sendThirtyMinBefore(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_30MIN,
-      );
-      return pre + general;
+      const [pre, general, additional] = await Promise.all([
+        this.sendThirtyMinBefore(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_30MIN,
+        ),
+        this.sendThirtyMinBefore(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_30MIN,
+        ),
+        this.sendThirtyMinBefore(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_30MIN,
+        ),
+      ]);
+      return pre + general + additional;
     } finally {
       this.running30min = false;
     }
@@ -79,7 +90,7 @@ export class TicketingReminderScheduler {
 
   /**
    * 오픈 10분 전: 1분마다 9~11분 윈도우 스캔
-   * PRE_TICKETING_OPEN / GENERAL_TICKETING_OPEN
+   * PRE_TICKETING_10MIN / GENERAL_TICKETING_10MIN
    */
   @InstrumentJob('ticketing_reminder_open')
   @Cron('* * * * *', { timeZone: 'Asia/Seoul' })
@@ -87,15 +98,21 @@ export class TicketingReminderScheduler {
     if (this.runningOpen) return 0;
     this.runningOpen = true;
     try {
-      const pre = await this.sendOpenTime(
-        ScheduleType.PRE_TICKETING,
-        NotificationType.PRE_TICKETING_OPEN,
-      );
-      const general = await this.sendOpenTime(
-        ScheduleType.GENERAL_TICKETING,
-        NotificationType.GENERAL_TICKETING_OPEN,
-      );
-      return pre + general;
+      const [pre, general, additional] = await Promise.all([
+        this.sendOpenTime(
+          ScheduleType.PRE_TICKETING,
+          NotificationType.PRE_TICKETING_10MIN,
+        ),
+        this.sendOpenTime(
+          ScheduleType.GENERAL_TICKETING,
+          NotificationType.GENERAL_TICKETING_10MIN,
+        ),
+        this.sendOpenTime(
+          ScheduleType.ADD_TICKETING,
+          NotificationType.ADD_TICKETING_10MIN,
+        ),
+      ]);
+      return pre + general + additional;
     } finally {
       this.runningOpen = false;
     }

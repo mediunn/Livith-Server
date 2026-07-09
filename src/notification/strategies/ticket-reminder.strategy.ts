@@ -11,7 +11,7 @@ import { NOTIFICATION_BATCH_SIZE } from '../constants/notification.constants';
 
 @Injectable()
 export class TicketReminderStrategy implements NotificationStrategy {
-  readonly type = NotificationType.PRE_TICKETING_OPEN; // 대표 타입
+  readonly type = NotificationType.PRE_TICKETING_10MIN; // 대표 타입
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -56,28 +56,10 @@ export class TicketReminderStrategy implements NotificationStrategy {
     const title = concertTitle ?? '콘서트';
 
     switch (notificationType) {
-      case NotificationType.PRE_TICKETING_OPEN:
-        return {
-          title: `콘서트 선예매 10분 전이에요!🔥`,
-          content: `관심 콘서트로 선택하신 ${title}, 10분 후 선예매가 시작돼요.`,
-        };
-
-      case NotificationType.GENERAL_TICKETING_OPEN:
-        return {
-          title: `콘서트 일반 예매 10분 전이에요!🔥`,
-          content: `관심 콘서트로 선택하신 ${title}, 10분 후 일반 예매가 시작돼요.`,
-        };
-
       case NotificationType.PRE_TICKETING_1D:
         return {
           title: `콘서트 선예매 1일전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 내일 선예매가 시작돼요.`,
-        };
-
-      case NotificationType.PRE_TICKETING_30MIN:
-        return {
-          title: `콘서트 선예매 30분전이에요!`,
-          content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작해요.`,
         };
 
       case NotificationType.GENERAL_TICKETING_1D:
@@ -86,10 +68,46 @@ export class TicketReminderStrategy implements NotificationStrategy {
           content: `관심 콘서트로 선택하신 ${title}, 내일 일반 예매가 시작돼요.`,
         };
 
+      case NotificationType.ADD_TICKETING_1D:
+        return {
+          title: `콘서트 추가 예매 1일전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 내일 추가 예매가 시작돼요.`,
+        };
+
+      case NotificationType.PRE_TICKETING_30MIN:
+        return {
+          title: `콘서트 선예매 30분전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작돼요.`,
+        };
+
       case NotificationType.GENERAL_TICKETING_30MIN:
         return {
           title: `콘서트 일반 예매 30분전이에요!`,
-          content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작해요.`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작돼요.`,
+        };
+
+      case NotificationType.ADD_TICKETING_30MIN:
+        return {
+          title: `콘서트 추가 예매가 30분전이에요!`,
+          content: `관심 콘서트로 선택하신 ${title}, 30분 후 추가 예매가 시작돼요.`,
+        };
+
+      case NotificationType.PRE_TICKETING_10MIN:
+        return {
+          title: `콘서트 선예매 10분 전이에요!🔥`,
+          content: `관심 콘서트로 선택하신 ${title}, 10분 후 선예매가 시작돼요.`,
+        };
+
+      case NotificationType.GENERAL_TICKETING_10MIN:
+        return {
+          title: `콘서트 일반 예매 10분 전이에요!🔥`,
+          content: `관심 콘서트로 선택하신 ${title}, 10분 후 일반 예매가 시작돼요.`,
+        };
+
+      case NotificationType.ADD_TICKETING_10MIN:
+        return {
+          title: `콘서트 추가 예매 10분 전이에요!🔥`,
+          content: `관심 콘서트로 선택하신 ${title}, 10분 후 추가 예매가 시작돼요.`,
         };
 
       default:
