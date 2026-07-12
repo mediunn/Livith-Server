@@ -29,10 +29,17 @@ export class ConcertArtistIndexService implements OnModuleInit {
 
   async onModuleInit() {
     this.index = this.client.index<ConcertArtistDocument>(INDEX_NAME);
-    await this.index.updateSettings({
-      searchableAttributes: ['name', 'searchNames'],
-    });
-    this.logger.log('concert-artists index settings ready');
+    try {
+      await this.index.updateSettings({
+        searchableAttributes: ['name', 'searchNames'],
+      });
+      this.logger.log('concert-artists index settings ready');
+    } catch (error) {
+      this.logger.error(
+        'Failed to initialize Meilisearch index settings',
+        error,
+      );
+    }
   }
 
   async bulkUpsertAll(): Promise<number> {
@@ -64,6 +71,9 @@ export class ConcertArtistIndexService implements OnModuleInit {
   async matchArtist(
     extractName: string,
   ): Promise<{ artistId: number; name: string }[]> {
+    if (!extractName || !extractName.trim()) {
+      return [];
+    }
     const result = await this.index.search(extractName, { limit: 3 });
     return result.hits.map((hit) => ({ artistId: hit.id, name: hit.name }));
   }

@@ -11,7 +11,11 @@ export class MeilisearchScheduler {
   // 매주 월요일 13:00 KST — INSERT한 아티스트를 색인에 흡수
   @Cron('0 13 * * 1', { timeZone: 'Asia/Seoul' })
   async resyncConcertArtists() {
-    const count = await this.concertArtistIndex.bulkUpsertAll();
-    this.logger.log(`weekly concert-artists resync: ${count}건`);
+    try {
+      const count = await this.concertArtistIndex.bulkUpsertAll();
+      this.logger.log(`weekly concert-artists resync: ${count}건`);
+    } catch (error) {
+      this.logger.error('Failed to resync concert artists weekly', error);
+    }
   }
 }
