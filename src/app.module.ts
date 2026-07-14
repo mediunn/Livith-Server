@@ -20,6 +20,7 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { LoggerModule } from './logger/logger.module';
 import { MeilisearchModule } from './meilisearch/meilisearch.module';
 import { ImageProxyModule } from './image-proxy/image-proxy.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
@@ -43,8 +44,8 @@ import { ImageProxyModule } from './image-proxy/image-proxy.module';
     LoggerModule,
     MeilisearchModule,
     ImageProxyModule,
+    CalendarModule,
   ],
-  controllers: [],
   providers: [
     {
       provide: APP_INTERCEPTOR,
