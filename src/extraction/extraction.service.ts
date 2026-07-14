@@ -24,7 +24,6 @@ export class ExtractionService {
    * 같은 URL의 최신 잡이 있으면 상태 무관 재사용.
    * - 진행 중(PENDING/EXTRACTING)이면 그 대기에 합류
    * - 종결(MATCHED/NO_MATCH)이면 캐시된 결과 반환(재추출 안 함).
-   *   추출값은 게시물이 안 바뀌니 동일하고, 못 찾은 공연은 요청/fulfill 플로우가 담당.
    */
   async createJob(instagramUrl: string): Promise<ExtractionJob> {
     const existing = await this.prisma.extractionJob.findFirst({
