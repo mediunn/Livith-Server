@@ -186,7 +186,7 @@ export class ExtractionService {
    * 못 찾거나(hits 0) 진행중 콘서트가 없으면 빈 배열(=NO_MATCH)
    */
   private async matchConcertIds(artistName?: string): Promise<number[]> {
-    if (!artistName?.trim()) return [];
+    if (typeof artistName !== 'string' || !artistName.trim()) return [];
 
     const matches = await this.concertArtistIndex.matchArtist(artistName);
     const artistIds = [...new Set(matches.map((m) => m.artistId))];
