@@ -21,7 +21,7 @@ export class ExtractionInternalController {
   constructor(private readonly extractionService: ExtractionService) {}
 
   @Get('claim')
-  async claim(@Res() res: Response) {
+  async claim(@Res({ passthrough: true }) res: Response) {
     const job = await this.extractionService.claimNext();
     if (!job) return res.status(204).send();
     return res.status(200).json({ data: job });
