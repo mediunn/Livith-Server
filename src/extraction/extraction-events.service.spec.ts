@@ -24,6 +24,28 @@ describe('ExtractionEventsService', () => {
     jest.useRealTimers();
   });
 
+  it('리스너 등록 전에 완료됐어도 checkAlreadyDone 재확인으로 즉시 resolve 된다', async () => {
+    // notifyDone 이 리스너 등록 전에 지나가 이벤트가 유실된 상황을 흉내
+    const checkAlreadyDone = jest.fn().mockResolvedValue(true);
+    const p = service.waitForDone('job1', 10_000, checkAlreadyDone);
+    await expect(p).resolves.toBeUndefined();
+    expect(checkAlreadyDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('checkAlreadyDone 이 미완료면 이벤트를 계속 기다린다', async () => {
+    const checkAlreadyDone = jest.fn().mockResolvedValue(false);
+    const p = service.waitForDone('job1', 10_000, checkAlreadyDone);
+    let resolved = false;
+    void p.then(() => {
+      resolved = true;
+    });
+    await Promise.resolve(); // 마이크로태스크 flush
+    expect(resolved).toBe(false);
+
+    service.notifyDone('job1'); // 나중에 도착한 이벤트로 해제
+    await expect(p).resolves.toBeUndefined();
+  });
+
   it('다른 jobId 이벤트에는 반응하지 않는다', async () => {
     jest.useFakeTimers();
     const p = service.waitForDone('job1', 5_000);

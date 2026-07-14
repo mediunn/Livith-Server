@@ -13,7 +13,7 @@ export class WorkerTokenGuard implements CanActivate {
     const expected = this.configService.get<string>('WORKER_TOKEN');
 
     if (!expected || token !== expected) {
-      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
+      throw new UnauthorizedException(ErrorCode.INVALID_WORKER_TOKEN);
     }
     return true;
   }

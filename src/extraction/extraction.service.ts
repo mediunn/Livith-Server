@@ -20,16 +20,18 @@ export class ExtractionService {
   ) {}
 
   /**
-   * 잡 생성
-   * 같은 URL로 대기중인 잡이 있으면 재사용
-   * 재시도/중복 공유 시 같은 게시물을 두 번 추출하는 것 방지.
-   * */
+   * 잡 생성(멱등)
+   * 같은 URL의 최신 잡이 있으면 상태 무관 재사용.
+   * - 진행 중(PENDING/EXTRACTING)이면 그 대기에 합류
+   * - 종결(MATCHED/NO_MATCH)이면 캐시된 결과 반환(재추출 안 함).
+   *   추출값은 게시물이 안 바뀌니 동일하고, 못 찾은 공연은 요청/fulfill 플로우가 담당.
+   */
   async createJob(instagramUrl: string): Promise<ExtractionJob> {
-    const inProgress = await this.prisma.extractionJob.findFirst({
-      where: { instagramUrl, status: { in: ['PENDING', 'EXTRACTING'] } },
+    const existing = await this.prisma.extractionJob.findFirst({
+      where: { instagramUrl },
       orderBy: { createdAt: 'desc' },
     });
-    if (inProgress) return inProgress;
+    if (existing) return existing;
 
     return this.prisma.extractionJob.create({ data: { instagramUrl } });
   }
@@ -62,11 +64,12 @@ export class ExtractionService {
       if (rows.length === 0) return null;
 
       const { id, instagram_url } = rows[0];
-      await tx.$executeRaw(Prisma.sql`
-        UPDATE extraction_jobs
-          SET status = 'EXTRACTING', updated_at = NOW(3)
-        WHERE id = ${id}
-       `);
+      // SELECT ... FOR UPDATE SKIP LOCKED 는 Prisma 표현 불가라 raw 유지,
+      // 전이 UPDATE 는 Prisma 로 처리(타입 안정성 + @updatedAt 자동)
+      await tx.extractionJob.update({
+        where: { id },
+        data: { status: 'EXTRACTING' },
+      });
       return { jobId: id, instagramUrl: instagram_url };
     });
   }
@@ -124,9 +127,13 @@ export class ExtractionService {
     const job = await this.createJob(instagramUrl);
 
     // 종결 전이면 대기(구독 먼저 걸고 -> 대기)
+    // 구독 직후 DB 재확인으로 리스너 등록 전 notifyDone 유실 레이스 방어
     let current = job;
     if (!TERMINAL.includes(current.status)) {
-      await this.events.waitForDone(job.id, this.WAIT_MS);
+      await this.events.waitForDone(job.id, this.WAIT_MS, async () => {
+        const latest = await this.findById(job.id);
+        return TERMINAL.includes(latest.status);
+      });
       current = await this.findById(job.id);
     }
 
