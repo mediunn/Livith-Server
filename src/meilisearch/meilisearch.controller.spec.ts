@@ -62,9 +62,9 @@ describe('MeilisearchController', () => {
       const result = await controller.reindexConcertArtists();
 
       expect(result).toEqual({ success: true, count: 45 });
-      expect(
-        mockConcertArtistIndexService.bulkUpsertAll,
-      ).toHaveBeenCalledTimes(1);
+      expect(mockConcertArtistIndexService.bulkUpsertAll).toHaveBeenCalledTimes(
+        1,
+      );
       expect(mockMeilisearchService.bulkUpsertAll).not.toHaveBeenCalled();
     });
 

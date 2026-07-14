@@ -1,10 +1,18 @@
-import { ExtractionJob, ExtractionStatus, Prisma } from '@prisma/client';
+import {
+  ConcertStatus,
+  ExtractionJob,
+  ExtractionStatus,
+  Prisma,
+} from '@prisma/client';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotFoundException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { SubmitResultDto } from './dto/submit-result.dto';
 import { ExtractionEventsService } from './extraction-events.service';
+import { ConcertArtistIndexService } from '../meilisearch/concert-artist-index.service';
+import { ConcertResponseDto } from '../concert/dto/concert-response.dto';
+import { getConcertDaysLeft } from '../common/utils/date.util';
 
 const TERMINAL: ExtractionStatus[] = ['MATCHED', 'NO_MATCH'];
 type ClientResult = 'MATCHED' | 'NO_MATCH';
@@ -17,6 +25,7 @@ export class ExtractionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: ExtractionEventsService,
+    private readonly concertArtistIndex: ConcertArtistIndexService,
   ) {}
 
   /**
@@ -84,14 +93,17 @@ export class ExtractionService {
     const job = await this.findById(jobId);
     if (job.status !== 'EXTRACTING') return job;
 
-    // TODO: 매칭 -> candidates + status(MATCHED/NO_MATCH)
+    const candidateIds = await this.matchConcertIds(dto.event?.artist);
+    const status: ExtractionStatus =
+      candidateIds.length > 0 ? 'MATCHED' : 'NO_MATCH';
+
     const updated = await this.prisma.extractionJob.update({
       where: { id: jobId },
       data: {
-        status: 'NO_MATCH',
+        status,
         resultPayload: {
           extracted: dto as unknown as Prisma.InputJsonValue,
-          candidates: [],
+          candidates: candidateIds,
         },
       },
     });
@@ -122,7 +134,7 @@ export class ExtractionService {
    */
   async createAndWait(
     instagramUrl: string,
-  ): Promise<{ result: ClientResult; concerts: any[] }> {
+  ): Promise<{ result: ClientResult; concerts: ConcertResponseDto[] }> {
     const job = await this.createJob(instagramUrl);
 
     // 종결 전이면 대기(구독 먼저 걸고 -> 대기)
@@ -140,13 +152,67 @@ export class ExtractionService {
   }
 
   /** DB status -> 클라 result 3종 + concerts 매핑 */
-  private toClientResponse(job: ExtractionJob): {
+  private async toClientResponse(job: ExtractionJob): Promise<{
     result: ClientResult;
-    concerts: any[];
-  } {
-    if (job.status === 'MATCHED') {
+    concerts: ConcertResponseDto[];
+  }> {
+    if (job.status !== 'MATCHED') {
+      return { result: 'NO_MATCH', concerts: [] };
+    }
+
+    const candidateIds = this.extractCandidateIds(job.resultPayload);
+    if (candidateIds.length === 0) {
       return { result: 'MATCHED', concerts: [] };
     }
-    return { result: 'NO_MATCH', concerts: [] };
+
+    const concerts = await this.prisma.concert.findMany({
+      where: { id: { in: candidateIds } },
+    });
+    // candidateis 순서(정확도/공연일 순) 보존
+    const byId = new Map(concerts.map((c) => [c.id, c]));
+    const ordered = candidateIds
+      .map((id) => byId.get(id))
+      .filter((c): c is (typeof concerts)[number] => Boolean(c));
+
+    const dtos = ordered.map(
+      (c) =>
+        new ConcertResponseDto(c, getConcertDaysLeft(c.startDate, c.endDate)),
+    );
+    return { result: 'MATCHED', concerts: dtos };
+  }
+
+  /**
+   * 추출된 아티스트명 -> concert-artists 인덱스 매칭 -> 진행중 + 다가올 콘서트 top3 id.
+   * 못 찾거나(hits 0) 진행중 콘서트가 없으면 빈 배열(=NO_MATCH)
+   */
+  private async matchConcertIds(artistName?: string): Promise<number[]> {
+    if (!artistName?.trim()) return [];
+
+    const matches = await this.concertArtistIndex.matchArtist(artistName);
+    const artistIds = [...new Set(matches.map((m) => m.artistId))];
+    if (artistIds.length === 0) return [];
+
+    const concerts = await this.prisma.concert.findMany({
+      where: {
+        artistId: { in: artistIds },
+        status: { in: [ConcertStatus.ONGOING, ConcertStatus.UPCOMING] },
+      },
+      orderBy: [{ startDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
+      take: 3,
+      select: { id: true },
+    });
+
+    return concerts.map((c) => c.id);
+  }
+
+  /** resultPayload.candidates(number[]) 안전 파싱 */
+  private extractCandidateIds(payload: Prisma.JsonValue | null): number[] {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return [];
+    }
+    const candidates = (payload as { candidates?: unknown }).candidates;
+    return Array.isArray(candidates)
+      ? candidates.filter((x): x is number => typeof x === 'number')
+      : [];
   }
 }

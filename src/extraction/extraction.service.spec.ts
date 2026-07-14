@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExtractionService } from './extraction.service';
 import { ExtractionEventsService } from './extraction-events.service';
+import { ConcertArtistIndexService } from '../meilisearch/concert-artist-index.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 describe('ExtractionService', () => {
   let service: ExtractionService;
   let mockPrisma: any;
   let mockEvents: any;
+  let mockConcertIndex: any;
 
   const baseJob = {
     id: 'job1',
@@ -25,6 +27,9 @@ describe('ExtractionService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      concert: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       $transaction: jest.fn(),
       $queryRaw: jest.fn(),
       $executeRaw: jest.fn(),
@@ -33,12 +38,16 @@ describe('ExtractionService', () => {
       waitForDone: jest.fn().mockResolvedValue(undefined),
       notifyDone: jest.fn(),
     };
+    mockConcertIndex = {
+      matchArtist: jest.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExtractionService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ExtractionEventsService, useValue: mockEvents },
+        { provide: ConcertArtistIndexService, useValue: mockConcertIndex },
       ],
     }).compile();
 
@@ -98,7 +107,57 @@ describe('ExtractionService', () => {
       expect(mockEvents.notifyDone).not.toHaveBeenCalled();
     });
 
-    it('EXTRACTING 이면 NO_MATCH 로 확정하고 notifyDone 호출', async () => {
+    it('매칭 후보가 없으면 NO_MATCH + 빈 candidates 로 확정', async () => {
+      mockPrisma.extractionJob.findUnique.mockResolvedValue({
+        ...baseJob,
+        status: 'EXTRACTING',
+      });
+      mockConcertIndex.matchArtist.mockResolvedValue([]); // 인덱스 miss
+      mockPrisma.extractionJob.update.mockResolvedValue({
+        ...baseJob,
+        status: 'NO_MATCH',
+      });
+
+      await service.submitResult('job1', { event: { artist: '없는아티스트' } });
+
+      expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
+        where: { id: 'job1' },
+        data: expect.objectContaining({
+          status: 'NO_MATCH',
+          resultPayload: expect.objectContaining({ candidates: [] }),
+        }),
+      });
+      expect(mockEvents.notifyDone).toHaveBeenCalledWith('job1');
+    });
+
+    it('매칭 후보가 있으면 MATCHED + candidates(concertId) 로 확정', async () => {
+      mockPrisma.extractionJob.findUnique.mockResolvedValue({
+        ...baseJob,
+        status: 'EXTRACTING',
+      });
+      mockConcertIndex.matchArtist.mockResolvedValue([
+        { artistId: 42, name: 'HITORIE (히토리에)' },
+      ]);
+      mockPrisma.concert.findMany.mockResolvedValue([{ id: 101 }, { id: 202 }]);
+      mockPrisma.extractionJob.update.mockResolvedValue({
+        ...baseJob,
+        status: 'MATCHED',
+      });
+
+      await service.submitResult('job1', { event: { artist: '히토리에' } });
+
+      expect(mockConcertIndex.matchArtist).toHaveBeenCalledWith('히토리에');
+      expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
+        where: { id: 'job1' },
+        data: expect.objectContaining({
+          status: 'MATCHED',
+          resultPayload: expect.objectContaining({ candidates: [101, 202] }),
+        }),
+      });
+      expect(mockEvents.notifyDone).toHaveBeenCalledWith('job1');
+    });
+
+    it('아티스트명이 없으면 매칭 없이 NO_MATCH', async () => {
       mockPrisma.extractionJob.findUnique.mockResolvedValue({
         ...baseJob,
         status: 'EXTRACTING',
@@ -108,10 +167,13 @@ describe('ExtractionService', () => {
         status: 'NO_MATCH',
       });
 
-      await service.submitResult('job1', { event: { artist: '히토리에' } });
+      await service.submitResult('job1', { caption: '아티스트 필드 없음' });
 
-      expect(mockPrisma.extractionJob.update).toHaveBeenCalledTimes(1);
-      expect(mockEvents.notifyDone).toHaveBeenCalledWith('job1');
+      expect(mockConcertIndex.matchArtist).not.toHaveBeenCalled();
+      expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
+        where: { id: 'job1' },
+        data: expect.objectContaining({ status: 'NO_MATCH' }),
+      });
     });
   });
 
