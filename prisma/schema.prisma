@@ -524,6 +524,25 @@ model NotificationDispatch {
   @@map("notification_dispatch")
 }
 
+model ExtractionJob {
+  id            String           @id @default(cuid())
+  instagramUrl  String           @map("instagram_url") @db.VarChar(2048)
+  status        ExtractionStatus @default(PENDING)
+  resultPayload Json?            @map("result_payload")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("extraction_jobs")
+}
+
+enum ExtractionStatus {
+  PENDING
+  EXTRACTING
+  MATCHED
+  NO_MATCH
+}
+
 enum ConcertStatus {
   ONGOING
   UPCOMING

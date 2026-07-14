@@ -14,6 +14,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
     '해당 셋리스트와 콘서트의 조합이 존재하지 않습니다.',
   [ErrorCode.GENRE_NOT_FOUND]: '해당 장르를 찾을 수 없습니다.',
   [ErrorCode.NOTIFICATION_NOT_FOUND]: '해당 알림을 찾을 수 없습니다.',
+  [ErrorCode.EXTRACTION_JOB_NOT_FOUND]: '추출 작업을 찾을 수 없습니다.',
 
   // Bad Request
   [ErrorCode.INVALID_CURSOR_FORMAT]: '유효하지 않은 cursor 형식입니다.',
@@ -22,6 +23,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.USER_ALREADY_DELETED]: '이미 탈퇴한 회원입니다.',
   [ErrorCode.NICKNAME_ALREADY_EXISTS]: '이미 존재하는 닉네임이에요.',
   [ErrorCode.USER_ALREADY_EXISTS]: '이미 존재하는 유저입니다.',
+  [ErrorCode.INVALID_INSTAGRAM_URL]: '유효한 인스타그램 게시글 URL이 아닙니다.',
 
   // Forbidden
   [ErrorCode.USER_DELETED]: '탈퇴한 회원입니다.',
@@ -35,6 +37,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.REFRESH_TOKEN_EXPIRED]: '리프레시 토큰 만료',
   [ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED]: '리프레시 토큰 검증 실패',
   [ErrorCode.REFRESH_TOKEN_NOT_FOUND]: '리프레시 토큰이 없습니다.',
+  [ErrorCode.INVALID_WORKER_TOKEN]: '워커 토큰이 유효하지 않습니다.',
 
   // Internal Server Error
   [ErrorCode.INTERNAL_SERVER_ERROR]: '서버 에러가 발생했습니다.',
