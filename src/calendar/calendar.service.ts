@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
 import { ScheduleType as PrismaScheduleType } from '@prisma/client';
+
+import { DailyEventsResponseDto } from './dto/daily-events-response.dto';
 import { MonthlyCalendarResponseDto } from './dto/monthly-calendar-response.dto';
 import { ConcertType } from './enum/concert-type.enum';
 import { RequestScheduleType } from './enum/request-schedule-type.enum';
@@ -120,5 +122,89 @@ export class CalendarService {
       month,
       days: Array.from(days.values()),
     } satisfies MonthlyCalendarResponseDto;
+  }
+
+  // 날짜별 일정 조회
+  async getEventsByDate(
+    date: string,
+    scheduleTypes: RequestScheduleType[],
+    concertType: ConcertType,
+    userId?: number,
+  ): Promise<DailyEventsResponseDto> {
+    if (concertType === ConcertType.INTEREST) {
+      if (!userId) {
+        throw new UnauthorizedException();
+      }
+
+      await this.userService.validateUser(userId);
+    }
+
+    const prismaScheduleTypes = this.getPrismaScheduleTypes(scheduleTypes);
+
+    const [year, month, day] = date.split('-').map(Number);
+
+    const start = new Date(Date.UTC(year, month - 1, day));
+    const end = new Date(Date.UTC(year, month - 1, day + 1));
+
+    const schedules = await this.prismaService.schedule.findMany({
+      where: {
+        type: {
+          in: prismaScheduleTypes,
+        },
+        scheduledAt: {
+          gte: start,
+          lt: end,
+        },
+        ...(concertType === ConcertType.INTEREST && userId
+          ? {
+              concert: {
+                userInterestConcerts: {
+                  some: {
+                    userId,
+                  },
+                },
+              },
+            }
+          : {}),
+      },
+      select: {
+        type: true,
+        scheduledAt: true,
+        concert: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            venue: true,
+            ticketSite: true,
+          },
+        },
+      },
+      orderBy: [
+        { scheduledAt: 'asc' },
+        { concert: { title: 'asc' } },
+        { id: 'asc' },
+      ],
+    });
+
+    const events = schedules.map((schedule) => {
+      const isConcert = schedule.type === PrismaScheduleType.CONCERT;
+
+      return {
+        id: schedule.concert.id,
+        title: schedule.concert.title ?? '',
+        type: schedule.type!,
+        status: schedule.concert.status,
+        time: schedule.scheduledAt.toISOString().substring(11, 16),
+        detail: isConcert
+          ? schedule.concert.venue
+          : schedule.concert.ticketSite,
+      };
+    });
+
+    return {
+      date,
+      events,
+    } satisfies DailyEventsResponseDto;
   }
 }
