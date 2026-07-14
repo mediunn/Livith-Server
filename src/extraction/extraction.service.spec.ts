@@ -47,16 +47,31 @@ describe('ExtractionService', () => {
   });
 
   describe('createJob (멱등)', () => {
-    it('진행 중인 잡이 있으면 재사용하고 새로 만들지 않는다', async () => {
+    it('같은 URL 잡이 있으면 상태 무관 재사용하고 새로 만들지 않는다', async () => {
       mockPrisma.extractionJob.findFirst.mockResolvedValue(baseJob);
 
       const result = await service.createJob(baseJob.instagramUrl);
 
       expect(result).toBe(baseJob);
       expect(mockPrisma.extractionJob.create).not.toHaveBeenCalled();
+      // 상태 필터 없이 URL 로만 최신 잡을 조회
+      expect(mockPrisma.extractionJob.findFirst).toHaveBeenCalledWith({
+        where: { instagramUrl: baseJob.instagramUrl },
+        orderBy: { createdAt: 'desc' },
+      });
     });
 
-    it('진행 중인 잡이 없으면 새로 생성한다', async () => {
+    it('종결(NO_MATCH)된 잡도 재추출 없이 캐시 반환한다', async () => {
+      const done = { ...baseJob, status: 'NO_MATCH' as const };
+      mockPrisma.extractionJob.findFirst.mockResolvedValue(done);
+
+      const result = await service.createJob(baseJob.instagramUrl);
+
+      expect(result).toBe(done);
+      expect(mockPrisma.extractionJob.create).not.toHaveBeenCalled();
+    });
+
+    it('같은 URL 잡이 없으면 새로 생성한다', async () => {
       mockPrisma.extractionJob.findFirst.mockResolvedValue(null);
       mockPrisma.extractionJob.create.mockResolvedValue(baseJob);
 
@@ -149,7 +164,11 @@ describe('ExtractionService', () => {
 
       const result = await service.createAndWait(baseJob.instagramUrl);
 
-      expect(mockEvents.waitForDone).toHaveBeenCalledWith('job1', 50_000);
+      expect(mockEvents.waitForDone).toHaveBeenCalledWith(
+        'job1',
+        50_000,
+        expect.any(Function),
+      );
       expect(result).toEqual({ result: 'MATCHED', concerts: [] });
     });
 
@@ -188,13 +207,17 @@ describe('ExtractionService', () => {
         $queryRaw: jest
           .fn()
           .mockResolvedValue([{ id: 'job1', instagram_url: 'https://x/p/A/' }]),
-        $executeRaw: jest.fn().mockResolvedValue(1),
+        extractionJob: { update: jest.fn().mockResolvedValue({ id: 'job1' }) },
       };
       mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(tx));
 
       const result = await service.claimNext();
 
-      expect(tx.$executeRaw).toHaveBeenCalledTimes(1); // UPDATE 실행
+      // SELECT FOR UPDATE SKIP LOCKED 는 raw, 전이 UPDATE 는 Prisma
+      expect(tx.extractionJob.update).toHaveBeenCalledWith({
+        where: { id: 'job1' },
+        data: { status: 'EXTRACTING' },
+      });
       expect(result).toEqual({
         jobId: 'job1',
         instagramUrl: 'https://x/p/A/',
