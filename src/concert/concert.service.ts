@@ -16,10 +16,15 @@ import { CultureResponseDto } from './dto/culture-response.dto';
 import { MDResponseDto } from './dto/md-response.dto';
 import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
+import { UserService } from 'src/user/user.service';
+import { RequestConcertInfoResponseDto } from './dto/request-concert-info-response.dto';
 
 @Injectable()
 export class ConcertService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly userService: UserService,
+  ) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: number, size?: number) {
     let cursorValue: { startDate: string | null; id: number } | undefined;
@@ -461,5 +466,35 @@ export class ConcertService {
     });
 
     return new CommentResponseDto(newComment, user.nickname);
+  }
+
+  // 콘서트 정보 요청
+  async requestConcertInfo(
+    userId: number,
+    autoRegister: boolean,
+    title?: string,
+    url?: string,
+    requestContent?: string,
+  ) {
+    //유효한 유저인지 확인
+    const user = await this.userService.validateUser(userId);
+
+    if (!user) {
+      throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+    }
+
+    //db에 콘서트 정보 요청 저장
+    const concertRequest = await this.prismaService.concertRequest.create({
+      data: {
+        userId,
+        autoRegister,
+        concertTitle: title,
+        url,
+        requestContent,
+      },
+    });
+
+    // 콘서트 정보 요청 결과 반환
+    return new RequestConcertInfoResponseDto(concertRequest);
   }
 }
