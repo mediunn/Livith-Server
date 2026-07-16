@@ -151,6 +151,41 @@ export class ExtractionService {
     return this.toClientResponse(current);
   }
 
+  /**
+   * 좀비 EXTRACTING 잡 종결.
+   * 워커가 claim 후 죽어 응답이 안 온 잡을 NO_MATCH로 확정
+   * 재추출은 안함
+   */
+  async failStaleExtracting(): Promise<number> {
+    const affected = await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE extraction_jobs 
+        SET status = 'NO_MATCH', updated_at = NOW(3)
+      WHERE status = 'EXTRACTING'
+        AND updated_at < NOW(3) - INTERVAL 2 MINUTE
+    `);
+    if (affected > 0) {
+      this.logger.warn(`stale EXTRACTING jobs failed: ${affected}건`);
+    }
+    return affected;
+  }
+
+  /**
+   * 오래된 종결 잡 정리
+   * 종결(MATCHED/NO_MATCH) 후 7일 지난 잡 삭제
+   * -> 큐 테이블 비대 방지 + 오래된 실패 캐시 만료
+   */
+  async cleanupOldJobs(): Promise<number> {
+    const affected = await this.prisma.$executeRaw(Prisma.sql`
+      DELETE FROM extraction_jobs 
+        WHERE status IN ('MATCHED', 'NO_MATCH')
+        AND updated_at < NOW(3) - INTERVAL 7 DAY
+    `);
+    if (affected > 0) {
+      this.logger.log(`old extraction jobs cleaned up: ${affected}건`);
+    }
+    return affected;
+  }
+
   /** DB status -> 클라 result 3종 + concerts 매핑 */
   private async toClientResponse(job: ExtractionJob): Promise<{
     result: ClientResult;
