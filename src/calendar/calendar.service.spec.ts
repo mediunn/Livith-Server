@@ -273,6 +273,40 @@ describe('CalendarService', () => {
 
       expect(result.days[0].events.map((e) => e.id)).toEqual([1, 2, 3]);
     });
+
+    it('티켓팅 일정은 00:00이어도 시간 있는 일정으로 판단한다', async () => {
+      mockPrismaService.schedule.findMany.mockResolvedValue([
+        {
+          type: PrismaScheduleType.CONCERT,
+          scheduledAt: new Date('2026-05-01T00:00:00.000Z'),
+          concert: {
+            id: 1,
+            artist: 'A',
+            title: '시간 미정 공연',
+            status: ConcertStatus.ONGOING,
+          },
+        },
+        {
+          type: PrismaScheduleType.GENERAL_TICKETING,
+          scheduledAt: new Date('2026-05-01T00:00:00.000Z'),
+          concert: {
+            id: 2,
+            artist: 'B',
+            title: '티켓팅',
+            status: ConcertStatus.ONGOING,
+          },
+        },
+      ]);
+
+      const result = await service.getMonthlyCalendar(
+        2026,
+        5,
+        [RequestScheduleType.CONCERT, RequestScheduleType.TICKETING],
+        ConcertType.ALL,
+      );
+
+      expect(result.days[0].events[0].id).toBe(2);
+    });
   });
 
   describe('getEventsByDate', () => {
@@ -307,7 +341,7 @@ describe('CalendarService', () => {
       });
     });
 
-    it('시간 없는 일정은 time이 null이다', async () => {
+    it('공연 일정이 00:00이면 시간 미정 처리한다', async () => {
       mockPrismaService.schedule.findMany.mockResolvedValue([
         {
           type: PrismaScheduleType.CONCERT,
@@ -329,6 +363,37 @@ describe('CalendarService', () => {
       );
 
       expect(result.events[0].time).toBeNull();
+    });
+
+    it('티켓팅 일정은 00:00이어도 시간으로 처리한다', async () => {
+      mockPrismaService.schedule.findMany.mockResolvedValue([
+        {
+          type: PrismaScheduleType.GENERAL_TICKETING,
+          scheduledAt: new Date('2026-07-13T00:00:00.000Z'),
+          concert: {
+            id: 2,
+            title: '티켓팅 일정',
+            status: ConcertStatus.ONGOING,
+            venue: null,
+            ticketSite: '인터파크',
+          },
+        },
+      ]);
+
+      const result = await service.getEventsByDate(
+        '2026-07-13',
+        [RequestScheduleType.TICKETING],
+        ConcertType.ALL,
+      );
+
+      expect(result.events[0]).toEqual({
+        id: 2,
+        title: '티켓팅 일정',
+        type: PrismaScheduleType.GENERAL_TICKETING,
+        status: ConcertStatus.ONGOING,
+        time: '00:00',
+        detail: '인터파크',
+      });
     });
   });
 });
