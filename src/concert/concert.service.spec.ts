@@ -2,8 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConcertService } from './concert.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConcertStatus } from '@prisma/client';
-import { BadRequestException } from '../common/exceptions/business.exception';
+import {
+  BadRequestException,
+  NotFoundException,
+} from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
+import { UserService } from 'src/user/user.service';
+import { ConcertRequestDiscordService } from './concert-request-discord.service';
+import { RequestConcertInfoResponseDto } from './dto/request-concert-info-response.dto';
 
 describe('ConcertService', () => {
   let service: ConcertService;
@@ -12,6 +18,15 @@ describe('ConcertService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
     };
+    concertRequest: {
+      create: jest.Mock;
+    };
+  };
+  let mockUserService: {
+    validateUser: jest.Mock;
+  };
+  let mockDiscordService: {
+    notifyConcertRequest: jest.Mock;
   };
 
   const mockConcerts = [
@@ -59,6 +74,15 @@ describe('ConcertService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
       },
+      concertRequest: {
+        create: jest.fn(),
+      },
+    };
+    mockUserService = {
+      validateUser: jest.fn(),
+    };
+    mockDiscordService = {
+      notifyConcertRequest: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,12 +92,18 @@ describe('ConcertService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
+        {
+          provide: ConcertRequestDiscordService,
+          useValue: mockDiscordService,
+        },
       ],
     }).compile();
 
     service = module.get<ConcertService>(ConcertService);
-
-    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -118,6 +148,98 @@ describe('ConcertService', () => {
         where: { id: 999 },
         select: { startDate: true },
       });
+    });
+  });
+
+  describe('requestConcertInfo', () => {
+    const userId = 10;
+    const autoRegister = true;
+    const title = '테일러 스위프트 콘서트';
+    const url = 'https://www.example.com/concert/1';
+    const requestContent = '아티스트명: 테일러 스위프트';
+
+    const mockConcertRequest = {
+      id: 1,
+      userId,
+      autoRegister,
+      concertTitle: title,
+      url,
+      requestContent,
+      registrationToastShown: false,
+      requestResult: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('콘서트 요청을 저장하고 디스코드 알림 후 응답 DTO를 반환해야 함', async () => {
+      // Given
+      const nickname = '테스트유저';
+      mockUserService.validateUser.mockResolvedValue({
+        id: userId,
+        nickname,
+      });
+      mockPrismaService.concertRequest.create.mockResolvedValue(
+        mockConcertRequest,
+      );
+      mockDiscordService.notifyConcertRequest.mockResolvedValue(undefined);
+
+      // When
+      const result = await service.requestConcertInfo(
+        userId,
+        autoRegister,
+        title,
+        url,
+        requestContent,
+      );
+
+      // Then
+      expect(mockUserService.validateUser).toHaveBeenCalledWith(userId);
+      expect(mockPrismaService.concertRequest.create).toHaveBeenCalledWith({
+        data: {
+          userId,
+          autoRegister,
+          concertTitle: title,
+          url,
+          requestContent,
+        },
+      });
+      expect(mockDiscordService.notifyConcertRequest).toHaveBeenCalledWith({
+        id: mockConcertRequest.id,
+        userId: mockConcertRequest.userId,
+        userNickname: nickname,
+        concertTitle: mockConcertRequest.concertTitle,
+        url: mockConcertRequest.url,
+        requestContent: mockConcertRequest.requestContent,
+        autoRegister: mockConcertRequest.autoRegister,
+      });
+      expect(result).toBeInstanceOf(RequestConcertInfoResponseDto);
+      expect(result).toEqual({
+        id: 1,
+        userId,
+        autoRegister,
+        title,
+        url,
+        requestContent,
+      });
+    });
+
+    it('유효하지 않은 유저면 NotFoundException을 던지고 저장/알림을 하지 않아야 함', async () => {
+      // Given
+      mockUserService.validateUser.mockResolvedValue(null);
+
+      // When & Then
+      await expect(
+        service.requestConcertInfo(
+          userId,
+          autoRegister,
+          title,
+          url,
+          requestContent,
+        ),
+      ).rejects.toThrow(new NotFoundException(ErrorCode.USER_NOT_FOUND));
+
+      expect(mockPrismaService.concertRequest.create).not.toHaveBeenCalled();
+      expect(mockDiscordService.notifyConcertRequest).not.toHaveBeenCalled();
     });
   });
 });
