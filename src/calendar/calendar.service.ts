@@ -31,14 +31,19 @@ export class CalendarService {
           ],
     );
   }
-  private hasTime(date: Date): boolean {
-    return !(
-      date.getUTCHours() === 0 &&
-      date.getUTCMinutes() === 0 &&
-      date.getUTCSeconds() === 0
-    );
-  }
+  private hasTime(type: PrismaScheduleType, date: Date): boolean {
+    // 공연 일정은 00:00이면 시간 미정으로 판단
+    if (type === PrismaScheduleType.CONCERT) {
+      return !(
+        date.getUTCHours() === 0 &&
+        date.getUTCMinutes() === 0 &&
+        date.getUTCSeconds() === 0
+      );
+    }
 
+    // 티켓팅 일정은 시간이 항상 존재한다고 판단
+    return true;
+  }
   /**
    * 캘린더 일정 정렬
    *
@@ -49,6 +54,7 @@ export class CalendarService {
    */
   private sortSchedules<
     T extends {
+      type: PrismaScheduleType;
       scheduledAt: Date;
       concert: {
         title: string | null;
@@ -68,10 +74,9 @@ export class CalendarService {
       if (!aCanceled && bCanceled) {
         return -1;
       }
+      const aHasTime = this.hasTime(a.type, a.scheduledAt);
 
-      const aHasTime = this.hasTime(a.scheduledAt);
-      const bHasTime = this.hasTime(b.scheduledAt);
-
+      const bHasTime = this.hasTime(b.type, b.scheduledAt);
       // 시간 없는 일정은 하단
       if (!aHasTime && bHasTime) {
         return 1;
@@ -258,8 +263,7 @@ export class CalendarService {
     const events = schedules.map((schedule) => {
       const isConcert = schedule.type === PrismaScheduleType.CONCERT;
 
-      const hasTime = this.hasTime(schedule.scheduledAt);
-
+      const hasTime = this.hasTime(schedule.type, schedule.scheduledAt);
       return {
         id: schedule.concert.id,
         title: schedule.concert.title ?? '',
