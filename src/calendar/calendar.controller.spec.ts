@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { CalendarController } from './calendar.controller';
 import { CalendarService } from './calendar.service';
-import { ScheduleType } from './enum/request-schedule-type.enum';
+import { RequestScheduleType } from './enum/request-schedule-type.enum';
 import { ConcertType } from './enum/concert-type.enum';
 
 type CalendarServiceMock = {
@@ -43,7 +43,10 @@ describe('CalendarController', () => {
     const query = {
       year: 2026,
       month: 5,
-      scheduleTypes: [ScheduleType.PERFORMANCE, ScheduleType.TICKETING],
+      scheduleTypes: [
+        RequestScheduleType.CONCERT,
+        RequestScheduleType.TICKETING,
+      ],
       concertType: ConcertType.ALL,
     };
     const user = { userId: 7 };
@@ -62,7 +65,7 @@ describe('CalendarController', () => {
     expect(mockCalendarService.getMonthlyCalendar).toHaveBeenCalledWith(
       2026,
       5,
-      [ScheduleType.PERFORMANCE, ScheduleType.TICKETING],
+      [RequestScheduleType.CONCERT, RequestScheduleType.TICKETING],
       ConcertType.ALL,
       7,
     );
