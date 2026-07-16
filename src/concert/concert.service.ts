@@ -18,12 +18,14 @@ import { ScheduleResponseDto } from './dto/schedule-response.dto';
 import { SetlistResponseDto } from './dto/setlist-response.dto';
 import { UserService } from 'src/user/user.service';
 import { RequestConcertInfoResponseDto } from './dto/request-concert-info-response.dto';
+import { ConcertRequestDiscordService } from './concert-request-discord.service';
 
 @Injectable()
 export class ConcertService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly userService: UserService,
+    private readonly concertRequestDiscordService: ConcertRequestDiscordService,
   ) {}
   // 콘서트 목록 조회
   async getConcerts(cursor?: number, size?: number) {
@@ -492,6 +494,16 @@ export class ConcertService {
         url,
         requestContent,
       },
+    });
+
+    await this.concertRequestDiscordService.notifyConcertRequest({
+      id: concertRequest.id,
+      userId: concertRequest.userId,
+      userNickname: user.nickname,
+      concertTitle: concertRequest.concertTitle,
+      url: concertRequest.url,
+      requestContent: concertRequest.requestContent,
+      autoRegister: concertRequest.autoRegister,
     });
 
     // 콘서트 정보 요청 결과 반환
