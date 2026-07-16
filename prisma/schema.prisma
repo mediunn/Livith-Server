@@ -35,6 +35,8 @@ model Concert {
   schedules             Schedule[]
   searchConcertSections SearchConcertSection[]
   userInterestConcerts  UserInterestConcert[]
+  concertRequests  ConcertRequest[]
+
 
   @@unique([startDate, id])
   @@unique([endDate, id])
@@ -539,6 +541,7 @@ model ExtractionJob {
 
 model ConcertRequest {
   id                      Int      @id @default(autoincrement())
+  concertId               Int?      @map("concert_id") 
   userId                  Int      @map("user_id")
   concertTitle            String   @db.VarChar(300) @map("concert_title")
   url                     String?  @db.VarChar(2048)
@@ -549,8 +552,10 @@ model ConcertRequest {
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @default(now()) @updatedAt @map("updated_at")
 
+  concert                 Concert? @relation(fields: [concertId], references: [id])
   user                    User     @relation(fields: [userId], references: [id])
 
+  @@index([concertId], map: "concert_requests_concert_id_idx")
   @@index([userId], map: "concert_requests_user_id_idx")
   @@map("concert_requests")
 }
