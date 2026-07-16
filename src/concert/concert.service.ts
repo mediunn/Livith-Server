@@ -474,7 +474,7 @@ export class ConcertService {
   async requestConcertInfo(
     userId: number,
     autoRegister: boolean,
-    title?: string,
+    title: string,
     url?: string,
     requestContent?: string,
   ) {
@@ -496,7 +496,7 @@ export class ConcertService {
       },
     });
 
-    await this.concertRequestDiscordService.notifyConcertRequest({
+    this.concertRequestDiscordService.notifyConcertRequest({
       id: concertRequest.id,
       userId: concertRequest.userId,
       userNickname: user.nickname,
