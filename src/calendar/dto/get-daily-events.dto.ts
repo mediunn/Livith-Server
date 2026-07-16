@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsEnum, IsString } from 'class-validator';
+import { IsArray, IsDateString, IsEnum } from 'class-validator';
 import { RequestScheduleType } from '../enum/request-schedule-type.enum';
 import { ConcertType } from '../enum/concert-type.enum';
 
@@ -9,7 +9,7 @@ export class GetDailyEventsDto {
     description: '조회할 날짜 (YYYY-MM-DD)',
     example: '2026-07-13',
   })
-  @IsString()
+  @IsDateString({}, { message: 'date는 YYYY-MM-DD 형식이어야 해요' })
   date: string;
 
   @ApiProperty({

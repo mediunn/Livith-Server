@@ -10,6 +10,12 @@ export class GetMonthlyCalendarDto {
     example: 2026,
   })
   @IsInt()
+  @Min(1900, {
+    message: 'year는 1900 이상의 값이어야 해요',
+  })
+  @Max(2100, {
+    message: 'year는 2100 이하의 값이어야 해요',
+  })
   year: number;
 
   @ApiProperty({
@@ -17,8 +23,8 @@ export class GetMonthlyCalendarDto {
     example: 5,
   })
   @IsInt()
-  @Min(1)
-  @Max(12)
+  @Min(1, { message: 'month는 1~12 사이의 값이어야 해요' })
+  @Max(12, { message: 'month는 1~12 사이의 값이어야 해요' })
   month: number;
 
   @ApiProperty({
