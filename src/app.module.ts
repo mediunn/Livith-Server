@@ -20,11 +20,14 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { LoggerModule } from './logger/logger.module';
 import { MeilisearchModule } from './meilisearch/meilisearch.module';
 import { ImageProxyModule } from './image-proxy/image-proxy.module';
+import { ExtractionModule } from './extraction/extraction.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -44,6 +47,7 @@ import { CalendarModule } from './calendar/calendar.module';
     LoggerModule,
     MeilisearchModule,
     ImageProxyModule,
+    ExtractionModule,
     CalendarModule,
   ],
   providers: [
