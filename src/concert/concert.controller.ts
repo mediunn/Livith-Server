@@ -247,8 +247,8 @@ export class ConcertController {
     summary: '콘서트 정보 요청',
     description: '콘서트 정보를 요청합니다.',
   })
-  @ApiBody({ type: RequestConcertInfoDto, required: false })
-  requestConcertInfo(@Req() req, @Body() body?: RequestConcertInfoDto) {
+  @ApiBody({ type: RequestConcertInfoDto })
+  requestConcertInfo(@Req() req, @Body() body: RequestConcertInfoDto) {
     const userId = req.user.userId;
     return this.concertService.requestConcertInfo(
       userId,

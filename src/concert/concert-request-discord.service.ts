@@ -65,15 +65,20 @@ export class ConcertRequestDiscordService {
     if (payload.url) {
       fields.push({
         name: 'URL',
-        value: payload.url,
+        value:
+          payload.url.length > 1024
+            ? payload.url.slice(0, 1021) + '...'
+            : payload.url,
         inline: false,
       });
     }
-
     if (payload.requestContent) {
       fields.push({
         name: '추가 요청',
-        value: payload.requestContent,
+        value:
+          payload.requestContent.length > 1024
+            ? payload.requestContent.slice(0, 1021) + '...'
+            : payload.requestContent,
         inline: false,
       });
     }
