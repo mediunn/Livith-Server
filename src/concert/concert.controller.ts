@@ -11,6 +11,7 @@ import {
 import { ConcertService } from './concert.service';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiTags,
@@ -21,6 +22,7 @@ import { GetCommentsDto } from './dto/get-comments.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { API_PREFIX } from 'src/common/constants/api-prefix';
+import { RequestConcertInfoDto } from './dto/request-concert-info.dto';
 
 @ApiTags('콘서트')
 @Controller(`${API_PREFIX}/concerts`)
@@ -234,6 +236,26 @@ export class ConcertController {
       concertId,
       userId,
       dto.content,
+    );
+  }
+
+  // 콘서트 정보 요청
+  @Post('/requests')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '콘서트 정보 요청',
+    description: '콘서트 정보를 요청합니다.',
+  })
+  @ApiBody({ type: RequestConcertInfoDto })
+  requestConcertInfo(@Req() req, @Body() body: RequestConcertInfoDto) {
+    const userId = req.user.userId;
+    return this.concertService.requestConcertInfo(
+      userId,
+      body.autoRegister,
+      body.title,
+      body.url,
+      body.requestContent,
     );
   }
 }

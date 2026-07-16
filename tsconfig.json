@@ -1,5 +1,5 @@
 {
-  "exclude": ["k6", "generated"],
+  "exclude": ["k6", "generated", "dist"],
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
