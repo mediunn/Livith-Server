@@ -20,7 +20,7 @@ type ClientResult = 'MATCHED' | 'NO_MATCH';
 @Injectable()
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
-  private readonly WAIT_MS = 50_000;
+  private readonly WAIT_MS = 30_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -93,7 +93,7 @@ export class ExtractionService {
     const job = await this.findById(jobId);
     if (job.status !== 'EXTRACTING') return job;
 
-    const candidateIds = await this.matchConcertIds(dto.event?.artist);
+    const candidateIds = await this.matchConcertIds(dto.artist);
     const status: ExtractionStatus =
       candidateIds.length > 0 ? 'MATCHED' : 'NO_MATCH';
 
@@ -151,7 +151,42 @@ export class ExtractionService {
     return this.toClientResponse(current);
   }
 
-  /** DB status -> 클라 result 3종 + concerts 매핑 */
+  /**
+   * 예산(WAIT_MS) 소진한 미종결 잡을 NO_MATCH로 종결.
+   */
+  async expireOverdueJobs(): Promise<void> {
+    const budgetCutoff = new Date(Date.now() - this.WAIT_MS);
+
+    const { count } = await this.prisma.extractionJob.updateMany({
+      where: {
+        status: { in: ['PENDING', 'EXTRACTING'] },
+        createdAt: { lt: budgetCutoff },
+      },
+      data: { status: 'NO_MATCH' },
+    });
+    if (count > 0) {
+      this.logger.warn(`extraction jobs expired to NO_MATCH: ${count}건`);
+    }
+  }
+
+  /**
+   * 종결(MATCHED/NO_MATCH) 후 7일 지난 잡 삭제.
+   */
+  async cleanupOldJobs(): Promise<number> {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.extractionJob.deleteMany({
+      where: {
+        status: { in: ['MATCHED', 'NO_MATCH'] },
+        updatedAt: { lt: cutoff },
+      },
+    });
+    if (count > 0) {
+      this.logger.log(`old extraction jobs cleaned up: ${count}건`);
+    }
+    return count;
+  }
+
+  /** DB status -> 클라 result 2종 + concerts 매핑 */
   private async toClientResponse(job: ExtractionJob): Promise<{
     result: ClientResult;
     concerts: ConcertResponseDto[];
@@ -168,7 +203,7 @@ export class ExtractionService {
     const concerts = await this.prisma.concert.findMany({
       where: { id: { in: candidateIds } },
     });
-    // candidateis 순서(정확도/공연일 순) 보존
+    // candidates 순서(정확도/공연일 순) 보존
     const byId = new Map(concerts.map((c) => [c.id, c]));
     const ordered = candidateIds
       .map((id) => byId.get(id))

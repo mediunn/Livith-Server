@@ -118,7 +118,7 @@ describe('ExtractionService', () => {
         status: 'NO_MATCH',
       });
 
-      await service.submitResult('job1', { event: { artist: '없는아티스트' } });
+      await service.submitResult('job1', { artist: '없는아티스트' });
 
       expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
         where: { id: 'job1' },
@@ -144,7 +144,7 @@ describe('ExtractionService', () => {
         status: 'MATCHED',
       });
 
-      await service.submitResult('job1', { event: { artist: '히토리에' } });
+      await service.submitResult('job1', { artist: '히토리에' });
 
       expect(mockConcertIndex.matchArtist).toHaveBeenCalledWith('히토리에');
       expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
@@ -167,7 +167,7 @@ describe('ExtractionService', () => {
         status: 'NO_MATCH',
       });
 
-      await service.submitResult('job1', { caption: '아티스트 필드 없음' });
+      await service.submitResult('job1', {});
 
       expect(mockConcertIndex.matchArtist).not.toHaveBeenCalled();
       expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
@@ -228,7 +228,7 @@ describe('ExtractionService', () => {
 
       expect(mockEvents.waitForDone).toHaveBeenCalledWith(
         'job1',
-        50_000,
+        30_000,
         expect.any(Function),
       );
       expect(result).toEqual({ result: 'MATCHED', concerts: [] });
