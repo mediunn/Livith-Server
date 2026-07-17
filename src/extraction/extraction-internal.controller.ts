@@ -13,6 +13,7 @@ import { Response } from 'express';
 import { WorkerTokenGuard } from './guard/worker-token.guard';
 import { ExtractionService } from './extraction.service';
 import { SubmitResultDto } from './dto/submit-result.dto';
+import { ReportFailDto } from './dto/report-fail.dto';
 
 @ApiExcludeController() // 내부 API - Swagger 노출 제외
 @Controller('internal/extraction-jobs')
@@ -23,8 +24,11 @@ export class ExtractionInternalController {
   @Get('claim')
   async claim(@Res({ passthrough: true }) res: Response) {
     const job = await this.extractionService.claimNext();
-    if (!job) return res.status(204).send();
-    return res.status(200).json({ data: job });
+    if (!job) {
+      res.status(204); // 빈 큐
+      return null;
+    }
+    return job; // -> data: { jobId, instagramUrl }
   }
 
   @Post(':id/result')
@@ -36,8 +40,8 @@ export class ExtractionInternalController {
 
   @Post(':id/fail')
   @HttpCode(200)
-  async reportFail(@Param('id') id: string, @Body() body: { reason?: string }) {
-    const job = await this.extractionService.reportFail(id, body?.reason);
+  async reportFail(@Param('id') id: string, @Body() dto: ReportFailDto) {
+    const job = await this.extractionService.reportFail(id, dto.reason);
     return { jobId: job.id, status: job.status };
   }
 }
