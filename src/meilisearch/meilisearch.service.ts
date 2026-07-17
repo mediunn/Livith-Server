@@ -29,11 +29,18 @@ export class MeilisearchService implements OnModuleInit {
 
   async onModuleInit() {
     this.index = this.client.index<ArtistDocument>(INDEX_NAME);
-    await this.index.updateSettings({
-      searchableAttributes: ['artistName'],
-      filterableAttributes: ['genreId'],
-    });
-    this.logger.log('Meilisearch index settings ready');
+    try {
+      await this.index.updateSettings({
+        searchableAttributes: ['artistName'],
+        filterableAttributes: ['genreId'],
+      });
+      this.logger.log('Meilisearch index settings ready');
+    } catch (error) {
+      this.logger.error(
+        'Failed to initialize Meilisearch index settings',
+        error,
+      );
+    }
   }
 
   async bulkUpsertAll(): Promise<number> {
