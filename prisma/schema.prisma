@@ -35,6 +35,8 @@ model Concert {
   schedules             Schedule[]
   searchConcertSections SearchConcertSection[]
   userInterestConcerts  UserInterestConcert[]
+  concertRequests  ConcertRequest[]
+
 
   @@unique([startDate, id])
   @@unique([endDate, id])
@@ -317,6 +319,7 @@ model User {
   notificationhistories NotificationHistories[]
   notificationConsents  NotificationConsent[]
   userInterestConcerts  UserInterestConcert[]
+  concertRequests       ConcertRequest[]
 
   @@map("users")
 }
@@ -535,6 +538,34 @@ model ExtractionJob {
 
   @@index([status, createdAt])
   @@map("extraction_jobs")
+}
+
+model ConcertRequest {
+  id                      Int      @id @default(autoincrement())
+  concertId               Int?      @map("concert_id") 
+  userId                  Int      @map("user_id")
+  concertTitle            String   @db.VarChar(300) @map("concert_title")
+  url                     String?  @db.VarChar(2048)
+  requestContent          String?  @db.Text @map("request_content")
+  autoRegister            Boolean  @default(false) @map("auto_register")
+  registrationToastShown  Boolean  @default(false) @map("registration_toast_shown")
+  requestResult           ConcertRequestResult? @map("request_result")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at")
+
+  concert                 Concert? @relation(fields: [concertId], references: [id])
+  user                    User     @relation(fields: [userId], references: [id])
+
+  @@index([concertId], map: "concert_requests_concert_id_idx")
+  @@index([userId], map: "concert_requests_user_id_idx")
+  @@map("concert_requests")
+}
+
+enum ConcertRequestResult {
+  REGISTERED
+  PAST_CONCERT
+  INSUFFICIENT_INFORMATION
+  UNSUPPORTED_GENRE
 }
 
 enum ExtractionStatus {

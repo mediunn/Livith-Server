@@ -22,6 +22,7 @@ import { MeilisearchModule } from './meilisearch/meilisearch.module';
 import { ImageProxyModule } from './image-proxy/image-proxy.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
@@ -47,8 +48,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     MeilisearchModule,
     ImageProxyModule,
     ExtractionModule,
+    CalendarModule,
   ],
-  controllers: [],
   providers: [
     {
       provide: APP_INTERCEPTOR,
