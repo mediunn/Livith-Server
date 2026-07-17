@@ -8,13 +8,13 @@ export class ExtractionScheduler {
 
   constructor(private readonly extractionService: ExtractionService) {}
 
-  // 매분: 워커 사망으로 멈춘 EXTRACTING 잡 종결
-  @Cron(CronExpression.EVERY_MINUTE)
-  async failStaleJobs() {
-    await this.extractionService.failStaleExtracting();
+  // 예산 소진 잡 종결. 클라 응답은 waitForDone 타임아웃이 책임지므로 주기는 느슨해도 된다
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  async expireOverdueJobs() {
+    await this.extractionService.expireOverdueJobs();
   }
 
-  // 매일 04:00 KST: 오래된 잡 종결 삭제
+  // 매일 04:00 KST: 종결 후 7일 지난 잡 삭제
   @Cron('0 4 * * *', { timeZone: 'Asia/Seoul' })
   async cleanupOldJobs() {
     await this.extractionService.cleanupOldJobs();
