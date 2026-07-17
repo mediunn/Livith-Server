@@ -1,29 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class SubmitResultDto {
-  @ApiProperty({ description: '추출된 공연 정보 필드', required: false })
-  @IsOptional()
-  @IsObject()
-  event?: {
-    title?: string;
-    artist?: string;
-    dates?: string;
-    preTicketingAt?: string;
-    generalTicketingAt?: string;
-  };
-
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: '추출된 아티스트명', required: false })
   @IsOptional()
   @IsString()
-  caption?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  ocrText?: string;
-
-  @ApiProperty({ required: false, type: [String] })
-  @IsOptional()
-  slides?: string[];
+  artist?: string;
 }
