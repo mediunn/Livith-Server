@@ -155,17 +155,17 @@ export class ExtractionService {
    * 예산(WAIT_MS) 소진한 미종결 잡을 NO_MATCH로 종결.
    */
   async expireOverdueJobs(): Promise<void> {
-    const now = new Date();
-    const budgetCutoff = new Date(now.getTime() - this.WAIT_MS);
+    const budgetCutoff = new Date(Date.now() - this.WAIT_MS);
 
-    const expired = await this.prisma.$executeRaw(Prisma.sql`
-      UPDATE extraction_jobs
-        SET status = 'NO_MATCH', updated_at = ${now}
-      WHERE status IN ('PENDING', 'EXTRACTING')
-        AND created_at < ${budgetCutoff}
-    `);
-    if (expired > 0) {
-      this.logger.warn(`extraction jobs expired to NO_MATCH: ${expired}건`);
+    const { count } = await this.prisma.extractionJob.updateMany({
+      where: {
+        status: { in: ['PENDING', 'EXTRACTING'] },
+        createdAt: { lt: budgetCutoff },
+      },
+      data: { status: 'NO_MATCH' },
+    });
+    if (count > 0) {
+      this.logger.warn(`extraction jobs expired to NO_MATCH: ${count}건`);
     }
   }
 
@@ -174,15 +174,16 @@ export class ExtractionService {
    */
   async cleanupOldJobs(): Promise<number> {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const affected = await this.prisma.$executeRaw(Prisma.sql`
-      DELETE FROM extraction_jobs
-        WHERE status IN ('MATCHED', 'NO_MATCH')
-        AND updated_at < ${cutoff}
-    `);
-    if (affected > 0) {
-      this.logger.log(`old extraction jobs cleaned up: ${affected}건`);
+    const { count } = await this.prisma.extractionJob.deleteMany({
+      where: {
+        status: { in: ['MATCHED', 'NO_MATCH'] },
+        updatedAt: { lt: cutoff },
+      },
+    });
+    if (count > 0) {
+      this.logger.log(`old extraction jobs cleaned up: ${count}건`);
     }
-    return affected;
+    return count;
   }
 
   /** DB status -> 클라 result 2종 + concerts 매핑 */

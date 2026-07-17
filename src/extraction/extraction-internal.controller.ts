@@ -25,8 +25,8 @@ export class ExtractionInternalController {
   async claim(@Res({ passthrough: true }) res: Response) {
     const job = await this.extractionService.claimNext();
     if (!job) {
-      res.status(204); // 빈 큐
-      return null;
+      res.status(204).send(); // 빈 큐
+      return;
     }
     return job; // -> data: { jobId, instagramUrl }
   }
