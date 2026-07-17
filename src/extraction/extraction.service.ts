@@ -20,7 +20,7 @@ type ClientResult = 'MATCHED' | 'NO_MATCH';
 @Injectable()
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
-  private readonly WAIT_MS = 50_000;
+  private readonly WAIT_MS = 30_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -93,7 +93,7 @@ export class ExtractionService {
     const job = await this.findById(jobId);
     if (job.status !== 'EXTRACTING') return job;
 
-    const candidateIds = await this.matchConcertIds(dto.event?.artist);
+    const candidateIds = await this.matchConcertIds(dto.artist);
     const status: ExtractionStatus =
       candidateIds.length > 0 ? 'MATCHED' : 'NO_MATCH';
 
@@ -152,33 +152,32 @@ export class ExtractionService {
   }
 
   /**
-   * 좀비 EXTRACTING 잡 종결.
-   * 워커가 claim 후 죽어 응답이 안 온 잡을 NO_MATCH로 확정
-   * 재추출은 안함
+   * 예산(WAIT_MS) 소진한 미종결 잡을 NO_MATCH로 종결.
    */
-  async failStaleExtracting(): Promise<number> {
-    const affected = await this.prisma.$executeRaw(Prisma.sql`
-      UPDATE extraction_jobs 
-        SET status = 'NO_MATCH', updated_at = NOW(3)
-      WHERE status = 'EXTRACTING'
-        AND updated_at < NOW(3) - INTERVAL 2 MINUTE
+  async expireOverdueJobs(): Promise<void> {
+    const now = new Date();
+    const budgetCutoff = new Date(now.getTime() - this.WAIT_MS);
+
+    const expired = await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE extraction_jobs
+        SET status = 'NO_MATCH', updated_at = ${now}
+      WHERE status IN ('PENDING', 'EXTRACTING')
+        AND created_at < ${budgetCutoff}
     `);
-    if (affected > 0) {
-      this.logger.warn(`stale EXTRACTING jobs failed: ${affected}건`);
+    if (expired > 0) {
+      this.logger.warn(`extraction jobs expired to NO_MATCH: ${expired}건`);
     }
-    return affected;
   }
 
   /**
-   * 오래된 종결 잡 정리
-   * 종결(MATCHED/NO_MATCH) 후 7일 지난 잡 삭제
-   * -> 큐 테이블 비대 방지 + 오래된 실패 캐시 만료
+   * 종결(MATCHED/NO_MATCH) 후 7일 지난 잡 삭제.
    */
   async cleanupOldJobs(): Promise<number> {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const affected = await this.prisma.$executeRaw(Prisma.sql`
-      DELETE FROM extraction_jobs 
+      DELETE FROM extraction_jobs
         WHERE status IN ('MATCHED', 'NO_MATCH')
-        AND updated_at < NOW(3) - INTERVAL 7 DAY
+        AND updated_at < ${cutoff}
     `);
     if (affected > 0) {
       this.logger.log(`old extraction jobs cleaned up: ${affected}건`);
@@ -186,7 +185,7 @@ export class ExtractionService {
     return affected;
   }
 
-  /** DB status -> 클라 result 3종 + concerts 매핑 */
+  /** DB status -> 클라 result 2종 + concerts 매핑 */
   private async toClientResponse(job: ExtractionJob): Promise<{
     result: ClientResult;
     concerts: ConcertResponseDto[];
@@ -203,7 +202,7 @@ export class ExtractionService {
     const concerts = await this.prisma.concert.findMany({
       where: { id: { in: candidateIds } },
     });
-    // candidateis 순서(정확도/공연일 순) 보존
+    // candidates 순서(정확도/공연일 순) 보존
     const byId = new Map(concerts.map((c) => [c.id, c]));
     const ordered = candidateIds
       .map((id) => byId.get(id))
