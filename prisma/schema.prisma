@@ -378,6 +378,7 @@ model UserInterestConcert {
   concertTitle String?  @map("concert_title") @db.VarChar(300)
   userNickname String   @map("user_nickname") @db.VarChar(50)
   toastShown   Boolean  @default(false) @map("toast_shown")
+  alarmCheck   Boolean  @default(true) @map("alarm_check")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
