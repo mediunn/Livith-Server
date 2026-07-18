@@ -218,7 +218,8 @@ export class ExtractionService {
 
   /**
    * 추출된 아티스트명 -> concert-artists 인덱스 매칭 -> 진행중 + 다가올 콘서트 top3 id.
-   * 못 찾거나(hits 0) 진행중 콘서트가 없으면 빈 배열(=NO_MATCH)
+   * 정렬: Meilisearch hits 순서(관련도), 2차 같은 아티스트 내 startDate asc
+   * 못 찾거나 진행중 콘서트가 없으면 빈 배열(=NO_MATCH)
    */
   private async matchConcertIds(artistName?: string): Promise<number[]> {
     if (typeof artistName !== 'string' || !artistName.trim()) return [];
@@ -233,11 +234,16 @@ export class ExtractionService {
         status: { in: [ConcertStatus.ONGOING, ConcertStatus.UPCOMING] },
       },
       orderBy: [{ startDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
-      take: 3,
-      select: { id: true },
+      select: { id: true, artistId: true },
     });
 
-    return concerts.map((c) => c.id);
+    // 안정 정렬이라 같은 아티스트 내에서는 위 orderBy(startDate asc)가 유지
+    const rank = new Map(artistIds.map((id, i) => [id, i]));
+    const rankOf = (artistId: number) => rank.get(artistId) ?? artistIds.length;
+    return concerts
+      .sort((a, b) => rankOf(a.artistId) - rankOf(b.artistId))
+      .slice(0, 3)
+      .map((c) => c.id);
   }
 
   /** resultPayload.candidates(number[]) 안전 파싱 */
