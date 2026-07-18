@@ -138,7 +138,10 @@ describe('ExtractionService', () => {
       mockConcertIndex.matchArtist.mockResolvedValue([
         { artistId: 42, name: 'HITORIE (히토리에)' },
       ]);
-      mockPrisma.concert.findMany.mockResolvedValue([{ id: 101 }, { id: 202 }]);
+      mockPrisma.concert.findMany.mockResolvedValue([
+        { id: 101, artistId: 42 },
+        { id: 202, artistId: 42 },
+      ]);
       mockPrisma.extractionJob.update.mockResolvedValue({
         ...baseJob,
         status: 'MATCHED',
@@ -155,6 +158,39 @@ describe('ExtractionService', () => {
         }),
       });
       expect(mockEvents.notifyDone).toHaveBeenCalledWith('job1');
+    });
+
+    it('여러 아티스트 매칭 시 공연일이 아니라 관련도(hits) 순으로 후보를 정렬한다', async () => {
+      mockPrisma.extractionJob.findUnique.mockResolvedValue({
+        ...baseJob,
+        status: 'EXTRACTING',
+      });
+      // hits 순서 = 관련도: The Weeknd > The Neighbourhood("The"만 매칭)
+      mockConcertIndex.matchArtist.mockResolvedValue([
+        { artistId: 1, name: 'The Weeknd' },
+        { artistId: 7, name: 'The Neighbourhood' },
+      ]);
+      // DB는 startDate asc 라 Neighbourhood 공연이 먼저 옴
+      mockPrisma.concert.findMany.mockResolvedValue([
+        { id: 301, artistId: 7 },
+        { id: 101, artistId: 1 },
+        { id: 102, artistId: 1 },
+      ]);
+      mockPrisma.extractionJob.update.mockResolvedValue({
+        ...baseJob,
+        status: 'MATCHED',
+      });
+
+      await service.submitResult('job1', { artist: 'The Weeknd' });
+
+      expect(mockPrisma.extractionJob.update).toHaveBeenCalledWith({
+        where: { id: 'job1' },
+        data: expect.objectContaining({
+          resultPayload: expect.objectContaining({
+            candidates: [101, 102, 301],
+          }),
+        }),
+      });
     });
 
     it('아티스트명이 없으면 매칭 없이 NO_MATCH', async () => {
