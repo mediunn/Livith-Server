@@ -23,7 +23,7 @@ export class ExtractionInternalController {
 
   @Get('claim')
   async claim(@Res({ passthrough: true }) res: Response) {
-    const job = await this.extractionService.claimNext();
+    const job = await this.extractionService.claimNextOrWait();
     if (!job) {
       res.status(204).send(); // 빈 큐
       return;
