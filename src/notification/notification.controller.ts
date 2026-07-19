@@ -3,12 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -23,6 +23,7 @@ import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
+import { EntryAlertResponseDto } from './dto/response/entry-alert-response.dto';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
@@ -192,5 +193,18 @@ export class NotificationController {
       title: message.title,
       content: message.content,
     };
+  }
+
+  @Post('entry-alerts')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: '앱 진입 알림 조회 및 노출 처리',
+    description:
+      '앱 진입 시 보여줄 알림을 조회하고, 응답에 포함된 항목은 노출 완료 처리합니다.',
+  })
+  async getEntryAlerts(
+    @CurrentUser() user: { userId: number },
+  ): Promise<EntryAlertResponseDto> {
+    return this.notificationService.getEntryAlertsAndMarkShown(user.userId);
   }
 }
