@@ -7,6 +7,7 @@ import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { EntryAlertService } from '../service/entry-alert.service';
 
 const mockSendEachForMulticast = jest.fn();
 
@@ -45,6 +46,9 @@ describe('Notification send integration (FCM mock)', () => {
   const mockHistoryService = {
     createNotificationHistories: jest.fn(),
   };
+  const mockEntryAlertService = {
+    getEntryAlertsAndMarkShown: jest.fn(),
+  };
 
   beforeEach(async () => {
     mockSendEachForMulticast.mockResolvedValue({
@@ -61,6 +65,7 @@ describe('Notification send integration (FCM mock)', () => {
         { provide: NotificationHistoryService, useValue: mockHistoryService },
         PushSenderService,
         { provide: NotificationStrategyService, useValue: mockStrategyService },
+        { provide: EntryAlertService, useValue: mockEntryAlertService },
         {
           provide: 'PROM_METRIC_FCM_NOTIFICATION_SENT_TOTAL',
           useValue: { inc: jest.fn() },

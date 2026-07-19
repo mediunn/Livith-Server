@@ -8,6 +8,7 @@ import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { EntryAlertService } from '../service/entry-alert.service';
 
 describe('NotificationService - 알림 목록', () => {
   let service: NotificationService;
@@ -49,6 +50,9 @@ describe('NotificationService - 알림 목록', () => {
     getStrategy: jest.fn(),
     createTicketReminderStrategy: jest.fn(),
   };
+  const mockEntryAlertService = {
+    getEntryAlertsAndMarkShown: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -59,6 +63,7 @@ describe('NotificationService - 알림 목록', () => {
         { provide: NotificationHistoryService, useValue: mockHistoryService },
         { provide: PushSenderService, useValue: mockPushSenderService },
         { provide: NotificationStrategyService, useValue: mockStrategyService },
+        { provide: EntryAlertService, useValue: mockEntryAlertService },
       ],
     }).compile();
 
