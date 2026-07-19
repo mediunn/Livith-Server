@@ -37,6 +37,8 @@ describe('ExtractionService', () => {
     mockEvents = {
       waitForDone: jest.fn().mockResolvedValue(undefined),
       notifyDone: jest.fn(),
+      waitForCreated: jest.fn().mockResolvedValue(undefined),
+      notifyCreated: jest.fn(),
     };
     mockConcertIndex = {
       matchArtist: jest.fn().mockResolvedValue([]),
@@ -68,6 +70,7 @@ describe('ExtractionService', () => {
         where: { instagramUrl: baseJob.instagramUrl },
         orderBy: { createdAt: 'desc' },
       });
+      expect(mockEvents.notifyCreated).not.toHaveBeenCalled();
     });
 
     it('종결(NO_MATCH)된 잡도 재추출 없이 캐시 반환한다', async () => {
@@ -90,6 +93,7 @@ describe('ExtractionService', () => {
         data: { instagramUrl: baseJob.instagramUrl },
       });
       expect(result).toBe(baseJob);
+      expect(mockEvents.notifyCreated).toHaveBeenCalled();
     });
   });
 
@@ -320,6 +324,56 @@ describe('ExtractionService', () => {
         jobId: 'job1',
         instagramUrl: 'https://x/p/A/',
       });
+    });
+  });
+
+  describe('claimNextOrWait (롱폴링)', () => {
+    it('첫 시도에 잡 있으면 대기 없이 즉시 반환', async () => {
+      const tx = {
+        $queryRaw: jest
+          .fn()
+          .mockResolvedValue([{ id: 'job1', instagram_url: 'https://x/p/A/' }]),
+        extractionJob: { update: jest.fn().mockResolvedValue({ id: 'job1' }) },
+      };
+      mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(tx));
+
+      const result = await service.claimNextOrWait();
+
+      expect(result).toEqual({ jobId: 'job1', instagramUrl: 'https://x/p/A/' });
+      expect(mockEvents.waitForCreated).not.toHaveBeenCalled();
+    });
+
+    it('빈 큐면 생성 이벤트 대기 후 재시도해서 반환', async () => {
+      // 1차 claim 빈 큐 → 대기 → 2차 claim 성공
+      const emptyTx = { $queryRaw: jest.fn().mockResolvedValue([]) };
+      const jobTx = {
+        $queryRaw: jest
+          .fn()
+          .mockResolvedValue([{ id: 'job2', instagram_url: 'https://x/p/B/' }]),
+        extractionJob: { update: jest.fn().mockResolvedValue({ id: 'job2' }) },
+      };
+      mockPrisma.$transaction
+        .mockImplementationOnce(async (cb: any) => cb(emptyTx))
+        .mockImplementationOnce(async (cb: any) => cb(jobTx));
+
+      const result = await service.claimNextOrWait();
+
+      expect(mockEvents.waitForCreated).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.any(Function),
+      );
+      expect(result).toEqual({ jobId: 'job2', instagramUrl: 'https://x/p/B/' });
+    });
+
+    it('예산 소진까지 잡 없으면 null (대기 없이 종료)', async () => {
+      mockPrisma.$transaction.mockImplementation(async (cb: any) =>
+        cb({ $queryRaw: jest.fn().mockResolvedValue([]) }),
+      );
+
+      const result = await service.claimNextOrWait(0);
+
+      expect(result).toBeNull();
+      expect(mockEvents.waitForCreated).not.toHaveBeenCalled();
     });
   });
 });
