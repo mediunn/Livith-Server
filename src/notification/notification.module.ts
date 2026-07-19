@@ -23,6 +23,7 @@ import { RecommendationNotificationScheduler } from './scheduler/recommendation-
 import { MetricsModule } from '../metrics/metrics.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { NotificationDispatchService } from './service/notification-dispatch.service';
+import { EntryAlertService } from './service/entry-alert.service';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { NotificationDispatchService } from './service/notification-dispatch.ser
     NotificationCleanupScheduler,
     InterestConcertNotificationScheduler,
     RecommendationNotificationScheduler,
+    EntryAlertService,
   ],
   exports: [NotificationService],
 })
