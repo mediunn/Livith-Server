@@ -13,6 +13,7 @@ type InterestConcertAlertRow = {
   concertTitle: string | null;
   concert: {
     title: string | null;
+    status: ConcertStatus;
   };
 };
 
@@ -51,12 +52,14 @@ export class EntryAlertService {
     await this.userService.validateUser(userId);
 
     return this.prisma.$transaction(async (tx) => {
-      const completedConcerts = await tx.userInterestConcert.findMany({
+      const interestConcerts = await tx.userInterestConcert.findMany({
         where: {
           userId,
           toastShown: false,
           concert: {
-            status: ConcertStatus.COMPLETED,
+            status: {
+              in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+            },
           },
         },
         select: {
@@ -65,31 +68,19 @@ export class EntryAlertService {
           concert: {
             select: {
               title: true,
+              status: true,
             },
           },
         },
         orderBy: { id: 'asc' },
       });
 
-      const canceledConcerts = await tx.userInterestConcert.findMany({
-        where: {
-          userId,
-          toastShown: false,
-          concert: {
-            status: ConcertStatus.CANCELED,
-          },
-        },
-        select: {
-          id: true,
-          concertTitle: true,
-          concert: {
-            select: {
-              title: true,
-            },
-          },
-        },
-        orderBy: { id: 'asc' },
-      });
+      const completedConcerts = interestConcerts.filter(
+        (item) => item.concert.status === ConcertStatus.COMPLETED,
+      );
+      const canceledConcerts = interestConcerts.filter(
+        (item) => item.concert.status === ConcertStatus.CANCELED,
+      );
 
       const requests = await tx.concertRequest.findMany({
         where: {
@@ -147,7 +138,7 @@ export class EntryAlertService {
 
       const items: EntryAlertItemDto[] = [];
       const consumedInterestConcertIds: number[] = [];
-      const consumedRequestIds: number[] = [];
+      const processedRequestIds: number[] = [];
 
       const completedItem = this.buildAutoRemovedItem(
         EntryAlertKind.AUTO_REMOVED_COMPLETED,
@@ -174,10 +165,11 @@ export class EntryAlertService {
 
       for (const request of requests) {
         const item = this.buildRequestItem(request, registeredTitleByConcertId);
+        processedRequestIds.push(request.id);
+
         if (!item) continue;
 
         items.push(item);
-        consumedRequestIds.push(request.id);
       }
 
       if (consumedInterestConcertIds.length > 0) {
@@ -191,10 +183,10 @@ export class EntryAlertService {
         });
       }
 
-      if (consumedRequestIds.length > 0) {
+      if (processedRequestIds.length > 0) {
         await tx.concertRequest.updateMany({
           where: {
-            id: { in: consumedRequestIds },
+            id: { in: processedRequestIds },
           },
           data: {
             registrationToastShown: true,
@@ -321,6 +313,9 @@ export class EntryAlertService {
 
   private withSubjectParticle(text: string): string {
     const trimmed = text.trim();
+    if (!trimmed) {
+      return '';
+    }
     const lastChar = trimmed.charCodeAt(trimmed.length - 1);
 
     if (lastChar < 0xac00 || lastChar > 0xd7a3) {

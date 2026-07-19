@@ -55,19 +55,26 @@ describe('EntryAlertService', () => {
         {
           id: 1,
           concertTitle: '완료 공연 A',
-          concert: { title: '최신 완료 공연 A' },
+          concert: {
+            title: '최신 완료 공연 A',
+            status: ConcertStatus.COMPLETED,
+          },
         },
         {
           id: 2,
           concertTitle: '완료 공연 B',
-          concert: { title: '최신 완료 공연 B' },
+          concert: {
+            title: '최신 완료 공연 B',
+            status: ConcertStatus.COMPLETED,
+          },
         },
-      ])
-      .mockResolvedValueOnce([
         {
           id: 3,
           concertTitle: '취소 공연',
-          concert: { title: '최신 취소 공연' },
+          concert: {
+            title: '최신 취소 공연',
+            status: ConcertStatus.CANCELED,
+          },
         },
       ])
       .mockResolvedValueOnce([
@@ -109,20 +116,9 @@ describe('EntryAlertService', () => {
           userId: 1,
           toastShown: false,
           concert: {
-            status: ConcertStatus.COMPLETED,
-          },
-        },
-      }),
-    );
-
-    expect(mockTx.userInterestConcert.findMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: {
-          userId: 1,
-          toastShown: false,
-          concert: {
-            status: ConcertStatus.CANCELED,
+            status: {
+              in: [ConcertStatus.COMPLETED, ConcertStatus.CANCELED],
+            },
           },
         },
       }),
@@ -184,9 +180,7 @@ describe('EntryAlertService', () => {
   });
 
   it('보여줄 알림이 없으면 빈 items를 반환하고 update를 호출하지 않는다', async () => {
-    mockTx.userInterestConcert.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    mockTx.userInterestConcert.findMany.mockResolvedValueOnce([]);
 
     mockTx.concertRequest.findMany.mockResolvedValue([]);
 
@@ -201,7 +195,6 @@ describe('EntryAlertService', () => {
     const title19 = '1234567890123456789';
 
     mockTx.userInterestConcert.findMany
-      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
@@ -241,5 +234,38 @@ describe('EntryAlertService', () => {
         registrationToastShown: true,
       },
     });
+  });
+
+  it('응답 item을 만들 수 없는 요청 결과도 노출 완료 처리한다', async () => {
+    const warnSpy = jest
+      .spyOn((service as any).logger, 'warn')
+      .mockImplementation();
+
+    mockTx.userInterestConcert.findMany.mockResolvedValueOnce([]);
+    mockTx.concertRequest.findMany.mockResolvedValue([
+      {
+        id: 10,
+        concertId: null,
+        concertTitle: 'concertId 없는 등록 요청',
+        requestResult: ConcertRequestResult.REGISTERED,
+        concert: null,
+      },
+    ]);
+
+    const result = await service.getEntryAlertsAndMarkShown(1);
+
+    expect(result.items).toEqual([]);
+    expect(mockTx.userInterestConcert.updateMany).not.toHaveBeenCalled();
+    expect(mockTx.concertRequest.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: [10] },
+      },
+      data: {
+        registrationToastShown: true,
+      },
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      'REGISTERED concert request has no concertId, requestId=10',
+    );
   });
 });
