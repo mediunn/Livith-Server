@@ -21,6 +21,7 @@ type ClientResult = 'MATCHED' | 'NO_MATCH';
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
   private readonly WAIT_MS = 30_000;
+  private readonly CLAIM_HOLD_MS = 25_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -41,7 +42,12 @@ export class ExtractionService {
     });
     if (existing) return existing;
 
-    return this.prisma.extractionJob.create({ data: { instagramUrl } });
+    const created = await this.prisma.extractionJob.create({
+      data: { instagramUrl },
+    });
+    // 재사용 잡은 이미 큐에 있어 claim 첫 시도에 잡히므로 신규 생성만 알림
+    this.events.notifyCreated();
+    return created;
   }
 
   async findById(jobId: string): Promise<ExtractionJob> {
@@ -80,6 +86,34 @@ export class ExtractionService {
       });
       return { jobId: id, instagramUrl: instagram_url };
     });
+  }
+
+  /**
+   * 홈워커 claim 롱폴링 진입점.
+   * 잡 있으면 즉시, 없으면 생성 이벤트를 기다렸다 재시도. 예산 소진 시 null
+   * claim(null) 직후 ~ 리스너 등록 사이의 생성 이벤트 유실은
+   * waitForCreated의 recheck(PENDING 존재 재확인)로 방어
+   */
+  async claimNextOrWait(
+    timeoutMs = this.CLAIM_HOLD_MS,
+  ): Promise<{ jobId: string; instagramUrl: string } | null> {
+    const deadline = Date.now() + timeoutMs;
+
+    for (;;) {
+      const job = await this.claimNext();
+      if (job) return job;
+
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return null;
+
+      await this.events.waitForCreated(remaining, async () => {
+        const pending = await this.prisma.extractionJob.findFirst({
+          where: { status: 'PENDING' },
+          select: { id: true },
+        });
+        return pending !== null;
+      });
+    }
   }
 
   /**
