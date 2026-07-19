@@ -33,4 +33,3 @@ export class EntryAlertResponseDto {
     this.items = items;
   }
 }
-
