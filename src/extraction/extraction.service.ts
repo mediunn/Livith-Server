@@ -91,8 +91,8 @@ export class ExtractionService {
   /**
    * 홈워커 claim 롱폴링 진입점.
    * 잡 있으면 즉시, 없으면 생성 이벤트를 기다렸다 재시도. 예산 소진 시 null
-   * claim(null) 직후 ~ 리스너 등록 사이의 생성 이벤트 유실은
-   * waitForCreated의 recheck(PENDING 존재 재확인)로 방어
+   * 구독을 claim 시도보다 먼저 걸어(subscribe-then-act)
+   * claim(null) ~ 구독 사이의 생성 이벤트 유실 틈을 없앤다.
    */
   async claimNextOrWait(
     timeoutMs = this.CLAIM_HOLD_MS,
@@ -100,19 +100,18 @@ export class ExtractionService {
     const deadline = Date.now() + timeoutMs;
 
     for (;;) {
-      const job = await this.claimNext();
-      if (job) return job;
-
       const remaining = deadline - Date.now();
       if (remaining <= 0) return null;
 
-      await this.events.waitForCreated(remaining, async () => {
-        const pending = await this.prisma.extractionJob.findFirst({
-          where: { status: 'PENDING' },
-          select: { id: true },
-        });
-        return pending !== null;
-      });
+      const waiter = this.events.prepareWaitCreated();
+      try {
+        const job = await this.claimNext();
+        if (job) return job;
+
+        await waiter.wait(remaining);
+      } finally {
+        waiter.cleanup();
+      }
     }
   }
 
