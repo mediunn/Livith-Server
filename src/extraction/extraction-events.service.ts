@@ -30,14 +30,34 @@ export class ExtractionEventsService {
   }
 
   /**
-   * 새 잡 생성까지 대기(claim 롱폴링용). 전역 이벤트라 대기 중인 워커 전원이 깨어나고,
+   * claim 롱폴링용 생성 이벤트 대기자(subscribe-then-act).
+   * 구독을 claim 시도보다 먼저 걸게 해서 claim(null) ~ 구독 사이의
+   * 이벤트 유실 틈을 없앤다. 전역 이벤트라 대기 중인 워커 전원이 깨어나고,
    * 실제 잡 획득은 claim의 FOR UPDATE SKIP LOCKED가 결정한다.
    */
-  async waitForCreated(
-    timeoutMs: number,
-    checkAlreadyCreated?: () => Promise<boolean>,
-  ): Promise<void> {
-    return this.waitFor(CREATED_KEY, timeoutMs, checkAlreadyCreated);
+  prepareWaitCreated() {
+    let resolveEvent!: () => void;
+    const eventPromise = new Promise<void>((resolve) => {
+      resolveEvent = resolve;
+    });
+    const onEvent = () => resolveEvent();
+    this.emitter.once(CREATED_KEY, onEvent);
+
+    return {
+      /** 생성 이벤트 또는 timeout 중 먼저 오는 쪽까지 대기 */
+      wait: async (timeoutMs: number) => {
+        let timer: NodeJS.Timeout | undefined;
+        const timeoutPromise = new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+        });
+        await Promise.race([eventPromise, timeoutPromise]);
+        clearTimeout(timer);
+      },
+      /** 리스너 해제(이벤트 수신 후 once 로 이미 제거됐으면 no-op) */
+      cleanup: () => {
+        this.emitter.off(CREATED_KEY, onEvent);
+      },
+    };
   }
 
   /** 생성 대기 중인 워커 깨우기 */

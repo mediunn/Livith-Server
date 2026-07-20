@@ -8,6 +8,7 @@ describe('ExtractionService', () => {
   let service: ExtractionService;
   let mockPrisma: any;
   let mockEvents: any;
+  let mockWaiter: any;
   let mockConcertIndex: any;
 
   const baseJob = {
@@ -34,10 +35,14 @@ describe('ExtractionService', () => {
       $queryRaw: jest.fn(),
       $executeRaw: jest.fn(),
     };
+    mockWaiter = {
+      wait: jest.fn().mockResolvedValue(undefined),
+      cleanup: jest.fn(),
+    };
     mockEvents = {
       waitForDone: jest.fn().mockResolvedValue(undefined),
       notifyDone: jest.fn(),
-      waitForCreated: jest.fn().mockResolvedValue(undefined),
+      prepareWaitCreated: jest.fn(() => mockWaiter),
       notifyCreated: jest.fn(),
     };
     mockConcertIndex = {
@@ -340,7 +345,9 @@ describe('ExtractionService', () => {
       const result = await service.claimNextOrWait();
 
       expect(result).toEqual({ jobId: 'job1', instagramUrl: 'https://x/p/A/' });
-      expect(mockEvents.waitForCreated).not.toHaveBeenCalled();
+      // 구독은 claim보다 먼저 걸리지만(subscribe-then-act) 대기 없이 정리돼야 함
+      expect(mockWaiter.wait).not.toHaveBeenCalled();
+      expect(mockWaiter.cleanup).toHaveBeenCalled();
     });
 
     it('빈 큐면 생성 이벤트 대기 후 재시도해서 반환', async () => {
@@ -358,22 +365,20 @@ describe('ExtractionService', () => {
 
       const result = await service.claimNextOrWait();
 
-      expect(mockEvents.waitForCreated).toHaveBeenCalledWith(
-        expect.any(Number),
-        expect.any(Function),
-      );
+      expect(mockWaiter.wait).toHaveBeenCalledWith(expect.any(Number));
       expect(result).toEqual({ jobId: 'job2', instagramUrl: 'https://x/p/B/' });
+      // 대기자(waiter)는 루프 회차마다 새로 만들고 매번 정리
+      expect(mockEvents.prepareWaitCreated).toHaveBeenCalledTimes(2);
+      expect(mockWaiter.cleanup).toHaveBeenCalledTimes(2);
     });
 
-    it('예산 소진까지 잡 없으면 null (대기 없이 종료)', async () => {
-      mockPrisma.$transaction.mockImplementation(async (cb: any) =>
-        cb({ $queryRaw: jest.fn().mockResolvedValue([]) }),
-      );
-
+    it('예산 소진까지 잡 없으면 null (구독·claim 없이 종료)', async () => {
       const result = await service.claimNextOrWait(0);
 
       expect(result).toBeNull();
-      expect(mockEvents.waitForCreated).not.toHaveBeenCalled();
+      // 예산 체크가 루프 맨 앞이라 구독도 claim도 시도하지 않음
+      expect(mockEvents.prepareWaitCreated).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 });
