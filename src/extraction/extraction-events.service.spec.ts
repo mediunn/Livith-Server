@@ -62,4 +62,39 @@ describe('ExtractionEventsService', () => {
     await p;
     jest.useRealTimers();
   });
+
+  describe('prepareWaitCreated (subscribe-then-act)', () => {
+    it('구독 후에 발생한 생성 이벤트로 wait 가 즉시 resolve 된다', async () => {
+      const waiter = service.prepareWaitCreated();
+      const p = waiter.wait(10_000);
+      service.notifyCreated();
+      await expect(p).resolves.toBeUndefined();
+      waiter.cleanup();
+    });
+
+    it('wait 시작 전(구독 후)에 이미 발생한 이벤트도 놓치지 않는다', async () => {
+      // 구독(prepare) ~ wait 사이에 emit 이 끼어든 상황: 유실 없이 즉시 resolve 돼야 함
+      const waiter = service.prepareWaitCreated();
+      service.notifyCreated();
+      await expect(waiter.wait(10_000)).resolves.toBeUndefined();
+      waiter.cleanup();
+    });
+
+    it('이벤트 없으면 timeout 으로 resolve 된다', async () => {
+      jest.useFakeTimers();
+      const waiter = service.prepareWaitCreated();
+      const p = waiter.wait(5_000);
+      jest.advanceTimersByTime(5_000);
+      await expect(p).resolves.toBeUndefined();
+      waiter.cleanup();
+      jest.useRealTimers();
+    });
+
+    it('cleanup 후에는 리스너가 남지 않는다', () => {
+      const waiter = service.prepareWaitCreated();
+      expect(emitter.listenerCount('extraction-job.created')).toBe(1);
+      waiter.cleanup();
+      expect(emitter.listenerCount('extraction-job.created')).toBe(0);
+    });
+  });
 });
