@@ -1,8 +1,4 @@
-import {
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
@@ -14,8 +10,9 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
       return null;
     }
 
+    // 토큰이 잘못된 경우도 비로그인으로 처리
     if (err || info || !user) {
-      throw err || new UnauthorizedException();
+      return null;
     }
 
     return user;
