@@ -1,9 +1,9 @@
-import { ScheduleType } from '@prisma/client';
+import { RequestScheduleType } from '../enum/request-schedule-type.enum';
 
 export class CalendarEventDto {
   id: number;
   artist: string;
-  type: ScheduleType;
+  type: RequestScheduleType;
 }
 
 export class CalendarDayDto {
