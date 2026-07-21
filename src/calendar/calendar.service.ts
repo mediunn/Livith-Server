@@ -187,10 +187,13 @@ export class CalendarService {
         events.push({
           id: schedule.concert.id,
           artist: schedule.concert.artist,
-          type:
-            schedule.type === PrismaScheduleType.CONCERT
-              ? RequestScheduleType.CONCERT
-              : RequestScheduleType.TICKETING,
+          type: {
+            [PrismaScheduleType.CONCERT]: RequestScheduleType.CONCERT,
+            [PrismaScheduleType.PRE_TICKETING]: RequestScheduleType.TICKETING,
+            [PrismaScheduleType.GENERAL_TICKETING]:
+              RequestScheduleType.TICKETING,
+            [PrismaScheduleType.ADD_TICKETING]: RequestScheduleType.TICKETING,
+          }[schedule.type!],
         });
       }
     }
