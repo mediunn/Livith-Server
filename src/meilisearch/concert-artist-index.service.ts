@@ -74,7 +74,10 @@ export class ConcertArtistIndexService implements OnModuleInit {
     if (!extractName || !extractName.trim()) {
       return [];
     }
-    const result = await this.index.search(extractName, { limit: 3 });
+    const result = await this.index.search(extractName, {
+      limit: 3,
+      matchingStrategy: 'all',
+    });
     return result.hits.map((hit) => ({ artistId: hit.id, name: hit.name }));
   }
 

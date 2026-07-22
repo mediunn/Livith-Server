@@ -143,7 +143,10 @@ describe('ConcertArtistIndexService', () => {
 
       const result = await service.matchArtist('원오크록');
 
-      expect(mockIndex.search).toHaveBeenCalledWith('원오크록', { limit: 3 });
+      expect(mockIndex.search).toHaveBeenCalledWith('원오크록', {
+        limit: 3,
+        matchingStrategy: 'all',
+      });
       expect(result).toEqual([
         { artistId: 1, name: 'ONE OK ROCK (원 오크 록)' },
         { artistId: 7, name: 'MADKID (매드키드)' },
