@@ -58,37 +58,37 @@ export class TicketReminderStrategy implements NotificationStrategy {
     switch (notificationType) {
       case NotificationType.PRE_TICKETING_1D:
         return {
-          title: `콘서트 선예매 1일전이에요!`,
+          title: `콘서트 선예매 1일 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 내일 선예매가 시작돼요.`,
         };
 
       case NotificationType.GENERAL_TICKETING_1D:
         return {
-          title: `콘서트 일반 예매 1일전이에요!`,
+          title: `콘서트 일반 예매 1일 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 내일 일반 예매가 시작돼요.`,
         };
 
       case NotificationType.ADD_TICKETING_1D:
         return {
-          title: `콘서트 추가 예매 1일전이에요!`,
+          title: `콘서트 추가 예매 1일 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 내일 추가 예매가 시작돼요.`,
         };
 
       case NotificationType.PRE_TICKETING_30MIN:
         return {
-          title: `콘서트 선예매 30분전이에요!`,
+          title: `콘서트 선예매 30분 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 30분 후 선예매가 시작돼요.`,
         };
 
       case NotificationType.GENERAL_TICKETING_30MIN:
         return {
-          title: `콘서트 일반 예매 30분전이에요!`,
+          title: `콘서트 일반 예매 30분 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 30분 후 일반 예매가 시작돼요.`,
         };
 
       case NotificationType.ADD_TICKETING_30MIN:
         return {
-          title: `콘서트 추가 예매가 30분전이에요!`,
+          title: `콘서트 추가 예매 30분 전이에요!`,
           content: `관심 콘서트로 선택하신 ${title}, 30분 후 추가 예매가 시작돼요.`,
         };
 
