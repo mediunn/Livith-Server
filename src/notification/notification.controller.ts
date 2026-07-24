@@ -24,6 +24,10 @@ import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 import { EntryAlertResponseDto } from './dto/response/entry-alert-response.dto';
+import {
+  SeedEntryAlertDto,
+  SeedEntryAlertKind,
+} from './dto/request/seed-entry-alert.dto';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
@@ -206,5 +210,27 @@ export class NotificationController {
     @CurrentUser() user: { userId: number },
   ): Promise<EntryAlertResponseDto> {
     return this.notificationService.getEntryAlertsAndMarkShown(user.userId);
+  }
+
+  @Post('test/entry-alerts/seed')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: '[테스트] 앱 진입 알림 더미 시드',
+    description:
+      'entry-alerts 화면 확인용 더미 데이터 생성. ',
+  })
+  async seedEntryAlerts(
+    @CurrentUser() user: { userId: number },
+    @Body() dto: SeedEntryAlertDto,
+  ): Promise<{
+    users: number;
+    concertRequests: number;
+    interestConcerts: number;
+  }> {
+    return this.notificationService.seedDummyEntryAlerts({
+      callerUserId: user.userId,
+      sendToAll: dto.sendToAll ?? false,
+      kinds: dto.kinds ?? Object.values(SeedEntryAlertKind),
+    });
   }
 }
