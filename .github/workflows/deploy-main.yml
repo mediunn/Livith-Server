@@ -8,12 +8,33 @@ on:
       - legacy
   workflow_dispatch:
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies on runner
+        run: npm ci
+
+      - name: Generate Prisma Client on runner
+        run: npm exec prisma generate
+
+      - name: Build project on runner
+        run: npm run build
 
       - name: Check prisma has changes
         uses: dorny/paths-filter@v3
@@ -51,6 +72,9 @@ jobs:
             User $EC2_USER
             IdentityFile ~/.ssh/id_rsa
             StrictHostKeyChecking no
+            ServerAliveInterval 30
+            ServerAliveCountMax 20
+            TCPKeepAlive yes
           EOF
           else
           cat <<EOF > ~/.ssh/config
@@ -59,6 +83,9 @@ jobs:
             User $EC2_USER
             IdentityFile ~/.ssh/id_rsa
             StrictHostKeyChecking no
+            ServerAliveInterval 30
+            ServerAliveCountMax 20
+            TCPKeepAlive yes
           EOF
           fi
         env:
@@ -71,16 +98,20 @@ jobs:
         run: |
           ssh ${{ env.TARGET }} "sudo mkdir -p ${{ env.APP_DIR }}"
           ssh ${{ env.TARGET }} "sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}"
-          rsync -av ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
+          rsync -az --delete \
+            --exclude='.env' \
+            --exclude='.git/' \
+            --exclude='*firebase*.json' \
+            --exclude='*service-account*.json' \
+            --exclude='*.pem' \
+            --exclude='coverage/' \
+            --exclude='tmp/' \
+            ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
 
-      - name: Install dependencies
+      - name: Verify build output
         run: |
-          ssh ${{ env.TARGET }} "npm install --prefix ${{ env.APP_DIR }}/"
-          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma generate"
-
-      - name: Build project
-        run: |
-          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm run build"
+          ssh ${{ env.TARGET }} "test -f ${{ env.APP_DIR }}/dist/src/main.js" \
+            || { echo '::error::빌드 산출물 dist/src/main.js 누락 — 재시작 중단 (기존 프로세스 유지)'; exit 1; }
 
       - name: Apply prisma migrations
         if: steps.paths-filter.outputs.prisma == 'true'
