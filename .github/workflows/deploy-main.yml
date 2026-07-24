@@ -8,8 +8,6 @@ on:
       - legacy
   workflow_dispatch:
 
-# 같은 브랜치 배포가 겹쳐 돌면 서버 빌드(dist)가 꼬여 MODULE_NOT_FOUND 로 죽을 수 있으므로
-# 한 번에 하나씩만 실행 (진행 중 배포는 취소하지 않고 큐잉)
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -103,6 +101,9 @@ jobs:
           rsync -az --delete \
             --exclude='.env' \
             --exclude='.git/' \
+            --exclude='*firebase*.json' \
+            --exclude='*service-account*.json' \
+            --exclude='*.pem' \
             --exclude='coverage/' \
             --exclude='tmp/' \
             ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
