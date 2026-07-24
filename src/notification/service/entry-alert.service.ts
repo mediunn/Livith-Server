@@ -281,7 +281,7 @@ export class EntryAlertService {
         requestRows.push({
           userId: user.id,
           concertId: null,
-          concertTitle: 'The Weeknd: After Hours Til Dawn Tour in Seoul',
+          concertTitle: '더 워닝 내한 공연 (The Warning Live) [서울]',
           requestResult: ConcertRequestResult.INSUFFICIENT_INFORMATION,
           registrationToastShown: false,
           requestContent: DUMMY_ENTRY_ALERT_MARKER,
