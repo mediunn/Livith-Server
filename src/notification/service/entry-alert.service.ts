@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConcertRequestResult, ConcertStatus } from '@prisma/client';
+import { ConcertRequestResult, ConcertStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
 import {
@@ -7,6 +7,7 @@ import {
   EntryAlertKind,
   EntryAlertResponseDto,
 } from '../dto/response/entry-alert-response.dto';
+import { SeedEntryAlertKind } from '../dto/request/seed-entry-alert.dto';
 
 type InterestConcertAlertRow = {
   id: number;
@@ -36,6 +37,13 @@ type RegisteredInterestConcertTitleRow = {
 };
 
 const REQUEST_ALERT_TITLE_MAX_LENGTH = 19;
+
+// 테스트 시드가 만든 더미 concert_requests 식별용(재시드 시 정리 대상)
+const DUMMY_ENTRY_ALERT_MARKER = '__DUMMY_ENTRY_ALERT__';
+// REGISTERED 더미가 참조할 고정 콘서트 ID
+const REGISTERED_CONCERT_ID = 1936;
+// 자동정리(완료/취소) 상태별 시드 개수
+const AUTO_REMOVED_SEED_COUNT = 2;
 
 @Injectable()
 export class EntryAlertService {
@@ -196,6 +204,145 @@ export class EntryAlertService {
 
       return new EntryAlertResponseDto(items);
     });
+  }
+
+  /** [테스트용] entry-alerts 화면 확인용 더미 시드(소비형이라 반복 확인 시 재호출) */
+  async seedDummyEntryAlerts(params: {
+    callerUserId: number;
+    sendToAll: boolean;
+    kinds: SeedEntryAlertKind[];
+  }): Promise<{
+    users: number;
+    concertRequests: number;
+    interestConcerts: number;
+  }> {
+    const { callerUserId, sendToAll, kinds } = params;
+    if (kinds.length === 0) {
+      return { users: 0, concertRequests: 0, interestConcerts: 0 };
+    }
+
+    const kindSet = new Set(kinds);
+    const users = await this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        ...(sendToAll ? {} : { id: callerUserId }),
+      },
+      select: { id: true, nickname: true },
+    });
+    if (users.length === 0) {
+      return { users: 0, concertRequests: 0, interestConcerts: 0 };
+    }
+
+    // REGISTERED는 고정 콘서트 1건, 자동정리는 상태별 2건씩 참조
+    const registeredConcert = kindSet.has(SeedEntryAlertKind.REGISTERED)
+      ? await this.prisma.concert.findUnique({
+          where: { id: REGISTERED_CONCERT_ID },
+          select: { id: true, title: true },
+        })
+      : null;
+    const completedConcerts = kindSet.has(
+      SeedEntryAlertKind.AUTO_REMOVED_COMPLETED,
+    )
+      ? await this.prisma.concert.findMany({
+          where: { status: ConcertStatus.COMPLETED },
+          select: { id: true, title: true },
+          orderBy: { id: 'asc' },
+          take: AUTO_REMOVED_SEED_COUNT,
+        })
+      : [];
+    const canceledConcerts = kindSet.has(
+      SeedEntryAlertKind.AUTO_REMOVED_CANCELED,
+    )
+      ? await this.prisma.concert.findMany({
+          where: { status: ConcertStatus.CANCELED },
+          select: { id: true, title: true },
+          orderBy: { id: 'asc' },
+          take: AUTO_REMOVED_SEED_COUNT,
+        })
+      : [];
+
+    const requestRows: Prisma.ConcertRequestCreateManyInput[] = [];
+    const interestRows: Prisma.UserInterestConcertCreateManyInput[] = [];
+
+    for (const user of users) {
+      if (registeredConcert) {
+        requestRows.push({
+          userId: user.id,
+          concertId: registeredConcert.id,
+          concertTitle: registeredConcert.title ?? '테스트 콘서트',
+          requestResult: ConcertRequestResult.REGISTERED,
+          registrationToastShown: false,
+          requestContent: DUMMY_ENTRY_ALERT_MARKER,
+        });
+      }
+
+      if (kindSet.has(SeedEntryAlertKind.FAILED)) {
+        // 더미라 실패 사유는 1종으로 통일
+        requestRows.push({
+          userId: user.id,
+          concertId: null,
+          concertTitle: '더 워닝 내한 공연 (The Warning Live) [서울]',
+          requestResult: ConcertRequestResult.INSUFFICIENT_INFORMATION,
+          registrationToastShown: false,
+          requestContent: DUMMY_ENTRY_ALERT_MARKER,
+        });
+      }
+
+      for (const concert of [...completedConcerts, ...canceledConcerts]) {
+        interestRows.push({
+          userId: user.id,
+          concertId: concert.id,
+          concertTitle: concert.title,
+          userNickname: user.nickname,
+          toastShown: false,
+        });
+      }
+    }
+
+    let concertRequests = 0;
+    let interestConcerts = 0;
+    const userIds = users.map((u) => u.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // 재시드 누적 방지: 이전 더미만 정리 후 재생성
+      await tx.concertRequest.deleteMany({
+        where: {
+          userId: { in: userIds },
+          requestContent: DUMMY_ENTRY_ALERT_MARKER,
+        },
+      });
+      if (requestRows.length > 0) {
+        const created = await tx.concertRequest.createMany({
+          data: requestRows,
+        });
+        concertRequests = created.count;
+      }
+
+      if (interestRows.length > 0) {
+        // 중복은 스킵하고 toastShown만 false로 초기화(재사용)
+        await tx.userInterestConcert.createMany({
+          data: interestRows,
+          skipDuplicates: true,
+        });
+        const autoRemovedConcertIds = [
+          ...new Set(interestRows.map((row) => row.concertId)),
+        ];
+        const { count } = await tx.userInterestConcert.updateMany({
+          where: {
+            userId: { in: userIds },
+            concertId: { in: autoRemovedConcertIds },
+          },
+          data: { toastShown: false },
+        });
+        interestConcerts = count;
+      }
+    });
+
+    this.logger.log(
+      `seeded entry-alerts: users=${users.length}, concertRequests=${concertRequests}, interestConcerts=${interestConcerts}`,
+    );
+
+    return { users: users.length, concertRequests, interestConcerts };
   }
 
   private buildAutoRemovedItem(
