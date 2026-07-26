@@ -24,6 +24,7 @@ import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
 import { EntryAlertResponseDto } from './dto/response/entry-alert-response.dto';
+import { PrismaService } from 'prisma/prisma.service';
 import {
   SeedEntryAlertDto,
   SeedEntryAlertKind,
@@ -37,6 +38,7 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly strategyService: NotificationStrategyService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('settings')
@@ -172,8 +174,15 @@ export class NotificationController {
     content: string;
   }> {
     const strategy = this.strategyService.getStrategy(dto.type);
+    const concert = dto.concertId
+      ? await this.prisma.concert.findUnique({
+          where: { id: dto.concertId },
+          select: { title: true },
+        })
+      : null;
     const message = await strategy.buildMessage({
       concertId: dto.concertId,
+      concertTitle: concert?.title,
       notificationType: dto.type,
     });
 
