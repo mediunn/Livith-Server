@@ -1,31 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsEnum, IsInt, Max, Min } from 'class-validator';
+import { IsArray, IsDateString, IsEnum } from 'class-validator';
 import { ConcertType } from '../enum/concert-type.enum';
 import { RequestScheduleType } from '../enum/request-schedule-type.enum';
 
 export class GetMonthlyCalendarDto {
   @ApiProperty({
-    description: '조회할 연도',
-    example: 2026,
+    description: '조회 시작 날짜 (YYYY-MM-DD)',
+    example: '2026-01-01',
   })
-  @IsInt()
-  @Min(1900, {
-    message: 'year는 1900 이상의 값이어야 해요',
-  })
-  @Max(2100, {
-    message: 'year는 2100 이하의 값이어야 해요',
-  })
-  year: number;
+  @IsDateString({}, { message: 'startDate는 YYYY-MM-DD 형식이어야 해요' })
+  startDate: string;
 
   @ApiProperty({
-    description: '조회할 월 (1~12)',
-    example: 5,
+    description: '조회 종료 날짜 (YYYY-MM-DD)',
+    example: '2026-01-31',
   })
-  @IsInt()
-  @Min(1, { message: 'month는 1~12 사이의 값이어야 해요' })
-  @Max(12, { message: 'month는 1~12 사이의 값이어야 해요' })
-  month: number;
+  @IsDateString({}, { message: 'endDate는 YYYY-MM-DD 형식이어야 해요' })
+  endDate: string;
 
   @ApiProperty({
     description: '조회할 일정 타입',

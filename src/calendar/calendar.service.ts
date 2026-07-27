@@ -102,12 +102,12 @@ export class CalendarService {
 
   // 월별 캘린더 조회
   async getMonthlyCalendar(
-    year: number,
-    month: number,
+    startDate: string,
+    endDate: string,
     scheduleTypes: RequestScheduleType[],
     concertType: ConcertType,
     userId?: number,
-  ): Promise<MonthlyCalendarResponseDto> {
+  ): Promise<MonthlyCalendarResponseDto[]> {
     if (concertType === ConcertType.INTEREST) {
       if (!userId) {
         throw new UnauthorizedException();
@@ -118,8 +118,9 @@ export class CalendarService {
 
     const prismaScheduleTypes = this.getPrismaScheduleTypes(scheduleTypes);
 
-    const start = new Date(Date.UTC(year, month - 1, 1));
-    const end = new Date(Date.UTC(year, month, 1));
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setUTCDate(end.getUTCDate() + 1);
 
     let schedules = await this.prismaService.schedule.findMany({
       where: {
@@ -198,11 +199,7 @@ export class CalendarService {
       }
     }
 
-    return {
-      year,
-      month,
-      days: Array.from(days.values()),
-    };
+    return Array.from(days.values());
   }
 
   // 날짜별 일정 조회
