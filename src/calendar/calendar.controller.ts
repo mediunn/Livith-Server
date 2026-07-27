@@ -24,8 +24,8 @@ export class CalendarController {
     @CurrentUser() user?: { userId: number },
   ) {
     return this.calendarService.getMonthlyCalendar(
-      query.year,
-      query.month,
+      query.startDate,
+      query.endDate,
       query.scheduleTypes,
       query.concertType,
       user?.userId,

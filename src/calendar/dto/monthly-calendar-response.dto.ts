@@ -6,13 +6,7 @@ export class CalendarEventDto {
   type: RequestScheduleType;
 }
 
-export class CalendarDayDto {
+export class MonthlyCalendarResponseDto {
   date: string;
   events: CalendarEventDto[];
-}
-
-export class MonthlyCalendarResponseDto {
-  year: number;
-  month: number;
-  days: CalendarDayDto[];
 }
