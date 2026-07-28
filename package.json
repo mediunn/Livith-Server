@@ -20,8 +20,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "perf:smoke": "k6 run k6/smoke.ts",
     "perf:load": "k6 run k6/load.ts",
+    "perf:dev": "k6 run k6/dev.ts",
     "perf:smoke:local": "BASE_URL=http://localhost:3000 k6 run k6/smoke.ts",
-    "perf:load:local": "BASE_URL=http://localhost:3000 k6 run k6/load.ts"
+    "perf:load:local": "BASE_URL=http://localhost:3000 k6 run k6/load.ts",
+    "perf:dev:local": "BASE_URL=http://localhost:3000 K6_ENV=local k6 run k6/dev.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.0",
