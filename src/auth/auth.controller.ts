@@ -36,6 +36,7 @@ export const LOGIN_PREFIX = (() => {
   const p = (process.env.LOGIN_PREFIX ?? '').trim();
   return p ? `/${p}` : '';
 })();
+
 @Controller()
 export class AuthController {
   constructor(
