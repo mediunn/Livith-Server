@@ -30,12 +30,15 @@ export class NotificationStrategyService {
       [NotificationType.CONCERT_INFO_UPDATE_TICKET, concertInfoUpdateStrategy],
       [NotificationType.INTEREST_CONCERT, interestConcertStrategy],
       [NotificationType.RECOMMEND, recommendationStrategy],
-      [NotificationType.PRE_TICKETING_OPEN, ticketReminderStrategy],
-      [NotificationType.GENERAL_TICKETING_OPEN, ticketReminderStrategy],
+      [NotificationType.PRE_TICKETING_10MIN, ticketReminderStrategy],
+      [NotificationType.GENERAL_TICKETING_10MIN, ticketReminderStrategy],
+      [NotificationType.ADD_TICKETING_10MIN, ticketReminderStrategy],
       [NotificationType.PRE_TICKETING_1D, ticketReminderStrategy],
       [NotificationType.GENERAL_TICKETING_1D, ticketReminderStrategy],
+      [NotificationType.ADD_TICKETING_1D, ticketReminderStrategy],
       [NotificationType.PRE_TICKETING_30MIN, ticketReminderStrategy],
       [NotificationType.GENERAL_TICKETING_30MIN, ticketReminderStrategy],
+      [NotificationType.ADD_TICKETING_30MIN, ticketReminderStrategy],
     ]);
   }
 

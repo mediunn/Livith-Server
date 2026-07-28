@@ -7,6 +7,7 @@ import { FcmTokenService } from '../service/fcm-token.service';
 import { NotificationHistoryService } from '../service/notification-history.service';
 import { PushSenderService } from '../service/push-sender.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
+import { EntryAlertService } from '../service/entry-alert.service';
 
 const mockSendEachForMulticast = jest.fn();
 
@@ -45,6 +46,9 @@ describe('Notification send integration (FCM mock)', () => {
   const mockHistoryService = {
     createNotificationHistories: jest.fn(),
   };
+  const mockEntryAlertService = {
+    getEntryAlertsAndMarkShown: jest.fn(),
+  };
 
   beforeEach(async () => {
     mockSendEachForMulticast.mockResolvedValue({
@@ -61,6 +65,7 @@ describe('Notification send integration (FCM mock)', () => {
         { provide: NotificationHistoryService, useValue: mockHistoryService },
         PushSenderService,
         { provide: NotificationStrategyService, useValue: mockStrategyService },
+        { provide: EntryAlertService, useValue: mockEntryAlertService },
         {
           provide: 'PROM_METRIC_FCM_NOTIFICATION_SENT_TOTAL',
           useValue: { inc: jest.fn() },
@@ -113,7 +118,7 @@ describe('Notification send integration (FCM mock)', () => {
     mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
-      type: NotificationType.PRE_TICKETING_OPEN,
+      type: NotificationType.PRE_TICKETING_10MIN,
       title: '선호 아티스트의 선예매 오픈🔥',
       content:
         "관심 콘서트로 선택하신 '테스트콘서트', 선예매 일정 소식이 도착했어요.",
@@ -125,7 +130,7 @@ describe('Notification send integration (FCM mock)', () => {
     const [message] = mockSendEachForMulticast.mock.calls[0];
     expect(message.notification?.title).toBe('선호 아티스트의 선예매 오픈🔥');
     expect(message.notification?.body).toContain('관심 콘서트');
-    expect(message.data?.notificationType).toBe('PRE_TICKETING_OPEN');
+    expect(message.data?.notificationType).toBe('PRE_TICKETING_10MIN');
     expect(message.data?.targetId).toBe('100');
     expect(message.tokens).toEqual(['test-fcm-token-1']);
   });

@@ -14,6 +14,9 @@ import { NotificationHistoryService } from './notification-history.service';
 import { PushSenderService } from './push-sender.service';
 import { NotificationStrategyService } from '../strategies/notification-strategy.service';
 import { NotificationTargetParams } from '../strategies/notification-strategy.interface';
+import { EntryAlertResponseDto } from '../dto/response/entry-alert-response.dto';
+import { EntryAlertService } from './entry-alert.service';
+import { SeedEntryAlertKind } from '../dto/request/seed-entry-alert.dto';
 
 @Injectable()
 export class NotificationService {
@@ -23,6 +26,7 @@ export class NotificationService {
     private readonly historyService: NotificationHistoryService,
     private readonly pushSenderService: PushSenderService,
     private readonly strategyService: NotificationStrategyService,
+    private readonly entryAlertService: EntryAlertService,
   ) {}
 
   // 알림 설정 관련
@@ -89,6 +93,24 @@ export class NotificationService {
     notificationId: number,
   ): Promise<void> {
     return this.historyService.deleteNotification(userId, notificationId);
+  }
+
+  async getEntryAlertsAndMarkShown(
+    userId: number,
+  ): Promise<EntryAlertResponseDto> {
+    return this.entryAlertService.getEntryAlertsAndMarkShown(userId);
+  }
+
+  async seedDummyEntryAlerts(params: {
+    callerUserId: number;
+    sendToAll: boolean;
+    kinds: SeedEntryAlertKind[];
+  }): Promise<{
+    users: number;
+    concertRequests: number;
+    interestConcerts: number;
+  }> {
+    return this.entryAlertService.seedDummyEntryAlerts(params);
   }
 
   //푸시 전송 (비즈니스 로직 + 히스토리 저장)

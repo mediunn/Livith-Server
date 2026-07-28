@@ -3,12 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -23,6 +23,12 @@ import { RegisterFcmTokenDto } from './dto/request/register-fcm-token.dto';
 import { DeleteFcmTokenDto } from './dto/request/delete-fcm-token.dto';
 import { TestNotificationDto } from './dto/request/test-notification.dto';
 import { NotificationStrategyService } from './strategies/notification-strategy.service';
+import { EntryAlertResponseDto } from './dto/response/entry-alert-response.dto';
+import { PrismaService } from 'prisma/prisma.service';
+import {
+  SeedEntryAlertDto,
+  SeedEntryAlertKind,
+} from './dto/request/seed-entry-alert.dto';
 
 @ApiTags('알림')
 @Controller(`${API_PREFIX}/notifications`)
@@ -32,6 +38,7 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly strategyService: NotificationStrategyService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('settings')
@@ -167,8 +174,15 @@ export class NotificationController {
     content: string;
   }> {
     const strategy = this.strategyService.getStrategy(dto.type);
+    const concert = dto.concertId
+      ? await this.prisma.concert.findUnique({
+          where: { id: dto.concertId },
+          select: { title: true },
+        })
+      : null;
     const message = await strategy.buildMessage({
       concertId: dto.concertId,
+      concertTitle: concert?.title,
       notificationType: dto.type,
     });
 
@@ -192,5 +206,40 @@ export class NotificationController {
       title: message.title,
       content: message.content,
     };
+  }
+
+  @Post('entry-alerts')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: '앱 진입 알림 조회 및 노출 처리',
+    description:
+      '앱 진입 시 보여줄 알림을 조회하고, 응답에 포함된 항목은 노출 완료 처리합니다.',
+  })
+  async getEntryAlerts(
+    @CurrentUser() user: { userId: number },
+  ): Promise<EntryAlertResponseDto> {
+    return this.notificationService.getEntryAlertsAndMarkShown(user.userId);
+  }
+
+  @Post('test/entry-alerts/seed')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: '[테스트] 앱 진입 알림 더미 시드',
+    description:
+      'entry-alerts 화면 확인용 더미 데이터 생성. ',
+  })
+  async seedEntryAlerts(
+    @CurrentUser() user: { userId: number },
+    @Body() dto: SeedEntryAlertDto,
+  ): Promise<{
+    users: number;
+    concertRequests: number;
+    interestConcerts: number;
+  }> {
+    return this.notificationService.seedDummyEntryAlerts({
+      callerUserId: user.userId,
+      sendToAll: dto.sendToAll ?? false,
+      kinds: dto.kinds ?? Object.values(SeedEntryAlertKind),
+    });
   }
 }
