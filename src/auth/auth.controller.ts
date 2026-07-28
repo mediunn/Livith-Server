@@ -56,7 +56,7 @@ export class AuthController {
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
     const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${this.configService.get<string>('KAKAO_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/kakao/callback&state=${state}`;
-    return res.redirect(kakaoAuthUrl);
+    res.redirect(kakaoAuthUrl);
   }
 
   @Get(`${API_PREFIX}/auth/apple/web`)
@@ -66,7 +66,7 @@ export class AuthController {
     const state = Buffer.from(JSON.stringify({ nonce })).toString('base64');
 
     const appleAuthUrl = `https://appleid.apple.com/auth/authorize?response_type=code&response_mode=form_post&client_id=${this.configService.get<string>('APPLE_CLIENT_ID')}&redirect_uri=${this.configService.get<string>('SERVER_URL')}${LOGIN_PREFIX}/auth/apple/callback&state=${state}&scope=name email`;
-    return res.redirect(appleAuthUrl);
+    res.redirect(appleAuthUrl);
   }
 
   @Get('auth/kakao/callback')
@@ -83,7 +83,8 @@ export class AuthController {
     if (decoded.nonce !== req.session.kakaoNonce) {
       delete req.session.kakaoNonce;
       const payload = { error: 'CSRF 검증 실패' };
-      return sendPostMessagePayload(res, payload);
+      sendPostMessagePayload(res, payload);
+      return;
     }
     delete req.session.kakaoNonce;
 
@@ -100,11 +101,11 @@ export class AuthController {
         this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
         payload = { accessToken: result.accessToken, isNewUser: false };
       }
-      return sendPostMessagePayload(res, payload);
+      sendPostMessagePayload(res, payload);
     } catch (error: any) {
       // 여기서 에러 메시지를 팝업으로 전달
       const payload = { error: error.message || '알 수 없는 오류' };
-      return sendPostMessagePayload(res, payload);
+      sendPostMessagePayload(res, payload);
     }
   }
   @Post('auth/apple/callback')
@@ -120,7 +121,8 @@ export class AuthController {
 
       if (decoded.nonce !== req.session.appleNonce) {
         delete req.session.appleNonce;
-        return sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
+        sendPostMessagePayload(res, { error: 'CSRF 검증 실패' });
+        return;
       }
       delete req.session.appleNonce;
 
@@ -128,19 +130,20 @@ export class AuthController {
       const result = await this.authService.validateOAuthLogin(userInfo);
 
       if (result.isNewUser) {
-        return sendPostMessagePayload(res, {
+        sendPostMessagePayload(res, {
           isNewUser: true,
           tempUserData: result.tempUserData,
         });
+        return;
       }
 
       this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
-      return sendPostMessagePayload(res, {
+      sendPostMessagePayload(res, {
         accessToken: result.accessToken,
         isNewUser: false,
       });
     } catch (error: any) {
-      return sendPostMessagePayload(res, {
+      sendPostMessagePayload(res, {
         error: error.message || '애플 로그인 중 오류가 발생했어요',
       });
     }

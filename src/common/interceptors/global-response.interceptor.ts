@@ -22,10 +22,14 @@ export class GlobalResponseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data) => {
+        if (response.headersSent || data === response) {
+          return data;
+        }
+
         // 응답이 null이나 undefined일 경우에도 처리할 수 있도록 기본값을 설정
         const responseData = {
           message: '요청에 성공하였습니다.',
-          data: data || null,
+          data: data ?? null,
           statusCode: context.switchToHttp().getResponse().statusCode,
         };
 

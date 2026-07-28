@@ -1,13 +1,13 @@
 import { Response } from 'express';
 
-export function sendPostMessagePayload(res: Response, payload: any) {
+export function sendPostMessagePayload(res: Response, payload: any): void {
   const allowedOrigins = (process.env.FRONTEND_URLS?.split(',') ?? [])
     .map((origin) => origin?.trim())
     .filter((origin): origin is string => Boolean(origin && origin.length > 0));
 
   const fallbackOrigin = allowedOrigins[0] ?? 'http://localhost:5173';
 
-  return res.send(`
+  res.send(`
     <html>
       <body>
         <script>
