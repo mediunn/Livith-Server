@@ -23,6 +23,7 @@ import { ImageProxyModule } from './image-proxy/image-proxy.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CalendarModule } from './calendar/calendar.module';
+import { AppleReviewModule } from './apple-review/apple-review.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { CalendarModule } from './calendar/calendar.module';
     ImageProxyModule,
     ExtractionModule,
     CalendarModule,
+    AppleReviewModule,
   ],
   providers: [
     {
