@@ -1,10 +1,12 @@
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+export const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 export const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
 function parseYmd(
-  dateStr: string,
+  dateStr?: string | null,
 ): { year: number; month: number; day: number } | null {
+  if (!dateStr) return null;
+
   const match = dateStr.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
   if (!match) return null;
 
@@ -30,7 +32,9 @@ function getTodayKstYmd(): { year: number; month: number; day: number } {
   };
 }
 
-export function getDaysUntil(dateStr: string): number {
+export function getDaysUntil(dateStr?: string | null): number | null {
+  if (dateStr == null) return null;
+
   const target = parseYmd(dateStr);
   if (!target) return 0;
 
@@ -50,6 +54,20 @@ export function isNightTimeKst(date?: Date): boolean {
   const kst = new Date(base + KST_OFFSET_MS);
   const hour = kst.getUTCHours();
   return hour >= 21 || hour < 8;
+}
+
+/**
+ * 읽은 Date에서 9시간을 빼야 실제 UTC 시각
+ */
+export function kstLiteralToUtc(date: Date): Date {
+  return new Date(date.getTime() - KST_OFFSET_MS);
+}
+
+/**
+ * 실제 UTC Date를 DB 쿼리 필터값(KST 리터럴이 UTC로 해석된 형태)으로 변환
+ */
+export function utcToKstLiteral(date: Date): Date {
+  return new Date(date.getTime() + KST_OFFSET_MS);
 }
 
 /**
@@ -103,7 +121,12 @@ export function formatKstDateTime(date: Date): string {
 /**
  * 콘서트 D-day 계산(다일 공연)
  */
-export function getConcertDaysLeft(startDate: string, endDate: string): number {
+export function getConcertDaysLeft(
+  startDate?: string | null,
+  endDate?: string | null,
+): number | null {
+  if (startDate == null || endDate == null) return null;
+
   const today = getTodayKstYmd();
   const todayUtcMs = Date.UTC(today.year, today.month - 1, today.day);
   const start = parseYmd(startDate);

@@ -1,7 +1,9 @@
 import { webcrypto } from 'crypto';
 
-(global as any).crypto = webcrypto;
-
+if (!(global as any).crypto) {
+  (global as any).crypto = webcrypto;
+}
+import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,9 +11,17 @@ import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import session from 'express-session';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ExternalApiMetricsService } from './metrics/external-api-metrics.service';
+import { HttpService } from '@nestjs/axios';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const apiMetrics = app.get(ExternalApiMetricsService);
+  apiMetrics.attach(app.get(HttpService).axiosRef);
+
+  // Winston을 NestJS 기본 로거로 교체
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -54,7 +64,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Livith API 문서')
     .setDescription('Livith API 문서입니다.')
-    .setVersion('5.0')
+    .setVersion('6.0')
     .addBearerAuth() // JWT 인증 추가
     .build();
 
@@ -63,13 +73,25 @@ async function bootstrap() {
   });
   SwaggerModule.setup('api-docs', app, document);
 
+  const defaultAllowedOrigins = [
+    'http://localhost:5173',
+    'https://www.livith.site',
+    'https://staging.livith.site',
+  ];
+
+  const allowedOrigins = Array.from(
+    new Set(
+      (process.env.FRONTEND_URLS?.split(',') ?? [])
+        .map((origin) => origin?.trim())
+        .filter((origin): origin is string =>
+          Boolean(origin && origin.length > 0),
+        ),
+    ),
+  );
+
   //cors 설정
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://www.livith.site',
-      'https://staging.livith.site',
-    ], // 클라이언트 주소 정확히 명시
+    origin: allowedOrigins.length ? allowedOrigins : defaultAllowedOrigins,
     credentials: true, // 자격 정보 허용
   });
 

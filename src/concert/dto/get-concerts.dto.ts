@@ -2,23 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional, Min } from 'class-validator';
 export class GetConcertsDto {
   @ApiProperty({
-    description: '커서 (startDate)',
-    default: undefined,
+    description: '커서 (마지막 콘서트 ID)',
     required: false,
-    example: undefined,
-  })
-  @IsOptional()
-  cursor?: string;
-
-  @ApiProperty({
-    description: '콘서트의 ID',
-    required: false,
-    example: 1,
+    example: 1562,
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  id?: number;
+  cursor?: number;
 
   @ApiProperty({
     description: '가져올 데이터 개수',

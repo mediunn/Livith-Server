@@ -7,7 +7,7 @@ export function InstrumentJob(jobName: string): MethodDecorator {
   return (_target, _propertyKey, descriptor: PropertyDescriptor) => {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (
+    const wrapped = async function (
       this: { schedulerMetrics: SchedulerMetricsService },
       ...args: unknown[]
     ) {
@@ -37,6 +37,18 @@ export function InstrumentJob(jobName: string): MethodDecorator {
       }
     };
 
+    // @Cron/@Interval 등이 원본 함수에 붙인 Reflect 메타데이터를 래퍼로 이관.
+    // 안 하면 @nestjs/schedule explorer 가 instance[key](=래퍼)에서 cron
+    // 메타데이터를 못 찾아 job 자체가 등록되지 않는다.
+    for (const key of Reflect.getMetadataKeys(originalMethod)) {
+      Reflect.defineMetadata(
+        key,
+        Reflect.getMetadata(key, originalMethod),
+        wrapped,
+      );
+    }
+
+    descriptor.value = wrapped;
     return descriptor;
   };
 }

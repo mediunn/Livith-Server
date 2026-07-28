@@ -3,7 +3,6 @@ export enum ConcertGenre {
   JPOP = 'JPOP',
   ROCK_METAL = 'ROCK_METAL',
   RAP_HIPHOP = 'RAP_HIPHOP',
-  CLASSIC_JAZZ = 'CLASSIC_JAZZ',
-  ACOUSTIC = 'ACOUSTIC',
-  ELECTRONIC = 'ELECTRONIC',
+  POP = 'POP',
+  INDIE = 'INDIE',
 }

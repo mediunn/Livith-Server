@@ -2,21 +2,30 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TicketingReminderScheduler } from '../scheduler/ticketing-reminder.scheduler';
 import { NotificationService } from '../service/notification.service';
 import { PrismaService } from 'prisma/prisma.service';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, ScheduleType } from '@prisma/client';
 import { SchedulerMetricsService } from 'src/metrics/scheduler-metrics.service';
+import { NotificationDispatchService } from '../service/notification-dispatch.service';
+import { KST_OFFSET_MS } from 'src/common/utils/date.util';
 
 describe('TicketingReminderScheduler', () => {
   let scheduler: TicketingReminderScheduler;
   let notificationService: NotificationService;
+  let dispatchService: NotificationDispatchService;
 
   const mockPrisma = {
     schedule: { findMany: jest.fn() },
   };
 
   const mockNotificationService = {
-    sendTicketReminderNotification: jest
+    sendNotificationByStrategy: jest
       .fn()
       .mockResolvedValue({ sent: 1, failed: 0 }),
+  };
+
+  const mockDispatchService = {
+    tryClaim: jest.fn(),
+    markSent: jest.fn(),
+    markFailed: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -25,6 +34,7 @@ describe('TicketingReminderScheduler', () => {
         TicketingReminderScheduler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: NotificationService, useValue: mockNotificationService },
+        { provide: NotificationDispatchService, useValue: mockDispatchService },
         {
           provide: SchedulerMetricsService,
           useValue: {
@@ -43,62 +53,320 @@ describe('TicketingReminderScheduler', () => {
 
     scheduler = module.get(TicketingReminderScheduler);
     notificationService = module.get(NotificationService);
+    dispatchService = module.get(NotificationDispatchService);
     jest.clearAllMocks();
+
+    // 기본값: claim 성공. 마감 no-op (dedup 테스트에서만 override)
+    mockDispatchService.tryClaim.mockResolvedValue(true);
+    mockDispatchService.markSent.mockResolvedValue(undefined);
+    mockDispatchService.markFailed.mockResolvedValue(undefined);
+    mockNotificationService.sendNotificationByStrategy.mockResolvedValue({
+      sent: 1,
+      failed: 0,
+    });
   });
 
-  it('7일 후 TICKETING 스케줄 있으면 sendTicketReminderNotification 호출', async () => {
-    mockPrisma.schedule.findMany
-      .mockResolvedValueOnce([
-        {
-          id: 1,
-          concertId: 1,
-          concert: { id: 1, title: '테스트콘서트' },
-          scheduledAt: new Date(),
-        },
-      ])
-      .mockResolvedValue([]); // 1일, 오늘 스케줄은 없음
+  describe('oneDayBeforeNotification', () => {
+    it('PRE_TICKETING schedule 이 있으면 PRE_TICKETING_1D 로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 10,
+            concertId: 1,
+            concert: { id: 1, title: '선예매콘서트' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
 
-    await scheduler.dailyTicketingNotifications();
+      await scheduler.oneDayBeforeNotification();
 
-    expect(
-      notificationService.sendTicketReminderNotification,
-    ).toHaveBeenCalledWith(
-      NotificationType.TICKET_7D,
-      expect.objectContaining({
-        scheduleId: 1,
-        concertTitle: '테스트콘서트',
-        daysUntil: 7,
-      }),
-      '1',
-    );
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.PRE_TICKETING_1D,
+        expect.objectContaining({
+          scheduleId: 10,
+          concertTitle: '선예매콘서트',
+          daysUntil: 1,
+        }),
+        '1',
+      );
+      expect(dispatchService.markSent).toHaveBeenCalledWith(
+        10,
+        NotificationType.PRE_TICKETING_1D,
+      );
+    });
+
+    it('GENERAL_TICKETING schedule 이 있으면 GENERAL_TICKETING_1D 로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 20,
+            concertId: 2,
+            concert: { id: 2, title: '일반예매콘서트' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      await scheduler.oneDayBeforeNotification();
+
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.GENERAL_TICKETING_1D,
+        expect.objectContaining({
+          scheduleId: 20,
+          concertTitle: '일반예매콘서트',
+          daysUntil: 1,
+        }),
+        '2',
+      );
+    });
+
+    it('PRE + GENERAL 둘 다 있으면 각각 발송 총합 반환', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 10,
+            concertId: 1,
+            concert: { id: 1, title: '선' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 20,
+            concertId: 2,
+            concert: { id: 2, title: '일반' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      const total = await scheduler.oneDayBeforeNotification();
+
+      expect(total).toBe(2);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it('ScheduleType 으로 쿼리 필터링한다 (CONCERT 아님)', async () => {
+      mockPrisma.schedule.findMany.mockResolvedValue([]);
+
+      await scheduler.oneDayBeforeNotification();
+
+      expect(mockPrisma.schedule.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: ScheduleType.PRE_TICKETING,
+          }),
+        }),
+      );
+      expect(mockPrisma.schedule.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: ScheduleType.GENERAL_TICKETING,
+          }),
+        }),
+      );
+    });
   });
 
-  it('당일 TICKETING 스케줄 있으면 sendTicketReminderNotification 호출 (TICKET_TODAY)', async () => {
-    const todayScheduleTime = new Date('2025-01-23T11:00:00Z');
-    mockPrisma.schedule.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 2,
-          concertId: 2,
-          concert: { id: 2, title: '당일콘서트' },
-          scheduledAt: todayScheduleTime,
-        },
-      ]);
+  describe('thirtyMinBeforeNotifications', () => {
+    it('claim 실패한 schedule 은 건너뛴다 (dedup)', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 100,
+            concertId: 5,
+            concert: { id: 5, title: '중복' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockDispatchService.tryClaim.mockResolvedValue(false);
 
-    await scheduler.dailyTicketingNotifications();
+      const count = await scheduler.thirtyMinBeforeNotifications();
 
-    expect(
-      notificationService.sendTicketReminderNotification,
-    ).toHaveBeenCalledWith(
-      NotificationType.TICKET_TODAY,
-      expect.objectContaining({
-        scheduleId: 2,
-        concertTitle: '당일콘서트',
-        daysUntil: 0,
-      }),
-      '2',
-    );
+      expect(count).toBe(0);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('claim 성공하면 PRE_TICKETING_30MIN 으로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 101,
+            concertId: 6,
+            concert: { id: 6, title: '신규' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      const count = await scheduler.thirtyMinBeforeNotifications();
+
+      expect(count).toBe(1);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.PRE_TICKETING_30MIN,
+        expect.objectContaining({
+          scheduleId: 101,
+          concertTitle: '신규',
+          daysUntil: 0,
+        }),
+        '6',
+      );
+    });
+
+    it('발송 중 예외면 markFailed 호출하고 count 미증가', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 102,
+            concertId: 7,
+            concert: { id: 7, title: '실패' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockNotificationService.sendNotificationByStrategy.mockRejectedValueOnce(
+        new Error('FCM down'),
+      );
+
+      const count = await scheduler.thirtyMinBeforeNotifications();
+
+      expect(count).toBe(0);
+      expect(dispatchService.markFailed).toHaveBeenCalledWith(
+        102,
+        NotificationType.PRE_TICKETING_30MIN,
+      );
+    });
+
+    it('29~31분 윈도우로 조회한다', async () => {
+      mockPrisma.schedule.findMany.mockResolvedValue([]);
+
+      const before = Date.now();
+      await scheduler.thirtyMinBeforeNotifications();
+
+      const firstCallWhere =
+        mockPrisma.schedule.findMany.mock.calls[0][0].where;
+      const { gte, lte } = firstCallWhere.scheduledAt;
+
+      // 29분 ~ 31분 윈도우 검증 (KST 벽시계 보정 +9h 포함, 실행 시간 오차 고려)
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before + 29 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 31 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
+    });
+  });
+
+  describe('openTimeNotifications', () => {
+    it('이미 발송된 schedule 은 건너뛴다 (dedup)', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 200,
+            concertId: 9,
+            concert: { id: 9, title: '오픈중복' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockDispatchService.tryClaim.mockResolvedValue(false);
+
+      const count = await scheduler.openTimeNotifications();
+
+      expect(count).toBe(0);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('claim 성공하면 GENERAL_TICKETING_OPEN 으로 발송', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 201,
+            concertId: 10,
+            concert: { id: 10, title: '오픈신규' },
+            scheduledAt: new Date(),
+          },
+        ]);
+
+      const count = await scheduler.openTimeNotifications();
+
+      expect(count).toBe(1);
+      expect(
+        notificationService.sendNotificationByStrategy,
+      ).toHaveBeenCalledWith(
+        NotificationType.GENERAL_TICKETING_OPEN,
+        expect.objectContaining({
+          scheduleId: 201,
+          concertTitle: '오픈신규',
+          daysUntil: 0,
+        }),
+        '10',
+      );
+    });
+
+    it('오픈 10분 전 (9~11분) 윈도우로 조회한다', async () => {
+      mockPrisma.schedule.findMany.mockResolvedValue([]);
+
+      const before = Date.now();
+      await scheduler.openTimeNotifications();
+
+      const firstCallWhere =
+        mockPrisma.schedule.findMany.mock.calls[0][0].where;
+      const { gte, lte } = firstCallWhere.scheduledAt;
+
+      // 9분 ~ 11분 미래 윈도우 (KST 벽시계 보정 +9h 포함)
+      expect(gte.getTime()).toBeGreaterThanOrEqual(
+        before + 9 * 60 * 1000 + KST_OFFSET_MS,
+      );
+      expect(lte.getTime()).toBeLessThanOrEqual(
+        before + 11 * 60 * 1000 + 1000 + KST_OFFSET_MS,
+      );
+    });
+
+    it('claim을  각 schedule 마다 호출', async () => {
+      mockPrisma.schedule.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 301,
+            concertId: 11,
+            concert: { id: 11, title: 'a' },
+            scheduledAt: new Date(),
+          },
+          {
+            id: 302,
+            concertId: 12,
+            concert: { id: 12, title: 'b' },
+            scheduledAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      await scheduler.openTimeNotifications();
+
+      expect(dispatchService.tryClaim).toHaveBeenCalledWith(
+        301,
+        NotificationType.PRE_TICKETING_OPEN,
+      );
+      expect(dispatchService.tryClaim).toHaveBeenCalledWith(
+        302,
+        NotificationType.PRE_TICKETING_OPEN,
+      );
+    });
   });
 });

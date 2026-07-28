@@ -75,6 +75,20 @@ export class NotificationHistoryService {
   }
 
   /**
+   * 알림 전체 읽음 처리
+   */
+  async markAllAsRead(userId: number): Promise<number> {
+    await this.userService.validateUser(userId);
+
+    const { count } = await this.prisma.notificationHistories.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
+
+    return count;
+  }
+
+  /**
    * 알림 삭제
    */
   async deleteNotification(
@@ -105,6 +119,7 @@ export class NotificationHistoryService {
     title: string,
     content: string,
     targetId: string | null,
+    scheduleId: number | null = null,
   ): Promise<void> {
     if (userIds.length === 0) return;
 
@@ -115,9 +130,23 @@ export class NotificationHistoryService {
         title,
         content,
         targetId,
+        scheduleId,
         isRead: false,
       })),
     });
+  }
+
+  /**
+   * 특정 schedule에 이미 같은 타입 알림을 보낸 적이 있는지 확인(dedup용)
+   */
+  async existsByScheduleAndType(
+    scheduleId: number,
+    type: NotificationType,
+  ): Promise<boolean> {
+    const count = await this.prisma.notificationHistories.count({
+      where: { scheduleId, type },
+    });
+    return count > 0;
   }
 
   /**

@@ -10,6 +10,13 @@ import { UserService } from './user.service';
 const mockUserService = {
   setUserArtistPreferences: jest.fn(),
   getUserArtistPreferences: jest.fn(),
+  setInterestConcerts: jest.fn(),
+  addInterestConcertById: jest.fn(),
+  getInterestConcerts: jest.fn(),
+  checkInterestConcert: jest.fn(),
+  getInterestConcertToastStatus: jest.fn(),
+  patchInterestConcertToastStatus: jest.fn(),
+  removeInterestConcertById: jest.fn(),
 };
 
 // Mock user for authentication
@@ -267,8 +274,159 @@ describe('UserController - Artist Preferences', () => {
       );
     });
   });
-});
 
+  describe('interest concerts', () => {
+    it('유저 관심 콘서트를 설정해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const dto = { concertIds: [10, 20] };
+      const expectedResult = [
+        { id: 10, title: '콘서트 A' },
+        { id: 20, title: '콘서트 B' },
+      ];
+
+      mockUserService.setInterestConcerts.mockResolvedValue(expectedResult);
+
+      // When
+      const result = await controller.setInterestConcerts(req, dto as any);
+
+      // Then
+      expect(result).toEqual(expectedResult);
+      expect(userService.setInterestConcerts).toHaveBeenCalledWith(
+        dto.concertIds,
+        mockUser.userId,
+      );
+      expect(userService.setInterestConcerts).toHaveBeenCalledTimes(1);
+    });
+
+    it('유저 관심 콘서트를 단건 추가해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const concertId = 33;
+      const expectedResult = { id: 33, title: '콘서트 D' };
+
+      mockUserService.addInterestConcertById.mockResolvedValue(expectedResult);
+
+      // When
+      const result = await controller.addInterestConcertById(req, concertId);
+
+      // Then
+      expect(result).toEqual(expectedResult);
+      expect(userService.addInterestConcertById).toHaveBeenCalledWith(
+        mockUser.userId,
+        concertId,
+      );
+      expect(userService.addInterestConcertById).toHaveBeenCalledTimes(1);
+    });
+
+    it('유저 관심 콘서트 목록을 조회해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const query = {
+        sort: 'TICKETING',
+        size: 10,
+        cursorDate: '2026-01-01T00:00:00.000Z',
+        cursorId: 100,
+      };
+      const expectedResult = {
+        data: [{ id: 100, title: '콘서트 C' }],
+        cursor: { date: '2026-01-02T00:00:00.000Z', id: 99 },
+      };
+
+      mockUserService.getInterestConcerts.mockResolvedValue(expectedResult);
+
+      // When
+      const result = await controller.getInterestConcerts(req, query as any);
+
+      // Then
+      expect(result).toEqual(expectedResult);
+      expect(userService.getInterestConcerts).toHaveBeenCalledWith(
+        query,
+        mockUser.userId,
+      );
+      expect(userService.getInterestConcerts).toHaveBeenCalledTimes(1);
+    });
+
+    it('특정 콘서트의 관심 여부를 조회해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const concertId = 7;
+      const expectedResult = { isInterested: true };
+
+      mockUserService.checkInterestConcert.mockResolvedValue(expectedResult);
+
+      // When
+      const result = await controller.checkInterestConcert(req, concertId);
+
+      // Then
+      expect(result).toEqual(expectedResult);
+      expect(userService.checkInterestConcert).toHaveBeenCalledWith(
+        mockUser.userId,
+        concertId,
+      );
+      expect(userService.checkInterestConcert).toHaveBeenCalledTimes(1);
+    });
+
+    it('관심 콘서트 토스트 노출 여부를 조회해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      mockUserService.getInterestConcertToastStatus.mockResolvedValue({
+        needsToShow: true,
+      });
+
+      // When
+      const result = await controller.getInterestConcertToastStatus(req);
+
+      // Then
+      expect(result).toEqual({ needsToShow: true });
+      expect(userService.getInterestConcertToastStatus).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
+      expect(userService.getInterestConcertToastStatus).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('관심 콘서트 토스트를 노출 처리해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      mockUserService.patchInterestConcertToastStatus.mockResolvedValue(
+        undefined,
+      );
+
+      // When
+      const result = await controller.patchInterestConcertToastStatus(req);
+
+      // Then
+      expect(result).toEqual({ success: true });
+      expect(userService.patchInterestConcertToastStatus).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
+      expect(userService.patchInterestConcertToastStatus).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('유저 관심 콘서트를 단건 삭제해야 함', async () => {
+      // Given
+      const req = { user: mockUser };
+      const concertId = 44;
+
+      mockUserService.removeInterestConcertById.mockResolvedValue(undefined);
+
+      // When
+      const result = await controller.removeInterestConcertById(req, concertId);
+
+      // Then
+      expect(result).toBeUndefined();
+      expect(userService.removeInterestConcertById).toHaveBeenCalledWith(
+        mockUser.userId,
+        concertId,
+      );
+      expect(userService.removeInterestConcertById).toHaveBeenCalledTimes(1);
+    });
+  });
+});
 describe('SetUserArtistPreferencesDto Validation', () => {
   it('유효한 아티스트 ID 배열을 허용해야 함', async () => {
     // Given
@@ -282,7 +440,7 @@ describe('SetUserArtistPreferencesDto Validation', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('빈 배열을 거부해야 함', async () => {
+  it('빈 배열을 허용해야 함', async () => {
     // Given
     const dto = new SetUserArtistPreferencesDto();
     dto.artistIds = [];
@@ -291,8 +449,7 @@ describe('SetUserArtistPreferencesDto Validation', () => {
     const errors = await validate(dto);
 
     // Then
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].constraints).toHaveProperty('arrayMinSize');
+    expect(errors).toHaveLength(0);
   });
 
   it('4개 이상의 아티스트 ID를 거부해야 함', async () => {

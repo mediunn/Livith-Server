@@ -19,7 +19,7 @@ export class GetConcertSearchResultsDto {
   @IsEnum(ConcertGenre, {
     each: true,
     message:
-      'genre는 JPOP | ROCK_METAL | RAP_HIPHOP | CLASSIC_JAZZ | ACOUSTIC | ELECTRONIC | ALL 중 하나여야 해요',
+      'genre는 JPOP | ROCK_METAL | RAP_HIPHOP | POP | INDIE | ALL 중 하나여야 해요',
   })
   @IsOptional()
   @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
@@ -32,11 +32,12 @@ export class GetConcertSearchResultsDto {
     enum: ConcertStatus,
     enumName: 'ConcertStatus',
     required: false,
-    example: 'ALL',
+    example: ['ALL'],
   })
   @IsEnum(ConcertStatus, {
     each: true,
-    message: 'status는 ONGOING | UPCOMING | COMPLETED | ALL 중 하나여야 해요',
+    message:
+      'status는 ONGOING | UPCOMING | COMPLETED | CANCELED | ALL 중 하나여야 해요',
   })
   @IsOptional()
   @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
@@ -66,13 +67,14 @@ export class GetConcertSearchResultsDto {
   keyword?: string;
 
   @ApiProperty({
-    description: '커서(startDate + id 또는 title + id)',
+    description: '커서 (마지막 콘서트 ID)',
     required: false,
-    example: '{"value":"2025.06.20","id":1}',
+    example: 59,
   })
   @IsOptional()
-  @IsString()
-  cursor?: string;
+  @IsNumber()
+  @Min(1)
+  cursor?: number;
 
   @ApiProperty({
     description: '가져올 데이터 개수',

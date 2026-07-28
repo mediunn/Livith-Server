@@ -30,7 +30,17 @@ export class PushSenderService {
     private readonly sendDuration: Histogram<string>,
     @InjectMetric('fcm_batch_size')
     private readonly batchSizeHistogram: Histogram<string>,
+    @InjectMetric('fcm_skip_total')
+    private readonly skipCounter: Counter<string>,
   ) {}
+
+  onModuleInit() {
+    for (const type of Object.values(NotificationType)) {
+      this.sentCounter.inc({ notification_type: type }, 0);
+      this.successCounter.inc({ notification_type: type }, 0);
+      this.failureCounter.inc({ notification_type: type }, 0);
+    }
+  }
 
   /**
    * 푸시 알림 일괄 전송
@@ -40,7 +50,9 @@ export class PushSenderService {
     title: string;
     content: string;
     targetId?: string;
+    scheduleId?: number;
     userIds: number[];
+    skipUserFilter?: boolean;
   }): Promise<{
     sent: number;
     failed: number;
@@ -48,8 +60,9 @@ export class PushSenderService {
     finalTitle: string;
     finalContent: string;
   }> {
-    const { type, title, content, targetId, userIds } = params;
-    if (userIds.length === 0)
+    const { type, title, content, targetId, userIds, skipUserFilter } = params;
+    if (userIds.length === 0) {
+      this.skipCounter.inc({ reason: 'no_target_users' });
       return {
         sent: 0,
         failed: 0,
@@ -57,6 +70,7 @@ export class PushSenderService {
         finalTitle: title,
         finalContent: content,
       };
+    }
 
     const { title: finalTitle, content: finalContent } = this.promotionalFormat(
       type,
@@ -64,8 +78,11 @@ export class PushSenderService {
       content,
     );
 
-    const availableUserIds = await this.getUserIdsForPush(type, userIds);
-    if (availableUserIds.length === 0)
+    const availableUserIds = skipUserFilter
+      ? userIds
+      : await this.getUserIdsForPush(type, userIds);
+    if (availableUserIds.length === 0) {
+      this.skipCounter.inc({ reason: 'all_users_filtered' });
       return {
         sent: 0,
         failed: 0,
@@ -73,12 +90,14 @@ export class PushSenderService {
         finalTitle,
         finalContent,
       };
+    }
 
     const tokensWithUserId = await this.prisma.fcmToken.findMany({
       where: { userId: { in: availableUserIds } },
       select: { token: true, userId: true },
     });
-    if (tokensWithUserId.length === 0)
+    if (tokensWithUserId.length === 0) {
+      this.skipCounter.inc({ reason: 'no_fcm_tokens' });
       return {
         sent: 0,
         failed: 0,
@@ -86,6 +105,7 @@ export class PushSenderService {
         finalTitle,
         finalContent,
       };
+    }
 
     const tokens = tokensWithUserId.map((t) => t.token);
     const userIdsByIndex = tokensWithUserId.map((t) => t.userId);

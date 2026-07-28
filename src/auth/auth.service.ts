@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   BadRequestException,
@@ -10,47 +10,73 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { UserResponseDto } from '../user/dto/user-response.dto';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from '@prisma/client';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 14 * 24 * 60 * 60 * 1000;
 
+// refresh 토큰 잔여 수명이 이 값보다 많이 남아 있으면 회전(재발급)하지 않고 같은 토큰을 돌려준다.
+// 평상시 갱신마다 토큰을 바꾸면, 앱이 동시에 여러 번 /auth/refresh 를 호출할 때
+// 한 요청만 성공하고 나머지는 옛 토큰이 무효화돼 401 → 강제 로그아웃이 발생한다.
+const REFRESH_TOKEN_REISSUE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
+
+const DISCORD_EMBED_COLOR = 0x58b9ff;
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private readonly httpService: HttpService,
+    @InjectMetric('auth_failure_total')
+    private readonly authFailureCounter: Counter<string>,
   ) {}
 
-  // JWT 토큰 생성
-  private getTokens(userId: number, email: string) {
-    const accessToken = this.jwtService.sign(
+  // access 토큰 생성
+  private signAccessToken(userId: number, email: string) {
+    return this.jwtService.sign(
       { userId, email },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES'),
       },
     );
+  }
 
-    const refreshToken = this.jwtService.sign(
+  // refresh 토큰 생성
+  private signRefreshToken(userId: number, email: string) {
+    return this.jwtService.sign(
       { userId, email },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES'),
       },
     );
+  }
 
-    return { accessToken, refreshToken };
+  // JWT 토큰 생성 (access + refresh)
+  private getTokens(userId: number, email: string) {
+    return {
+      accessToken: this.signAccessToken(userId, email),
+      refreshToken: this.signRefreshToken(userId, email),
+    };
   }
 
   // iOS에서 전달된 identityToken 검증
   async verifyAppleIdentity(identityToken: string) {
     // Apple 공개 키 가져오기
-    const appleKeysRes = await axios.get('https://appleid.apple.com/auth/keys');
+    const appleKeysRes = await firstValueFrom(
+      this.httpService.get('https://appleid.apple.com/auth/keys'),
+    );
     const appleKeys = appleKeysRes.data.keys;
 
     // JWT header에서 kid 확인
@@ -60,12 +86,27 @@ export class AuthService {
 
     const key = appleKeys.find((k) => k.kid === decodedHeader.kid);
 
-    if (!key) throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    if (!key) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_key_not_found',
+      });
+      throw new UnauthorizedException(ErrorCode.APPLE_KEY_NOT_FOUND);
+    }
     const pem = jwkToPem(key);
     // JWT 검증
-    const payload: any = jwt.verify(identityToken, pem, {
-      algorithms: ['RS256'],
-    });
+    let payload: any;
+    try {
+      payload = jwt.verify(identityToken, pem, {
+        algorithms: ['RS256'],
+      });
+    } catch (err) {
+      this.authFailureCounter.inc({
+        provider: 'apple',
+        reason: 'apple_token_verification_failed',
+      });
+      throw err;
+    }
     return {
       provider: 'apple',
       providerId: payload.sub,
@@ -144,46 +185,74 @@ export class AuthService {
 
   // 리프레시 토큰으로 새로운 토큰 발급
   async refreshToken(oldRefreshToken: string) {
+    // 1) JWT 서명/만료 검증 (실패 사유를 구체 에러코드로 구분)
+    let payload: { userId: number; email: string };
     try {
-      const payload = this.jwtService.verify(oldRefreshToken, {
+      payload = this.jwtService.verify(oldRefreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.userId },
-      });
-
-      if (!user || user.refreshToken !== oldRefreshToken) {
-        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
-      }
-
-      // 토큰 absolute 만료 체크
-      if (
-        !user.refreshTokenExpiresAt ||
-        new Date() > user.refreshTokenExpiresAt
-      ) {
-        throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
-      }
-
-      const { accessToken, refreshToken } = this.getTokens(user.id, user.email);
-
-      // 새 리프레시 토큰 DB 저장
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          refreshToken,
-          refreshTokenExpiresAt: new Date(
-            Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
-          ),
-        },
-      });
-
-      return { accessToken, refreshToken };
     } catch (e) {
+      this.logger.warn(`refresh 토큰 검증 실패: ${e?.message ?? e}`);
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_verification_failed',
+      });
       throw new UnauthorizedException(
         ErrorCode.REFRESH_TOKEN_VERIFICATION_FAILED,
       );
     }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    // 2) DB 토큰 불일치 = 회전 직후 옛 토큰으로 들어온 동시 요청이거나 무효 토큰
+    if (!user || user.refreshToken !== oldRefreshToken) {
+      this.logger.warn(
+        `refresh 토큰 불일치 (userId=${payload.userId}) - 회전 경쟁 또는 무효 토큰`,
+      );
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_invalid',
+      });
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_INVALID);
+    }
+
+    // 3) absolute 만료 체크
+    if (
+      !user.refreshTokenExpiresAt ||
+      new Date() > user.refreshTokenExpiresAt
+    ) {
+      this.authFailureCounter.inc({
+        provider: 'jwt',
+        reason: 'refresh_token_expired',
+      });
+      throw new UnauthorizedException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+    }
+
+    // access 토큰은 항상 새로 발급
+    const accessToken = this.signAccessToken(user.id, user.email);
+
+    // 4) 잔여 수명이 충분하면 refresh 토큰을 회전하지 않고 그대로 재사용
+    //    → 동시 갱신 요청이 겹쳐도 토큰이 바뀌지 않아 강제 로그아웃이 발생하지 않는다.
+    const remainingMs = user.refreshTokenExpiresAt.getTime() - Date.now();
+    if (remainingMs > REFRESH_TOKEN_REISSUE_THRESHOLD_MS) {
+      return { accessToken, refreshToken: oldRefreshToken };
+    }
+
+    // 5) 만료 임박 시에만 새 refresh 토큰으로 회전 (슬라이딩 윈도우 연장)
+    const refreshToken = this.signRefreshToken(user.id, user.email);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken,
+        refreshTokenExpiresAt: new Date(
+          Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS,
+        ),
+      },
+    });
+
+    return { accessToken, refreshToken };
   }
 
   // 로그아웃 처리 (리프레시 토큰 삭제)
@@ -307,6 +376,11 @@ export class AuthService {
       return { user: updatedUser, accessToken, refreshToken };
     });
 
+    // 트랜잭션 커밋 후 Discord 알림 (실패해도 가입에는 영향 없음)
+    this.sendDiscordSignupNotification(result.user).catch((e) =>
+      this.logger.warn(`Discord 가입 알림 실패:`, e),
+    );
+
     if (client === 'web') {
       return {
         user: new UserResponseDto(result.user),
@@ -319,6 +393,46 @@ export class AuthService {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     };
+  }
+
+  // 신규 회원가입 Discord 웹후크 알림
+  private async sendDiscordSignupNotification(user: {
+    id: number;
+    nickname: string;
+    provider: string;
+  }) {
+    const webhookUrl = this.configService.get<string>(
+      'DISCORD_SIGNUP_WEBHOOK_URL',
+    );
+    if (!webhookUrl) return;
+
+    const signupOrder = user.id;
+
+    await firstValueFrom(
+      this.httpService.post(
+        webhookUrl,
+        {
+          username: 'Livith 가입 알림',
+          embeds: [
+            {
+              title: '🎉 신규 회원가입',
+              color: DISCORD_EMBED_COLOR,
+              fields: [
+                { name: '닉네임', value: user.nickname, inline: true },
+                { name: 'Provider', value: user.provider, inline: true },
+                {
+                  name: '누적 가입자',
+                  value: `${signupOrder}번째`,
+                  inline: false,
+                },
+              ],
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        },
+        { timeout: 3000 },
+      ),
+    );
   }
 
   //회원 탈퇴
@@ -341,6 +455,10 @@ export class AuthService {
           deletedAt: new Date(),
           refreshToken: null,
         },
+      });
+
+      await tx.fcmToken.deleteMany({
+        where: { userId },
       });
 
       await tx.resignation.create({

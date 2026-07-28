@@ -1,1 +1,1 @@
-export const API_PREFIX = 'api/v5';
+export const API_PREFIX = 'api/v6';

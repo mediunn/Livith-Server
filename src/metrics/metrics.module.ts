@@ -1,4 +1,4 @@
-import { Module, Provider } from '@nestjs/common';
+import { Module, OnModuleDestroy, Provider } from '@nestjs/common';
 import {
   makeCounterProvider,
   makeGaugeProvider,
@@ -7,17 +7,22 @@ import {
 } from '@willsoto/nestjs-prometheus';
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
 import { SchedulerMetricsService } from './scheduler-metrics.service';
+import { ExternalApiMetricsService } from './external-api-metrics.service';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+
+const elHistogram = monitorEventLoopDelay({ resolution: 20 });
+elHistogram.enable();
 
 const httpMetricProviders: Provider[] = [
   makeCounterProvider({
     name: 'http_request_total',
     help: '총 HTTP 요청 수',
-    labelNames: ['method', 'route', 'status_code'],
+    labelNames: ['method', 'route', 'status_class'],
   }),
   makeHistogramProvider({
     name: 'http_request_duration_seconds',
     help: '요청 처리 시간 (초)',
-    labelNames: ['method', 'route', 'status_code'],
+    labelNames: ['method', 'route'],
     buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
   }),
   makeGaugeProvider({
@@ -31,7 +36,7 @@ const dbMetricProviders: Provider[] = [
   makeHistogramProvider({
     name: 'db_query_duration_seconds',
     help: '쿼리 실행 시간 (초)',
-    labelNames: ['operation', 'model', 'success'],
+    labelNames: ['operation'],
     buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
   }),
   makeCounterProvider({
@@ -61,6 +66,11 @@ const fcmMetricProviders: Provider[] = [
     name: 'fcm_notification_failure_total',
     help: '발송 실패 수',
     labelNames: ['notification_type'],
+  }),
+  makeCounterProvider({
+    name: 'fcm_skip_total',
+    help: 'FCM 발송이 시도 전에 slient drop 된 횟수',
+    labelNames: ['reason'],
   }),
   makeHistogramProvider({
     name: 'fcm_send_duration_seconds',
@@ -110,11 +120,116 @@ const schedulerMetricProviders: Provider[] = [
   }),
 ];
 
+const externalApiMetricProviders: Provider[] = [
+  makeCounterProvider({
+    name: 'external_api_request_total',
+    help: '외부 API 호출 수',
+    labelNames: ['api', 'method', 'status_class'],
+  }),
+  makeHistogramProvider({
+    name: 'external_api_request_duration_seconds',
+    help: '외부 API 응답 시간 (초)',
+    labelNames: ['api', 'method'],
+    buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5, 10],
+  }),
+  makeGaugeProvider({
+    name: 'external_api_requests_in_flight',
+    help: '진행 중인 외부 API 호출 수',
+    labelNames: ['api'],
+  }),
+];
+
+const recommendationMetricProviders: Provider[] = [
+  makeCounterProvider({
+    name: 'recommendation_cache_total',
+    help: 'SWR 캐시 결과',
+    labelNames: ['cache', 'result'],
+  }),
+  makeCounterProvider({
+    name: 'recommendation_coalesced_total',
+    help: 'Coalescing으로 합쳐진(dedup된) 중복 요청 수',
+    labelNames: ['api'],
+  }),
+  makeCounterProvider({
+    name: 'lastfm_rate_limit_total',
+    help: 'LastFM error 29 발생 수',
+  }),
+  makeCounterProvider({
+    name: 'lastfm_retry_total',
+    help: 'Bottleneck 재시도 횟수',
+  }),
+  makeCounterProvider({
+    name: 'youtube_quota_exceeded_total',
+    help: 'YouTube quota 초과 수',
+  }),
+  makeCounterProvider({
+    name: 'spotify_error_total',
+    help: 'Spotify 토큰 실패/404',
+    labelNames: ['kind'], // token_failure | not_found
+  }),
+];
+
+const authMetricProviders: Provider[] = [
+  makeCounterProvider({
+    name: 'auth_failure_total',
+    help: '인증 단계에서 거절된 횟수',
+    labelNames: ['provider', 'reason'],
+  }),
+];
+
+const processMetricProviders: Provider[] = [
+  makeGaugeProvider({
+    name: 'app_process_resident_memory_bytes',
+    help: 'V8 + 네이티브 RSS (OS가 본 프로세스 메모리)',
+    collect() {
+      this.set(process.memoryUsage().rss);
+    },
+  }),
+  makeGaugeProvider({
+    name: 'app_process_heap_used_bytes',
+    help: 'V8 heap used (실제 사용 중인 JS 객체 메모리)',
+    collect() {
+      this.set(process.memoryUsage().heapUsed);
+    },
+  }),
+  makeGaugeProvider({
+    name: 'app_eventloop_lag_p99_seconds',
+    help: 'Event loop p99 lag (지난 scrape 이후 누적 분포의 p99)',
+    collect() {
+      this.set(elHistogram.percentile(99) / 1e9);
+      elHistogram.reset();
+    },
+  }),
+];
+
+const searchMetricProviders: Provider[] = [
+  makeHistogramProvider({
+    name: 'meilisearch_search_duration_seconds',
+    help: 'Meilisearch search() 호출 지연',
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  }),
+  makeCounterProvider({
+    name: 'search_result_total',
+    help: '검색 호출 + 결과 유무 분포',
+    labelNames: ['has_result'], // 'yes' | 'no'
+  }),
+  makeCounterProvider({
+    name: 'meilisearch_reindex_failure_total',
+    help: 'bulkUpsertAll 실패',
+    labelNames: ['reason'], // 'timeout' | 'http_error' | 'unknown'
+  }),
+];
+
 const allMetricProviders: Provider[] = [
   ...httpMetricProviders,
   ...dbMetricProviders,
   ...fcmMetricProviders,
   ...schedulerMetricProviders,
+  ...externalApiMetricProviders,
+  ...recommendationMetricProviders,
+  ...authMetricProviders,
+  ...processMetricProviders,
+  ...searchMetricProviders,
 ];
 
 @Module({
@@ -122,20 +237,26 @@ const allMetricProviders: Provider[] = [
     PrometheusModule.register({
       path: '/metrics', // 매트릭 엔드포인트
       defaultMetrics: {
-        enabled: true, // Node.js 기본 메트릭 활성화
+        enabled: false, // Node.js 기본 메트릭 비활성화
       },
     }),
   ],
   providers: [
     HttpMetricsInterceptor,
     SchedulerMetricsService,
+    ExternalApiMetricsService,
     ...allMetricProviders,
   ],
   exports: [
     PrometheusModule,
     HttpMetricsInterceptor,
     SchedulerMetricsService,
+    ExternalApiMetricsService,
     ...allMetricProviders,
   ],
 })
-export class MetricsModule {}
+export class MetricsModule implements OnModuleDestroy {
+  onModuleDestroy() {
+    elHistogram.disable();
+  }
+}

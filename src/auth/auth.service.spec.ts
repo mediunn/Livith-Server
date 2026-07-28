@@ -6,6 +6,14 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '../common/exceptions/business.exception';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { Provider } from '@prisma/client';
+import { HttpService } from '@nestjs/axios';
+import { of, throwError } from 'rxjs';
+import { getToken } from '@willsoto/nestjs-prometheus';
+
+const mockHttpService = {
+  get: jest.fn(),
+  post: jest.fn(),
+};
 
 const mockPrismaService = {
   user: {
@@ -51,6 +59,11 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: HttpService, useValue: mockHttpService },
+        {
+          provide: getToken('auth_failure_total'),
+          useValue: { inc: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -289,6 +302,125 @@ describe('AuthService', () => {
     });
   });
 
+  describe('회원가입 Discord 알림', () => {
+    const webhookUrl = 'https://discord.com/api/webhooks/123/abc';
+
+    const createdUser = {
+      id: 42,
+      provider: Provider.kakao,
+      providerId: 'discord-test',
+      email: 'someone@example.com',
+      nickname: '디코유저',
+      marketingConsent: true,
+      userGenres: [],
+      userArtists: [],
+    };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    const callSignup = () =>
+      service.signup(
+        Provider.kakao,
+        'discord-test',
+        'someone@example.com',
+        true,
+        '디코유저',
+        'web',
+        [],
+        [],
+      );
+
+    beforeEach(() => {
+      mockHttpService.post.mockReturnValue(of({ status: 204 }));
+      jwtService.sign.mockReturnValue('mock-token');
+      prismaService.user.findUnique.mockResolvedValue(null);
+      prismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          user: {
+            create: jest.fn().mockResolvedValue({ id: 42 }),
+            update: jest.fn().mockResolvedValue(createdUser),
+          },
+          genre: { findMany: jest.fn() },
+          representativeArtist: { findMany: jest.fn() },
+          userGenre: { createMany: jest.fn() },
+          userArtist: { createMany: jest.fn() },
+        };
+        return callback(mockTx as any);
+      });
+    });
+
+    it('웹후크 URL이 설정돼 있으면 회원가입 후 Discord로 POST한다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+
+      await callSignup();
+      await flush();
+
+      expect(mockHttpService.post).toHaveBeenCalledTimes(1);
+      const [url, body, options] = mockHttpService.post.mock.calls[0];
+      expect(url).toBe(webhookUrl);
+      expect(options).toEqual({ timeout: 3000 });
+
+      const fields = body.embeds[0].fields;
+      expect(fields).toEqual(
+        expect.arrayContaining([
+          { name: '닉네임', value: '디코유저', inline: true },
+          { name: 'Provider', value: Provider.kakao, inline: true },
+          { name: '누적 가입자', value: '42번째', inline: false },
+        ]),
+      );
+
+      const fieldNames = fields.map((f: any) => f.name);
+      expect(fieldNames).not.toContain('User ID');
+    });
+
+    it('이메일은 알림에 포함되지 않는다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+
+      await callSignup();
+      await flush();
+
+      const body = mockHttpService.post.mock.calls[0][1];
+      const fieldNames = body.embeds[0].fields.map((f: any) => f.name);
+      expect(fieldNames).not.toContain('이메일');
+      expect(JSON.stringify(body)).not.toContain('someone@example.com');
+    });
+
+    it('웹후크 URL이 없으면 Discord 호출을 건너뛴다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? undefined : 'test-secret',
+      );
+
+      const result = await callSignup();
+      await flush();
+
+      expect(result.user).toBeDefined();
+      expect(mockHttpService.post).not.toHaveBeenCalled();
+    });
+
+    it('Discord 호출이 실패해도 회원가입은 성공한다', async () => {
+      configService.get.mockImplementation((key: string) =>
+        key === 'DISCORD_SIGNUP_WEBHOOK_URL' ? webhookUrl : 'test-secret',
+      );
+      mockHttpService.post.mockReturnValue(
+        throwError(() => new Error('discord down')),
+      );
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const result = await callSignup();
+      await flush();
+
+      expect(result.user).toBeDefined();
+      expect(result.accessToken).toBe('mock-token');
+      expect(warnSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('refreshToken', () => {
     const mockUser = {
       id: 1,
@@ -335,6 +467,20 @@ describe('AuthService', () => {
       expect(expiresAtMs).toBeLessThanOrEqual(
         after + 14 * 24 * 60 * 60 * 1000 + 1000,
       );
+    });
+
+    it('잔여 수명이 충분하면 refresh 토큰을 회전하지 않고 그대로 반환한다', async () => {
+      // 만료까지 10일 남음 → 임계치(3일)보다 충분 → 회전 X
+      prismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        refreshTokenExpiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+
+      const result = await service.refreshToken('old-refresh-token');
+
+      // refresh 토큰은 그대로, DB update 호출 없음 (동시 갱신 경쟁 방지)
+      expect(result.refreshToken).toBe('old-refresh-token');
+      expect(prismaService.user.update).not.toHaveBeenCalled();
     });
 
     it('만료된 refreshTokenExpiresAt이면 에러 발생', async () => {

@@ -17,6 +17,10 @@ import { NotificationModule } from './notification/notification.module';
 import { ArtistModule } from './artist/artist.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
+import { LoggerModule } from './logger/logger.module';
+import { MeilisearchModule } from './meilisearch/meilisearch.module';
+import { ImageProxyModule } from './image-proxy/image-proxy.module';
+import { AppleReviewModule } from './apple-review/apple-review.module';
 
 @Module({
   imports: [
@@ -37,6 +41,10 @@ import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
     NotificationModule,
     ArtistModule,
     MetricsModule,
+    LoggerModule,
+    MeilisearchModule,
+    ImageProxyModule,
+    AppleReviewModule,
   ],
   controllers: [],
   providers: [

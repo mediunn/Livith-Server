@@ -81,6 +81,10 @@ describe('Notification send integration (FCM mock)', () => {
           provide: 'PROM_METRIC_FCM_BATCH_SIZE',
           useValue: { observe: jest.fn() },
         },
+        {
+          provide: 'PROM_METRIC_FCM_SKIP_TOTAL',
+          useValue: { inc: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -109,18 +113,19 @@ describe('Notification send integration (FCM mock)', () => {
     mockHistoryService.createNotificationHistories.mockResolvedValue(undefined);
 
     await service.sendPushNotification({
-      type: NotificationType.TICKET_7D,
-      title: '띵동! 7일 뒤 예매가 시작돼요',
-      content: "관심 콘서트 '테스트콘서트', 예매 일정이 다가왔어요.",
+      type: NotificationType.PRE_TICKETING_OPEN,
+      title: '선호 아티스트의 선예매 오픈🔥',
+      content:
+        "관심 콘서트로 선택하신 '테스트콘서트', 선예매 일정 소식이 도착했어요.",
       targetId: '100',
       userIds: [1],
     });
 
     expect(mockSendEachForMulticast).toHaveBeenCalledTimes(1);
     const [message] = mockSendEachForMulticast.mock.calls[0];
-    expect(message.notification?.title).toBe('띵동! 7일 뒤 예매가 시작돼요');
+    expect(message.notification?.title).toBe('선호 아티스트의 선예매 오픈🔥');
     expect(message.notification?.body).toContain('관심 콘서트');
-    expect(message.data?.notificationType).toBe('TICKET_7D');
+    expect(message.data?.notificationType).toBe('PRE_TICKETING_OPEN');
     expect(message.data?.targetId).toBe('100');
     expect(message.tokens).toEqual(['test-fcm-token-1']);
   });
@@ -156,6 +161,7 @@ describe('Notification send integration (FCM mock)', () => {
       '셋리스트가 등록이 됐어요!',
       'OOO 콘서트 공연의 예상 셋리스트가 등록됐어요. 콘서트 가기 전까지 주요 노래를 익혀보아요!',
       '50',
+      null,
     );
   });
 
