@@ -16,7 +16,8 @@ import { ErrorCode } from '../common/enums/error-code.enum';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
-import axios from 'axios';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
 import { KakaoMobileLoginDto } from './dto/kakao-mobile-login.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
@@ -35,12 +36,14 @@ export const LOGIN_PREFIX = (() => {
   const p = (process.env.LOGIN_PREFIX ?? '').trim();
   return p ? `/${p}` : '';
 })();
+
 @Controller()
 export class AuthController {
   constructor(
     private authService: AuthService,
     private cookieService: CookieService,
     private configService: ConfigService,
+    private httpService: HttpService,
   ) {}
 
   @Get(`${API_PREFIX}/auth/kakao/web`)
@@ -148,9 +151,11 @@ export class AuthController {
   @ApiBody({ type: KakaoMobileLoginDto })
   async kakaoLoginMobile(@Body() dto: KakaoMobileLoginDto) {
     // 카카오 사용자 정보 조회
-    const userRes = await axios.get('https://kapi.kakao.com/v2/user/me', {
-      headers: { Authorization: `Bearer ${dto.accessToken}` },
-    });
+    const userRes = await firstValueFrom(
+      this.httpService.get('https://kapi.kakao.com/v2/user/me', {
+        headers: { Authorization: `Bearer ${dto.accessToken}` },
+      }),
+    );
 
     if (!userRes.data || !userRes.data.id) {
       throw new ForbiddenException(ErrorCode.KAKAO_USER_INFO_FETCH_HEAD);

@@ -6,6 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { SwrCache } from '../../utils/swr-cache.util';
 import { InFlightCoalescing } from '../../utils/in-flight-coalescing.util';
 import { Bottleneck } from '../../utils/bottleneck.util';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 const TTL_MS = 1000 * 60 * 60 * 6; // 6시간 fresh
 const STALE_TTL_MS = 1000 * 60 * 60 * 18; // 18시간 stale 서빙
@@ -19,20 +21,31 @@ export class LastfmApiService implements MusicApiService {
   private readonly similarCache = new SwrCache<string[]>();
   private readonly topArtistCache = new SwrCache<{ name: string }[]>();
   private readonly coalescing = new InFlightCoalescing();
-  private readonly bottleneck = new Bottleneck({
-    maxConcurrent: 3,
-    minTime: 200, // 200ms 간격 -> 최대 5 req/s
-    maxRetries: 2,
-    retryDelay: 500, // 500ms -> 1000ms 지수 백오프
-    isRetryable: (err) =>
-      err instanceof Error && err.message.startsWith('Last.fm rate limit'),
-  });
+  private readonly bottleneck: Bottleneck;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    @InjectMetric('recommendation_cache_total')
+    private cacheCounter: Counter<string>,
+    @InjectMetric('recommendation_coalesced_total')
+    private coalescedCounter: Counter<string>,
+    @InjectMetric('lastfm_rate_limit_total')
+    private rateLimitCounter: Counter<string>,
+    @InjectMetric('lastfm_retry_total')
+    private retryCounter: Counter<string>,
   ) {
     this.apiKey = this.configService.get<string>('LASTFM_API_KEY');
+
+    this.bottleneck = new Bottleneck({
+      maxConcurrent: 3,
+      minTime: 200, // 200ms 간격 -> 최대 5 req/s
+      maxRetries: 2,
+      retryDelay: 500, // 500ms -> 1000ms 지수 백오프
+      isRetryable: (err) =>
+        err instanceof Error && err.message.startsWith('Last.fm rate limit'),
+      onRetry: () => this.retryCounter.inc(),
+    });
 
     if (!this.apiKey) {
       this.logger.warn('LASTFM_API_KEY is not set');
@@ -44,12 +57,22 @@ export class LastfmApiService implements MusicApiService {
 
     // Layer1: SWR Cache
     const cached = this.similarCache.get(key);
-    if (cached && !cached.isStale) return cached.data;
+    if (cached && !cached.isStale) {
+      this.cacheCounter.inc({ cache: 'similar', result: 'hit' });
+      return cached.data;
+    }
+    this.cacheCounter.inc({
+      cache: 'similar',
+      result: cached?.isStale ? 'stale' : 'miss',
+    });
 
     // Layer 2 + 3: InFlightCoalescing -> Bottleneck -> HTTP
     const fetch = () =>
-      this.coalescing.wrap(key, () =>
-        this.bottleneck.schedule(() => this.fetchSimilarArtists(artistName)),
+      this.coalescing.wrap(
+        key,
+        () =>
+          this.bottleneck.schedule(() => this.fetchSimilarArtists(artistName)),
+        () => this.coalescedCounter.inc({ api: 'lastfm' }),
       );
 
     if (cached?.isStale) {
@@ -89,6 +112,7 @@ export class LastfmApiService implements MusicApiService {
     if (response.data.error) {
       // error 29: rate limit → throw해서 Bottleneck retry 발동
       if (response.data.error === 29) {
+        this.rateLimitCounter.inc();
         throw new Error(`Last.fm rate limit: ${response.data.message}`);
       }
       this.logger.warn(
@@ -115,12 +139,22 @@ export class LastfmApiService implements MusicApiService {
 
     // Layer 1: SWR Cache
     const cached = this.topArtistCache.get(key);
-    if (cached && !cached.isStale) return cached.data;
+    if (cached && !cached.isStale) {
+      this.cacheCounter.inc({ cache: 'topArtist', result: 'hit' });
+      return cached.data;
+    }
+    this.cacheCounter.inc({
+      cache: 'topArtist',
+      result: cached?.isStale ? 'stale' : 'miss',
+    });
 
     // Layer 2 + 3: InFlightCoalescing -> Bottleneck -> HTTP
     const fetch = () =>
-      this.coalescing.wrap(key, () =>
-        this.bottleneck.schedule(() => this.fetchTopArtistByTag(tag, limit)),
+      this.coalescing.wrap(
+        key,
+        () =>
+          this.bottleneck.schedule(() => this.fetchTopArtistByTag(tag, limit)),
+        () => this.coalescedCounter.inc({ api: 'lastfm' }),
       );
 
     if (cached?.isStale) {
@@ -165,6 +199,7 @@ export class LastfmApiService implements MusicApiService {
 
     if (response.data.error) {
       if (response.data.error === 29) {
+        this.rateLimitCounter.inc();
         throw new Error(`Last.fm rate limit: ${response.data.message}`);
       }
       this.logger.warn(

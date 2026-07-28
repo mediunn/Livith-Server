@@ -6,6 +6,9 @@ import { ConfigModule } from '@nestjs/config';
 import { LastfmApiService } from '../integrations/lastfm/last-fm.api.service';
 import { YoutubeApiService } from '../integrations/youtube/youtube.api.service';
 import { ArtistImageService } from '../services/artist-image.service';
+import { externalApiMetricMocks } from './metric-mocks';
+import { SpotifyApiService } from '../integrations/spotify/spotify.api.service';
+import { SchedulerMetricsService } from '../../metrics/scheduler-metrics.service';
 
 // API + Mock DB
 describe('ArtistSyncService Logic Test ', () => {
@@ -32,7 +35,20 @@ describe('ArtistSyncService Logic Test ', () => {
         LastfmApiService,
         YoutubeApiService,
         ArtistImageService,
+        SpotifyApiService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: SchedulerMetricsService,
+          useValue: {
+            executionCounter: { inc: jest.fn() },
+            durationHistogram: { startTimer: jest.fn(() => jest.fn()) },
+            successCounter: { inc: jest.fn() },
+            failureCounter: { inc: jest.fn() },
+            itemsProcessed: { inc: jest.fn() },
+            lastSuccessTimestamp: { set: jest.fn() },
+          },
+        },
+        ...externalApiMetricMocks,
       ],
     }).compile();
 

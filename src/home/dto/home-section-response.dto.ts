@@ -1,6 +1,5 @@
 import { Concert, HomeConcertSection, HomeSection } from '@prisma/client';
 import { getConcertDaysLeft } from 'src/common/utils/date.util';
-
 export class HomeSectionResponseDto {
   id: number;
   sectionTitle: string;

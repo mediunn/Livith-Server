@@ -119,6 +119,24 @@ export class TicketingReminderScheduler {
   }
 
   /**
+   * PRE/GENERAL 등 독립 발송을 감싸 한쪽 실패가 다른 쪽을 막지 x.
+   */
+  private async safeSend(
+    fn: () => Promise<number>,
+    label: string,
+  ): Promise<number> {
+    try {
+      return await fn();
+    } catch (err) {
+      this.logger.error(
+        `${label} 티켓팅 알림 발송 중 오류`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      return 0;
+    }
+  }
+
+  /**
    * 단건 발송: claim 성공 시에만 발송하고 결과로 ledger 마감
    */
   private async dispatch(
