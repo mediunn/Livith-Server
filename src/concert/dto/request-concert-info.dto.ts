@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
 } from 'class-validator';
 
@@ -22,7 +21,6 @@ export class RequestConcertInfoDto {
     description: 'URL',
     example: 'https://www.example.com/concert/1',
   })
-  @IsUrl({}, { message: '올바른 URL 형식이 아닙니다.' })
   @IsOptional()
   url?: string;
 
