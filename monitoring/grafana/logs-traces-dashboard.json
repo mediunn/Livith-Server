@@ -1,0 +1,111 @@
+{
+  "annotations": [
+    {
+      "kind": "AnnotationQuery",
+      "spec": {
+        "builtIn": true,
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "query": { "datasource": { "name": "-- Grafana --" }, "group": "grafana", "kind": "DataQuery", "spec": {}, "version": "v0" }
+      }
+    }
+  ],
+  "cursorSync": "Off",
+  "description": "Loki 로그 + Tempo 트레이스 진단 대시보드. 메인 대시보드에서 이상 발견 시 deep-dive 용도. Loki 데이터소스의 Derived field에 traceId 패턴 등록 시 로그→트레이스 원클릭 점프 가능.",
+  "editable": true,
+  "elements": {
+    "panel-3": {
+      "kind": "Panel",
+      "spec": {
+        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-logs" }, "group": "loki", "kind": "DataQuery", "spec": { "editorMode": "code", "expr": "sum by (level) (rate({job=~\"$job\"} | json | level=~\"error|warn\" [5m]))", "legendFormat": "{{level}}", "queryType": "range" }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
+        "description": "5분 윈도우 에러/경고 로그 rate (level 분포). 스파이크 = 앱 내부 에러 폭증",
+        "id": 3,
+        "links": [],
+        "title": "Error/Warn Log Rate",
+        "vizConfig": { "group": "timeseries", "kind": "VizConfig", "spec": { "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 30, "lineWidth": 1, "showPoints": "never", "stacking": { "group": "A", "mode": "normal" } } }, "overrides": [ { "matcher": { "id": "byName", "options": "error" }, "properties": [ { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } } ] }, { "matcher": { "id": "byName", "options": "warn" }, "properties": [ { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } } ] } ] }, "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } } }, "version": "13.1.0-26564065169" }
+      }
+    },
+    "panel-4": {
+      "kind": "Panel",
+      "spec": {
+        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-logs" }, "group": "loki", "kind": "DataQuery", "spec": { "editorMode": "code", "expr": "sum(count_over_time({job=~\"$job\"} | json | level=\"error\" [1h]))", "legendFormat": "errors 1h", "queryType": "instant" }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
+        "description": "지난 1시간 누적 error 로그 수",
+        "id": 4,
+        "links": [],
+        "title": "Errors (1h)",
+        "vizConfig": { "group": "stat", "kind": "VizConfig", "spec": { "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": 0 }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 100 } ] }, "unit": "short" }, "overrides": [] }, "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true } }, "version": "13.1.0-26564065169" }
+      }
+    },
+    "panel-1": {
+      "kind": "Panel",
+      "spec": {
+        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-logs" }, "group": "loki", "kind": "DataQuery", "spec": { "direction": "backward", "editorMode": "code", "expr": "{job=~\"$job\"} | json", "queryType": "range" }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
+        "description": "원본 로그 스트림. 우측 상단 검색창에 필터 추가 가능. traceId 클릭 시 Tempo 점프(Derived field 설정 필요)",
+        "id": 1,
+        "links": [],
+        "title": "Logs",
+        "vizConfig": { "group": "logs", "kind": "VizConfig", "spec": { "fieldConfig": { "defaults": {}, "overrides": [] }, "options": { "dedupStrategy": "none", "enableInfiniteScrolling": true, "enableLogDetails": true, "prettifyLogMessage": true, "showControls": true, "showFieldSelector": true, "showLevel": true, "showLogAttributes": true, "showTime": true, "sortOrder": "Descending", "timestampResolution": "ms", "unwrappedColumns": false, "wrapLogMessage": true } }, "version": "13.1.0-26564065169" }
+      }
+    },
+    "panel-2": {
+      "kind": "Panel",
+      "spec": {
+        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-traces" }, "group": "tempo", "kind": "DataQuery", "spec": { "filters": [], "limit": 50, "metricsQueryType": "range", "query": "{ trace:rootService = \"livith-server\" && trace:duration > 500ms }", "queryType": "traceqlSearch", "tableType": "traces" }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
+        "description": "livith-server 기준 500ms 이상 슬로우 트레이스 (TraceQL `{ trace:rootService = \"livith-server\" && trace:duration > 500ms }`). 트레이스 클릭 시 Tempo로 점프",
+        "id": 2,
+        "links": [],
+        "title": "Slow Traces (>500ms)",
+        "vizConfig": { "group": "traces", "kind": "VizConfig", "spec": { "fieldConfig": { "defaults": {}, "overrides": [] }, "options": {} }, "version": "13.1.0-26564065169" }
+      }
+    }
+  },
+  "layout": {
+    "kind": "GridLayout",
+    "spec": {
+      "items": [
+        { "kind": "GridLayoutItem", "spec": { "element": { "kind": "ElementReference", "name": "panel-3" }, "height": 8,  "width": 18, "x": 0,  "y": 0 } },
+        { "kind": "GridLayoutItem", "spec": { "element": { "kind": "ElementReference", "name": "panel-4" }, "height": 8,  "width": 6,  "x": 18, "y": 0 } },
+        { "kind": "GridLayoutItem", "spec": { "element": { "kind": "ElementReference", "name": "panel-1" }, "height": 14, "width": 24, "x": 0,  "y": 8 } },
+        { "kind": "GridLayoutItem", "spec": { "element": { "kind": "ElementReference", "name": "panel-2" }, "height": 12, "width": 24, "x": 0,  "y": 22 } }
+      ]
+    }
+  },
+  "links": [],
+  "liveNow": false,
+  "preload": false,
+  "tags": [ "logs", "traces", "livith" ],
+  "timeSettings": {
+    "autoRefresh": "",
+    "autoRefreshIntervals": [ "5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d" ],
+    "fiscalYearStartMonth": 0,
+    "from": "now-6h",
+    "hideTimepicker": false,
+    "timezone": "browser",
+    "to": "now"
+  },
+  "title": "Livith Logs & Traces",
+  "variables": [
+    {
+      "kind": "QueryVariable",
+      "spec": {
+        "allowCustomValue": true,
+        "current": { "text": [ "livith-server" ], "value": [ "livith-server" ] },
+        "definition": "label_values({unit=\"app.service\"},job)",
+        "hide": "dontHide",
+        "includeAll": true,
+        "label": "Server",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": { "datasource": { "name": "grafanacloud-logs" }, "group": "loki", "kind": "DataQuery", "spec": { "label": "job", "queryType": "label_values", "refId": "LokiVariableQueryEditor-VariableQuery", "stream": "{unit=\"app.service\"}" }, "version": "v0" },
+        "refresh": "onDashboardLoad",
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": "disabled"
+      }
+    }
+  ]
+}
