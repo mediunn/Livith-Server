@@ -96,7 +96,7 @@
     "panel-20": {
       "kind": "Panel",
       "spec": {
-        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-prom" }, "group": "prometheus", "kind": "DataQuery", "spec": { "editorMode": "code", "expr": "increase(scheduler_job_failure_total[1h])", "legendFormat": "__auto", "range": true }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
+        "data": { "kind": "QueryGroup", "spec": { "queries": [ { "kind": "PanelQuery", "spec": { "hidden": false, "query": { "datasource": { "name": "grafanacloud-prom" }, "group": "prometheus", "kind": "DataQuery", "spec": { "editorMode": "code", "expr": "increase(scheduler_job_failure_total{job=~\"$job\"}[1h])", "legendFormat": "__auto", "range": true }, "version": "v0" }, "refId": "A" } } ], "queryOptions": {}, "transformations": [] } },
         "description": "",
         "id": 20,
         "links": [],
