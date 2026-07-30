@@ -23,6 +23,7 @@ import { ImageProxyModule } from './image-proxy/image-proxy.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CalendarModule } from './calendar/calendar.module';
+import { HealthModule } from './health/health.module';
 import { AppleReviewModule } from './apple-review/apple-review.module';
 
 @Module({
@@ -51,6 +52,7 @@ import { AppleReviewModule } from './apple-review/apple-review.module';
     ExtractionModule,
     CalendarModule,
     AppleReviewModule,
+    HealthModule,
   ],
   providers: [
     {

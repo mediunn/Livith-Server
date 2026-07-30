@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.ref == 'refs/heads/develop' && 'dev' || 'prod' }}
   cancel-in-progress: false
 
 jobs:
@@ -35,13 +35,6 @@ jobs:
 
       - name: Build project on runner
         run: npm run build
-
-      - name: Check prisma has changes
-        uses: dorny/paths-filter@v3
-        id: paths-filter
-        with:
-          filters: |
-            prisma: ["prisma/**"]
 
       - name: Set deploy variables
         run: |
@@ -101,6 +94,7 @@ jobs:
           rsync -az --delete \
             --exclude='.env' \
             --exclude='.git/' \
+            --exclude='node_modules/' \
             --exclude='*firebase*.json' \
             --exclude='*service-account*.json' \
             --exclude='*.pem' \
@@ -108,13 +102,16 @@ jobs:
             --exclude='tmp/' \
             ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
 
+      - name: Install dependencies on server
+        run: |
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm ci"
+
       - name: Verify build output
         run: |
           ssh ${{ env.TARGET }} "test -f ${{ env.APP_DIR }}/dist/src/main.js" \
             || { echo '::error::빌드 산출물 dist/src/main.js 누락 — 재시작 중단 (기존 프로세스 유지)'; exit 1; }
 
       - name: Apply prisma migrations
-        if: steps.paths-filter.outputs.prisma == 'true'
         run: |
           ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma migrate deploy"
 
@@ -141,6 +138,24 @@ jobs:
           ssh ${{ env.TARGET }} 'sudo systemctl daemon-reload'
           ssh ${{ env.TARGET }} "sudo systemctl enable ${{ env.SERVICE }}"
 
-      - name: Restart systemd service
+      - name: Restart and verify systemd service
         run: |
-          ssh ${{ env.TARGET }} "sudo systemctl restart ${{ env.SERVICE }}"
+          ssh ${{ env.TARGET }} "
+            if ! sudo systemctl restart ${{ env.SERVICE }}; then
+              sudo systemctl status ${{ env.SERVICE }} --no-pager || true
+              sudo journalctl -u ${{ env.SERVICE }} -n 100 --no-pager || true
+              exit 1
+            fi
+
+            for i in \$(seq 1 30); do
+              if sudo systemctl is-active --quiet ${{ env.SERVICE }} && curl -fsS --max-time 2 http://127.0.0.1:3000/health > /dev/null; then
+                echo 'Health check passed'
+                exit 0
+              fi
+              sleep 2
+            done
+
+            sudo systemctl status ${{ env.SERVICE }} --no-pager || true
+            sudo journalctl -u ${{ env.SERVICE }} -n 100 --no-pager || true
+            exit 1
+          "
