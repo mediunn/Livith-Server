@@ -25,9 +25,11 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CalendarModule } from './calendar/calendar.module';
 import { HealthModule } from './health/health.module';
 import { AppleReviewModule } from './apple-review/apple-review.module';
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     ConfigModule.forRoot({

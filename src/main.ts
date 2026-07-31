@@ -3,6 +3,7 @@ import { webcrypto } from 'crypto';
 if (!(global as any).crypto) {
   (global as any).crypto = webcrypto;
 }
+import './instrument';
 import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
