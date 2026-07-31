@@ -12,6 +12,7 @@ import { ErrorMessages } from '../constants/error-messages';
 import { HTTP_STATUS_MESSAGES } from '../constants/http-status-messages';
 import { trace } from '@opentelemetry/api';
 import { Prisma } from '@prisma/client';
+import * as Sentry from '@sentry/nestjs';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -50,6 +51,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           `Prisma ${exception.code} (${where}) traceId=${traceId}`,
           exception.stack,
         );
+        this.captureSentryException(exception, request, status, traceId);
       } else {
         this.logger.warn(
           `Prisma ${exception.code} -> ${status} (${where}) traceId=${traceId}`,
@@ -82,6 +84,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           `HttpException ${status} (${where}) traceId=${traceId}`,
           exception.stack,
         );
+        this.captureSentryException(exception, request, status, traceId);
       }
       return response.status(status).json({
         message,
@@ -97,6 +100,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       `Unhandled exception (${where}) traceId=${traceId}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
+    this.captureSentryException(exception, request, status, traceId);
 
     const message =
       process.env.NODE_ENV !== 'production' && exception instanceof Error
@@ -108,6 +112,33 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       error: HTTP_STATUS_MESSAGES[status] || 'Error',
       statusCode: status,
       traceId,
+    });
+  }
+
+  private captureSentryException(
+    exception: unknown,
+    request: any,
+    status: number,
+    traceId?: string,
+  ) {
+    if (!process.env.SENTRY_DSN) return;
+
+    Sentry.withScope((scope) => {
+      scope.setTag('status_code', String(status));
+      scope.setTag('method', request?.method ?? '-');
+
+      if (traceId) {
+        scope.setTag('trace_id', traceId);
+      }
+
+      scope.setContext('request', {
+        method: request?.method,
+        url: request?.url,
+        path: request?.path,
+        route: request?.route?.path,
+      });
+
+      Sentry.captureException(exception);
     });
   }
 
