@@ -30,7 +30,7 @@ import { sendPostMessagePayload } from '../common/utils/sendPostMessagePayload';
 import { AppleMobileLoginDto } from './dto/apple-mobile-login.dto';
 import { CookieService } from '../common/utils/cookie.util';
 import { ConfigService } from '@nestjs/config';
-import { API_PREFIX } from 'src/common/constants/api-prefix';
+import { API_PREFIX } from '../common/constants/api-prefix';
 
 export const LOGIN_PREFIX = (() => {
   const p = (process.env.LOGIN_PREFIX ?? '').trim();
@@ -47,6 +47,7 @@ export class AuthController {
   ) {}
 
   @Get(`${API_PREFIX}/auth/kakao/web`)
+  @Get(`${API_PREFIX}/legacy/auth/kakao/web`)
   async kakaoLoginWeb(@Req() req, @Res() res: Response) {
     // 카카오 로그인 페이지로 리다이렉트
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -60,6 +61,7 @@ export class AuthController {
   }
 
   @Get(`${API_PREFIX}/auth/apple/web`)
+  @Get(`${API_PREFIX}/legacy/auth/apple/web`)
   async appleLoginWeb(@Req() req, @Res() res: Response) {
     const nonce = crypto.randomBytes(16).toString('hex');
     req.session.appleNonce = nonce;
