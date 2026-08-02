@@ -38,19 +38,39 @@ jobs:
 
       - name: Set deploy variables
         run: |
+          echo "SENTRY_RELEASE=${GITHUB_SHA}" >> $GITHUB_ENV
+
           if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
             echo "TARGET=dev_livith_ec2" >> $GITHUB_ENV
             echo "APP_DIR=/opt/app" >> $GITHUB_ENV
             echo "SERVICE=app" >> $GITHUB_ENV
+            echo "SENTRY_ENVIRONMENT=development" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF}" == "refs/heads/legacy" ]]; then
             echo "TARGET=livith_ec2" >> $GITHUB_ENV
             echo "APP_DIR=/opt/app-legacy" >> $GITHUB_ENV
             echo "SERVICE=app-legacy" >> $GITHUB_ENV
+            echo "SENTRY_ENVIRONMENT=legacy" >> $GITHUB_ENV
           else
             echo "TARGET=livith_ec2" >> $GITHUB_ENV
             echo "APP_DIR=/opt/app" >> $GITHUB_ENV
             echo "SERVICE=app" >> $GITHUB_ENV
+            echo "SENTRY_ENVIRONMENT=production" >> $GITHUB_ENV
           fi
+
+      - name: Create Sentry release and upload source maps
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+        with:
+          environment: ${{ github.ref == 'refs/heads/develop' && 'development' || 'production' }}
+          version: ${{ github.sha }}
+          sourcemaps: './dist'
+
+      - name: Remove source maps before deploy
+        run: find dist -name '*.map' -delete
 
       - name: Configure SSH
         run: |
@@ -126,6 +146,10 @@ jobs:
 
           [Service]
           User=ubuntu
+          WorkingDirectory=${APP_DIR}
+          EnvironmentFile=-${APP_DIR}/.env
+          Environment=SENTRY_RELEASE=${SENTRY_RELEASE}
+          Environment=SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT}
           ExecStart=/usr/bin/npm run start:prod --prefix ${APP_DIR}/
           Restart=always
 
