@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref == 'refs/heads/develop' && 'dev' || 'prod' }}
+  group: deploy-${{ github.ref == 'refs/heads/develop' && 'dev' || github.ref == 'refs/heads/legacy' && 'legacy' || 'prod' }}
   cancel-in-progress: false
 
 jobs:
@@ -17,14 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Reject unsupported manual deployment refs
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/legacy'
+        run: |
+          echo "::error::Manual deployment is only allowed from develop, main, or legacy."
+          exit 1
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies on runner
@@ -50,26 +56,30 @@ jobs:
             echo "APP_DIR=/opt/app-legacy" >> $GITHUB_ENV
             echo "SERVICE=app-legacy" >> $GITHUB_ENV
             echo "SENTRY_ENVIRONMENT=legacy" >> $GITHUB_ENV
-          else
+          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             echo "TARGET=livith_ec2" >> $GITHUB_ENV
             echo "APP_DIR=/opt/app" >> $GITHUB_ENV
             echo "SERVICE=app" >> $GITHUB_ENV
             echo "SENTRY_ENVIRONMENT=production" >> $GITHUB_ENV
+          else
+            echo "::error::Unsupported deployment ref: ${GITHUB_REF}"
+            exit 1
           fi
 
       - name: Create Sentry release and upload source maps
-        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/legacy'
         uses: getsentry/action-release@v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         with:
-          environment: ${{ github.ref == 'refs/heads/develop' && 'development' || 'production' }}
+          environment: ${{ github.ref == 'refs/heads/develop' && 'development' || github.ref == 'refs/heads/legacy' && 'legacy' || 'production' }}
           version: ${{ github.sha }}
           sourcemaps: './dist'
 
       - name: Remove source maps before deploy
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/legacy'
         run: find dist -name '*.map' -delete
 
       - name: Configure SSH
@@ -107,6 +117,19 @@ jobs:
           PROD_EC2_HOST: ${{ secrets.PROD_EC2_HOST }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
+      - name: Verify server Node.js runtime
+        run: |
+          ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
+          NODE_MAJOR=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)
+          if [ "$NODE_MAJOR" -lt 20 ]; then
+            echo "::error::Server Node.js 20 or higher is required. Upgrade the EC2 Node.js runtime before deploying."
+            node --version || true
+            exit 1
+          fi
+          node --version
+          npm --version
+          EOF
+
       - name: Copy Workspace
         run: |
           ssh ${{ env.TARGET }} "sudo mkdir -p ${{ env.APP_DIR }}"
@@ -131,6 +154,13 @@ jobs:
           ssh ${{ env.TARGET }} "test -f ${{ env.APP_DIR }}/dist/src/main.js" \
             || { echo '::error::빌드 산출물 dist/src/main.js 누락 — 재시작 중단 (기존 프로세스 유지)'; exit 1; }
 
+      - name: Write deployment environment file
+        run: |
+          ssh ${{ env.TARGET }} "cat > ${{ env.APP_DIR }}/.deploy.env" << EOF
+          SENTRY_RELEASE=${SENTRY_RELEASE}
+          SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT}
+          EOF
+
       - name: Apply prisma migrations
         run: |
           ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma migrate deploy"
@@ -148,8 +178,7 @@ jobs:
           User=ubuntu
           WorkingDirectory=${APP_DIR}
           EnvironmentFile=-${APP_DIR}/.env
-          Environment=SENTRY_RELEASE=${SENTRY_RELEASE}
-          Environment=SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT}
+          EnvironmentFile=-${APP_DIR}/.deploy.env
           ExecStart=/usr/bin/npm run start:prod --prefix ${APP_DIR}/
           Restart=always
 
