@@ -34,7 +34,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies on runner
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Generate Prisma Client on runner
         run: npm exec prisma generate
@@ -75,7 +75,7 @@ jobs:
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         with:
           environment: ${{ github.ref == 'refs/heads/develop' && 'development' || github.ref == 'refs/heads/legacy' && 'legacy' || 'production' }}
-          version: ${{ github.sha }}
+          release: ${{ github.sha }}
           sourcemaps: './dist'
 
       - name: Remove source maps before deploy
@@ -136,6 +136,7 @@ jobs:
           ssh ${{ env.TARGET }} "sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}"
           rsync -az --delete \
             --exclude='.env' \
+            --exclude='.deploy-dependency-key' \
             --exclude='.git/' \
             --exclude='node_modules/' \
             --exclude='*firebase*.json' \
@@ -147,7 +148,19 @@ jobs:
 
       - name: Install dependencies on server
         run: |
-          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm ci"
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; bash -s" <<'EOF'
+          set -euo pipefail
+
+          DEPENDENCY_KEY="$(sha256sum package.json package-lock.json | sha256sum | awk '{print $1}')-node$(node -p "process.versions.node.split('.')[0]")"
+
+          if [ -d node_modules ] && [ -x node_modules/.bin/prisma ] && [ -f .deploy-dependency-key ] && [ "$(cat .deploy-dependency-key)" = "$DEPENDENCY_KEY" ]; then
+            echo "Dependencies unchanged. Skipping npm ci."
+            exit 0
+          fi
+
+          npm ci --prefer-offline --no-audit --no-fund
+          echo "$DEPENDENCY_KEY" > .deploy-dependency-key
+          EOF
 
       - name: Verify build output
         run: |
