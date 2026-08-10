@@ -2,14 +2,11 @@ name: deploy
 
 on:
   push:
-    branches:
-      - develop
-      - main
-      - legacy
+    branches: [develop, main, legacy]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref == 'refs/heads/develop' && 'dev' || github.ref == 'refs/heads/legacy' && 'legacy' || 'prod' }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -21,11 +18,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reject unsupported manual deployment refs
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/legacy'
+      # 브랜치별 배포 대상을 한 테이블에서 결정 (단일 소스)
+      - name: Resolve deploy target
         run: |
-          echo "::error::Manual deployment is only allowed from develop, main, or legacy."
-          exit 1
+          case "${GITHUB_REF_NAME}" in
+            develop) TARGET=dev_livith_ec2; HOST='${{ secrets.DEV_EC2_HOST }}';  DIR=/opt/app;        SVC=app;        PORT=4000; ENVNAME=development ;;
+            main)    TARGET=livith_ec2;     HOST='${{ secrets.PROD_EC2_HOST }}'; DIR=/opt/app;        SVC=app;        PORT=4000; ENVNAME=production ;;
+            legacy)  TARGET=livith_ec2;     HOST='${{ secrets.PROD_EC2_HOST }}'; DIR=/opt/app-legacy; SVC=app-legacy; PORT=3000; ENVNAME=legacy ;;
+            *) echo "::error::Unsupported deployment ref: ${GITHUB_REF_NAME}"; exit 1 ;;
+          esac
+          {
+            echo "TARGET=$TARGET"
+            echo "EC2_HOST=$HOST"
+            echo "APP_DIR=$DIR"
+            echo "SERVICE=$SVC"
+            echo "HEALTH_PORT=$PORT"
+            echo "SENTRY_ENVIRONMENT=$ENVNAME"
+            echo "SENTRY_RELEASE=$GITHUB_SHA"
+          } >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -33,182 +43,164 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies on runner
-        run: npm ci
-
-      - name: Generate Prisma Client on runner
-        run: npm exec prisma generate
-
-      - name: Build project on runner
-        run: npm run build
-
-      - name: Set deploy variables
+      # 무거운 작업은 전부 러너에서 수행한다. 서버는 파일을 받아 실행만 한다.
+      - name: Build
         run: |
-          echo "SENTRY_RELEASE=${GITHUB_SHA}" >> $GITHUB_ENV
-
-          if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
-            echo "TARGET=dev_livith_ec2" >> $GITHUB_ENV
-            echo "APP_DIR=/opt/app" >> $GITHUB_ENV
-            echo "SERVICE=app" >> $GITHUB_ENV
-            echo "SENTRY_ENVIRONMENT=development" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF}" == "refs/heads/legacy" ]]; then
-            echo "TARGET=livith_ec2" >> $GITHUB_ENV
-            echo "APP_DIR=/opt/app-legacy" >> $GITHUB_ENV
-            echo "SERVICE=app-legacy" >> $GITHUB_ENV
-            echo "SENTRY_ENVIRONMENT=legacy" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            echo "TARGET=livith_ec2" >> $GITHUB_ENV
-            echo "APP_DIR=/opt/app" >> $GITHUB_ENV
-            echo "SERVICE=app" >> $GITHUB_ENV
-            echo "SENTRY_ENVIRONMENT=production" >> $GITHUB_ENV
-          else
-            echo "::error::Unsupported deployment ref: ${GITHUB_REF}"
-            exit 1
-          fi
+          npm ci --prefer-offline --no-audit --no-fund
+          npm exec prisma generate
+          npm run build
 
       - name: Create Sentry release and upload source maps
-        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/legacy'
         uses: getsentry/action-release@v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         with:
-          environment: ${{ github.ref == 'refs/heads/develop' && 'development' || github.ref == 'refs/heads/legacy' && 'legacy' || 'production' }}
-          version: ${{ github.sha }}
-          sourcemaps: './dist'
+          environment: ${{ env.SENTRY_ENVIRONMENT }}
+          release: ${{ env.SENTRY_RELEASE }}
+          sourcemaps: ./dist
 
       - name: Remove source maps before deploy
-        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/legacy'
         run: find dist -name '*.map' -delete
 
+      # known_hosts는 시크릿에 고정된 값만 사용한다 (StrictHostKeyChecking yes).
+      # 최초 등록: ssh-keyscan -H "$DEV_EC2_HOST" "$PROD_EC2_HOST" 결과를 이미 신뢰된 경로로
+      # (기존 로컬 known_hosts와 대조하거나 EC2 콘솔 시스템 로그의 host key fingerprint와 대조 후)
+      # EC2_KNOWN_HOSTS 시크릿에 저장해둔다.
       - name: Configure SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          if [[ "${GITHUB_REF}" == "refs/heads/develop" ]]; then
-          cat <<EOF > ~/.ssh/config
-          Host dev_livith_ec2
-            HostName $DEV_EC2_HOST
-            User $EC2_USER
+          echo "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host ${{ env.TARGET }}
+            HostName ${{ env.EC2_HOST }}
+            User ubuntu
             IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
+            UserKnownHostsFile ~/.ssh/known_hosts
+            StrictHostKeyChecking yes
             ServerAliveInterval 30
             ServerAliveCountMax 20
-            TCPKeepAlive yes
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%C
+            ControlPersist 10m
           EOF
-          else
-          cat <<EOF > ~/.ssh/config
-          Host livith_ec2
-            HostName $PROD_EC2_HOST
-            User $EC2_USER
-            IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
-            ServerAliveInterval 30
-            ServerAliveCountMax 20
-            TCPKeepAlive yes
-          EOF
-          fi
-        env:
-          EC2_USER: ubuntu
-          DEV_EC2_HOST: ${{ secrets.DEV_EC2_HOST }}
-          PROD_EC2_HOST: ${{ secrets.PROD_EC2_HOST }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
+      # node_modules를 러너에서 빌드해 보내므로 메이저 버전이 정확히 일치해야 한다.
+      # systemd 는 로그인 셸 PATH 를 쓰지 않으므로 node 절대경로를 확정해 유닛에 박는다.
       - name: Verify server Node.js runtime
         run: |
-          ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
-          NODE_MAJOR=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)
-          if [ "$NODE_MAJOR" -lt 20 ]; then
-            echo "::error::Server Node.js 20 or higher is required. Upgrade the EC2 Node.js runtime before deploying."
-            node --version || true
+          OUTPUT=$(ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
+          set -eu
+          BIN=$(command -v node || true)
+          if [ -z "$BIN" ]; then
+            echo "node not found in the non-interactive PATH (nvm-only installs are not visible to systemd either)" >&2
             exit 1
           fi
-          node --version
-          npm --version
+          BIN=$(readlink -f "$BIN")
+          echo "NODE_BIN=$BIN"
+          echo "NODE_MAJOR=$("$BIN" -p "process.versions.node.split('.')[0]")"
           EOF
+          )
+          echo "$OUTPUT"
 
-      - name: Copy Workspace
+          # 원격 출력을 셸로 실행(source)하지 않고 값으로만 추출한 뒤 형식을 검증한다.
+          NODE_BIN=$(printf '%s\n' "$OUTPUT" | sed -n 's/^NODE_BIN=//p' | tail -n1)
+          NODE_MAJOR=$(printf '%s\n' "$OUTPUT" | sed -n 's/^NODE_MAJOR=//p' | tail -n1)
+
+          case "$NODE_BIN" in
+            /*[!A-Za-z0-9_./-]*|'') echo "::error::Unexpected NODE_BIN format from server: $NODE_BIN"; exit 1 ;;
+          esac
+          case "$NODE_MAJOR" in
+            ''|*[!0-9]*) echo "::error::Unexpected NODE_MAJOR format from server: $NODE_MAJOR"; exit 1 ;;
+          esac
+          if [ "$NODE_MAJOR" != "22" ]; then
+            echo "::error::Server Node.js must be 22 (found major: $NODE_MAJOR). node_modules is prebuilt on the runner with Node 22."
+            exit 1
+          fi
+          echo "NODE_BIN=$NODE_BIN" >> "$GITHUB_ENV"
+
+      # 필요한 것만 명시적으로 전송한다 (allow-list).
+      # --exclude 로 지정된 경로는 --delete 대상에서도 제외되어 서버의 .env 가 보존된다.
+      - name: Deploy files
         run: |
-          ssh ${{ env.TARGET }} "sudo mkdir -p ${{ env.APP_DIR }}"
-          ssh ${{ env.TARGET }} "sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}"
+          ssh ${{ env.TARGET }} "sudo mkdir -p ${{ env.APP_DIR }} && sudo chown ubuntu:ubuntu ${{ env.APP_DIR }}"
           rsync -az --delete \
             --exclude='.env' \
-            --exclude='.git/' \
-            --exclude='node_modules/' \
-            --exclude='*firebase*.json' \
-            --exclude='*service-account*.json' \
-            --exclude='*.pem' \
-            --exclude='coverage/' \
-            --exclude='tmp/' \
-            ./ ${{ env.TARGET }}:${{ env.APP_DIR }}
-
-      - name: Install dependencies on server
-        run: |
-          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm ci"
-
-      - name: Verify build output
-        run: |
-          ssh ${{ env.TARGET }} "test -f ${{ env.APP_DIR }}/dist/src/main.js" \
-            || { echo '::error::빌드 산출물 dist/src/main.js 누락 — 재시작 중단 (기존 프로세스 유지)'; exit 1; }
+            --exclude='.deploy.env' \
+            dist node_modules package.json package-lock.json prisma \
+            ${{ env.TARGET }}:${{ env.APP_DIR }}/
 
       - name: Write deployment environment file
         run: |
-          ssh ${{ env.TARGET }} "cat > ${{ env.APP_DIR }}/.deploy.env" << EOF
-          SENTRY_RELEASE=${SENTRY_RELEASE}
-          SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT}
+          ssh ${{ env.TARGET }} "cat > ${{ env.APP_DIR }}/.deploy.env" <<'EOF'
+          SENTRY_RELEASE=${{ env.SENTRY_RELEASE }}
+          SENTRY_ENVIRONMENT=${{ env.SENTRY_ENVIRONMENT }}
           EOF
 
-      - name: Apply prisma migrations
-        run: |
-          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }}; npm exec prisma migrate deploy"
+      # push: prisma/** 변경분이 있을 때만 감지. workflow_dispatch는 커밋 범위가 없어
+      # 비교 기준이 없으므로 이 스텝 자체를 건너뛴다 (아래에서 항상 실행으로 처리).
+      - name: Detect prisma changes
+        if: github.event_name == 'push'
+        id: prisma-changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            prisma:
+              - 'prisma/**'
 
-      - name: Copy systemd service file
+      # push: prisma/** 변경 시에만 실행 (무관한 코드 배포가 마이그레이션 이슈로 막히지 않도록).
+      # workflow_dispatch(수동 트리거): 비교 기준 커밋이 없으므로 항상 실행.
+      - name: Apply prisma migrations
+        if: github.event_name != 'push' || steps.prisma-changes.outputs.prisma == 'true'
         run: |
-          APP_DIR="${{ env.APP_DIR }}"
-          SERVICE="${{ env.SERVICE }}"
-          ssh ${{ env.TARGET }} "sudo tee /etc/systemd/system/${SERVICE}.service" << EOF
+          ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }} && ./node_modules/.bin/prisma migrate deploy"
+
+      - name: Install and restart service
+        run: |
+          ssh ${{ env.TARGET }} "sudo tee /etc/systemd/system/${{ env.SERVICE }}.service > /dev/null" <<'EOF'
           [Unit]
-          Description=Livith Project
+          Description=Livith (${{ env.SERVICE }})
           After=network.target
 
           [Service]
           User=ubuntu
-          WorkingDirectory=${APP_DIR}
-          EnvironmentFile=-${APP_DIR}/.env
-          EnvironmentFile=-${APP_DIR}/.deploy.env
-          ExecStart=/usr/bin/npm run start:prod --prefix ${APP_DIR}/
+          WorkingDirectory=${{ env.APP_DIR }}
+          EnvironmentFile=-${{ env.APP_DIR }}/.env
+          EnvironmentFile=-${{ env.APP_DIR }}/.deploy.env
+          ExecStart=${{ env.NODE_BIN }} dist/src/main
           Restart=always
 
           [Install]
           WantedBy=multi-user.target
           EOF
 
-      - name: Enable systemd service
-        run: |
-          ssh ${{ env.TARGET }} 'sudo systemctl daemon-reload'
-          ssh ${{ env.TARGET }} "sudo systemctl enable ${{ env.SERVICE }}"
+          ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
+          set -eu
+          sudo systemctl daemon-reload
+          sudo systemctl enable ${{ env.SERVICE }}
+          sudo systemctl restart ${{ env.SERVICE }}
+          EOF
 
-      - name: Restart and verify systemd service
+      - name: Health check
         run: |
-          ssh ${{ env.TARGET }} "
-            if ! sudo systemctl restart ${{ env.SERVICE }}; then
-              sudo systemctl status ${{ env.SERVICE }} --no-pager || true
-              sudo journalctl -u ${{ env.SERVICE }} -n 100 --no-pager || true
-              exit 1
+          ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
+          for i in $(seq 1 30); do
+            if systemctl is-active --quiet ${{ env.SERVICE }} \
+               && curl -fsS --max-time 2 http://127.0.0.1:${{ env.HEALTH_PORT }}/health > /dev/null; then
+              echo 'Health check passed'
+              exit 0
             fi
-
-            for i in \$(seq 1 30); do
-              if sudo systemctl is-active --quiet ${{ env.SERVICE }} && curl -fsS --max-time 2 http://127.0.0.1:3000/health > /dev/null; then
-                echo 'Health check passed'
-                exit 0
-              fi
-              sleep 2
-            done
-
-            sudo systemctl status ${{ env.SERVICE }} --no-pager || true
-            sudo journalctl -u ${{ env.SERVICE }} -n 100 --no-pager || true
-            exit 1
-          "
+            sleep 2
+          done
+          echo "::error::Health check failed on port ${{ env.HEALTH_PORT }}"
+          sudo systemctl status ${{ env.SERVICE }} --no-pager || true
+          sudo journalctl -u ${{ env.SERVICE }} -n 100 --no-pager || true
+          exit 1
+          EOF
