@@ -64,19 +64,27 @@ jobs:
       - name: Remove source maps before deploy
         run: find dist -name '*.map' -delete
 
+      # known_hosts는 시크릿에 고정된 값만 사용한다 (StrictHostKeyChecking yes).
+      # 최초 등록: ssh-keyscan -H "$DEV_EC2_HOST" "$PROD_EC2_HOST" 결과를 이미 신뢰된 경로로
+      # (기존 로컬 known_hosts와 대조하거나 EC2 콘솔 시스템 로그의 host key fingerprint와 대조 후)
+      # EC2_KNOWN_HOSTS 시크릿에 저장해둔다.
       - name: Configure SSH
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          echo "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
           cat > ~/.ssh/config <<EOF
           Host ${{ env.TARGET }}
             HostName ${{ env.EC2_HOST }}
             User ubuntu
             IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
+            UserKnownHostsFile ~/.ssh/known_hosts
+            StrictHostKeyChecking yes
             ServerAliveInterval 30
             ServerAliveCountMax 20
             ControlMaster auto
@@ -88,7 +96,7 @@ jobs:
       # systemd 는 로그인 셸 PATH 를 쓰지 않으므로 node 절대경로를 확정해 유닛에 박는다.
       - name: Verify server Node.js runtime
         run: |
-          ssh ${{ env.TARGET }} 'bash -s' > /tmp/nodeinfo <<'EOF'
+          OUTPUT=$(ssh ${{ env.TARGET }} 'bash -s' <<'EOF'
           set -eu
           BIN=$(command -v node || true)
           if [ -z "$BIN" ]; then
@@ -99,8 +107,19 @@ jobs:
           echo "NODE_BIN=$BIN"
           echo "NODE_MAJOR=$("$BIN" -p "process.versions.node.split('.')[0]")"
           EOF
-          cat /tmp/nodeinfo
-          . /tmp/nodeinfo
+          )
+          echo "$OUTPUT"
+
+          # 원격 출력을 셸로 실행(source)하지 않고 값으로만 추출한 뒤 형식을 검증한다.
+          NODE_BIN=$(printf '%s\n' "$OUTPUT" | sed -n 's/^NODE_BIN=//p' | tail -n1)
+          NODE_MAJOR=$(printf '%s\n' "$OUTPUT" | sed -n 's/^NODE_MAJOR=//p' | tail -n1)
+
+          case "$NODE_BIN" in
+            /*[!A-Za-z0-9_./-]*|'') echo "::error::Unexpected NODE_BIN format from server: $NODE_BIN"; exit 1 ;;
+          esac
+          case "$NODE_MAJOR" in
+            ''|*[!0-9]*) echo "::error::Unexpected NODE_MAJOR format from server: $NODE_MAJOR"; exit 1 ;;
+          esac
           if [ "$NODE_MAJOR" != "22" ]; then
             echo "::error::Server Node.js must be 22 (found major: $NODE_MAJOR). node_modules is prebuilt on the runner with Node 22."
             exit 1
@@ -125,7 +144,21 @@ jobs:
           SENTRY_ENVIRONMENT=${{ env.SENTRY_ENVIRONMENT }}
           EOF
 
+      # push: prisma/** 변경분이 있을 때만 감지. workflow_dispatch는 커밋 범위가 없어
+      # 비교 기준이 없으므로 이 스텝 자체를 건너뛴다 (아래에서 항상 실행으로 처리).
+      - name: Detect prisma changes
+        if: github.event_name == 'push'
+        id: prisma-changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            prisma:
+              - 'prisma/**'
+
+      # push: prisma/** 변경 시에만 실행 (무관한 코드 배포가 마이그레이션 이슈로 막히지 않도록).
+      # workflow_dispatch(수동 트리거): 비교 기준 커밋이 없으므로 항상 실행.
       - name: Apply prisma migrations
+        if: github.event_name != 'push' || steps.prisma-changes.outputs.prisma == 'true'
         run: |
           ssh ${{ env.TARGET }} "cd ${{ env.APP_DIR }} && ./node_modules/.bin/prisma migrate deploy"
 
