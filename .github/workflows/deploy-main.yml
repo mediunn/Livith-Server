@@ -22,7 +22,7 @@ jobs:
       - name: Resolve deploy target
         run: |
           case "${GITHUB_REF_NAME}" in
-            develop) TARGET=dev_livith_ec2; HOST='${{ secrets.DEV_EC2_HOST }}';  DIR=/opt/app;        SVC=app;        PORT=4000; ENVNAME=development ;;
+            develop) TARGET=dev_livith_ec2; HOST='${{ secrets.DEV_EC2_HOST }}';  DIR=/opt/app;        SVC=app;        PORT=3000; ENVNAME=development ;;
             main)    TARGET=livith_ec2;     HOST='${{ secrets.PROD_EC2_HOST }}'; DIR=/opt/app;        SVC=app;        PORT=4000; ENVNAME=production ;;
             legacy)  TARGET=livith_ec2;     HOST='${{ secrets.PROD_EC2_HOST }}'; DIR=/opt/app-legacy; SVC=app-legacy; PORT=3000; ENVNAME=legacy ;;
             *) echo "::error::Unsupported deployment ref: ${GITHUB_REF_NAME}"; exit 1 ;;
